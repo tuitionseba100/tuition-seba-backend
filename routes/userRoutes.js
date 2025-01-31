@@ -5,7 +5,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = 4554554454455;
 
 // Get all users
 router.get('/users', async (req, res) => {
