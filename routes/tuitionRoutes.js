@@ -3,7 +3,6 @@ const Tuition = require('../models/Tuition');
 const router = express.Router();
 
 
-// Get all tuition records
 router.get('/all', async (req, res) => {
     try {
         const tuitions = await Tuition.find(); // Fetch all tuition records
