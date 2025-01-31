@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 
 const tuitionSchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
+    isPublish: { type: Boolean, default: true },
     wantedTeacher: String,
     student: String,
     class: String,

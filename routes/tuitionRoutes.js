@@ -17,6 +17,7 @@ router.get('/all', async (req, res) => {
 router.post('/add', async (req, res) => {
     const {
         tuitionCode,
+        isPublish,
         wantedTeacher,
         student,
         class: className,
@@ -26,6 +27,7 @@ router.post('/add', async (req, res) => {
         salary,
         location,
         guardianNumber,
+        status,
         joining,
     } = req.body;
 
@@ -33,6 +35,7 @@ router.post('/add', async (req, res) => {
     try {
         const newTuition = new Tuition({
             tuitionCode,
+            isPublish,
             wantedTeacher,
             student,
             class: className,
@@ -42,6 +45,7 @@ router.post('/add', async (req, res) => {
             salary,
             location,
             guardianNumber,
+            status,
             joining,
         });
 
