@@ -5,8 +5,6 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 
-const JWT_SECRET = 4554554454455;
-
 // Get all users
 router.get('/users', async (req, res) => {
     try {
@@ -47,15 +45,8 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
         res.json({
             message: 'Login successful',
-            token,
             role: user.role,
         });
     } catch (err) {
