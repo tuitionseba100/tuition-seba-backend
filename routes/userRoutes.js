@@ -45,14 +45,23 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, role: user.role },
+            'mahedi1000abcdefgh100',
+            { expiresIn: '1h' }
+        );
+
         res.json({
             message: 'Login successful',
-            role: user.role,
+            token,
+            role: user.role
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 // Approve user
 router.put('/approve/:id', async (req, res) => {
