@@ -32,7 +32,6 @@ router.post('/add', async (req, res) => {
         joining,
     } = req.body;
 
-
     try {
         const newTuition = new Tuition({
             tuitionCode,
