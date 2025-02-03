@@ -17,7 +17,7 @@ const tuitionSchema = new mongoose.Schema({
     note: String,
     tutorNumber: String,
     joining: { type: String, default: '' },
-    isPublish: { type: Boolean, default: false },
+    isUrgent: { type: Boolean, default: false },
 });
 
 const Tuition = mongoose.model('Tuition', tuitionSchema);
