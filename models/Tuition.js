@@ -15,6 +15,7 @@ const tuitionSchema = new mongoose.Schema({
     guardianNumber: String,
     status: String,
     note: String,
+    tutorNumber: String,
     joining: { type: String, default: '' },
     isPublish: { type: Boolean, default: false },
 });

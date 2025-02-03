@@ -40,6 +40,7 @@ router.post('/add', async (req, res) => {
         status,
         joining,
         note,
+        tutorNumber,
         isUrgent,
     } = req.body;
 
@@ -60,6 +61,7 @@ router.post('/add', async (req, res) => {
             status,
             joining,
             note,
+            tutorNumber,
             isUrgent,
         });
 
