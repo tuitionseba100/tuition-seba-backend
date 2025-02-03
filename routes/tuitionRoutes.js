@@ -39,6 +39,8 @@ router.post('/add', async (req, res) => {
         guardianNumber,
         status,
         joining,
+        note,
+        isUrgent,
     } = req.body;
 
     try {
@@ -57,6 +59,8 @@ router.post('/add', async (req, res) => {
             guardianNumber,
             status,
             joining,
+            note,
+            isUrgent,
         });
 
         await newTuition.save();
