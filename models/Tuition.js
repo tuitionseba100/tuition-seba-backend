@@ -12,6 +12,7 @@ const tuitionSchema = new mongoose.Schema({
     day: String,
     salary: String,
     location: String,
+    area: String,
     guardianNumber: String,
     status: String,
     note: String,
