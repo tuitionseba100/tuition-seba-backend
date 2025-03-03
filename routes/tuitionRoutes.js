@@ -21,7 +21,6 @@ router.get('/all', async (req, res) => {
     }
 });
 
-
 // Add tuition record
 router.post('/add', async (req, res) => {
     const {

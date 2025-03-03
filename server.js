@@ -16,9 +16,11 @@ mongoose.connect(process.env.DB_URI)
 // Routes
 const tuitionRoutes = require('./routes/tuitionRoutes');
 const userRoutes = require('./routes/userRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
+app.use('/api/payment', paymentRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
