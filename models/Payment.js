@@ -4,15 +4,15 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
     tuitionId: { type: String, required: true },
-    paymentReceivedDate: { type: Date, required: true },
-    paymentType: { type: String, required: true },
-    transactionId: { type: String, required: true },
-    tutorName: { type: String, required: true },
-    tutorNumber: { type: String, required: true },
-    paymentNumber: { type: String, required: true },
-    receivedTk: { type: String, required: true },
-    duePayment: { type: String, required: true },
-    comment: { type: String, required: true },
+    paymentReceivedDate: { type: Date },
+    paymentType: { type: String },
+    transactionId: { type: String },
+    tutorName: { type: String },
+    tutorNumber: { type: String },
+    paymentNumber: { type: String },
+    receivedTk: { type: String },
+    duePayment: { type: String },
+    comment: { type: String },
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
