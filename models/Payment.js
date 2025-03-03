@@ -7,8 +7,8 @@ const paymentSchema = new mongoose.Schema({
     paymentReceivedDate: { type: Date, required: true },
     paymentType: { type: String, required: true },
     transactionId: { type: String, required: true },
-    receivedTk: { type: Number, required: true },
-    duePayment: { type: Number, required: true },
+    receivedTk: { type: String, required: true },
+    duePayment: { type: String, required: true },
     comment: { type: String, required: true },
 });
 
