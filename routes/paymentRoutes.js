@@ -14,12 +14,26 @@ router.get('/all', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     const {
-
+        tuitionCode,
+        tuitionId,
+        paymentReceivedDate,
+        paymentType,
+        transactionId,
+        receivedTk,
+        duePayment,
+        comment,
     } = req.body;
 
     try {
         const newPayment = new Payment({
-
+            tuitionCode,
+            tuitionId,
+            paymentReceivedDate,
+            paymentType,
+            transactionId,
+            receivedTk,
+            duePayment,
+            comment,
         });
 
         await newPayment.save();
