@@ -23,7 +23,8 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
-        const localTime = moment().tz(moment.tz.guess()).toDate();
+        const localTime = moment().tz("Asia/Dhaka").toDate();
+
         const newData = new GuardianApply({
             name,
             phone,
