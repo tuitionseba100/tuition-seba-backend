@@ -17,10 +17,12 @@ mongoose.connect(process.env.DB_URI)
 const tuitionRoutes = require('./routes/tuitionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const guardianApplyRoutes = require('./routes/guardianApplyRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/guardianApply', guardianApplyRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
