@@ -76,7 +76,6 @@ router.put('/update-status/:id', async (req, res) => {
     }
 });
 
-
 router.delete('/delete/:id', async (req, res) => {
     try {
         await GuardianApply.findByIdAndDelete(req.params.id);
