@@ -25,6 +25,7 @@ router.post('/add', async (req, res) => {
         transactionId,
         receivedTk,
         duePayment,
+        paymentStatus,
         comment,
     } = req.body;
 
@@ -41,6 +42,7 @@ router.post('/add', async (req, res) => {
             transactionId,
             receivedTk,
             duePayment,
+            paymentStatus,
             comment,
         });
 

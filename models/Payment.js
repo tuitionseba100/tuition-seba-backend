@@ -12,6 +12,7 @@ const paymentSchema = new mongoose.Schema({
     tutorNumber: { type: String },
     paymentNumber: { type: String },
     receivedTk: { type: String },
+    paymentStatus: { type: String },
     duePayment: { type: String },
     comment: { type: String },
 });
