@@ -53,7 +53,7 @@ router.put('/edit/:id', async (req, res) => {
 });
 
 router.put('/update-status/:id', async (req, res) => {
-    const { status } = req.body;
+    const { status, comment } = req.body;
 
     if (!status) {
         return res.status(400).json({ message: "Status is required" });
@@ -62,7 +62,7 @@ router.put('/update-status/:id', async (req, res) => {
     try {
         const updatedData = await GuardianApply.findByIdAndUpdate(
             req.params.id,
-            { status },
+            { status, comment },
             { new: true }
         );
 
@@ -75,6 +75,7 @@ router.put('/update-status/:id', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 router.delete('/delete/:id', async (req, res) => {
     try {
