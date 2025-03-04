@@ -29,6 +29,7 @@ router.post('/add', async (req, res) => {
             studentClass,
             teacherGender,
             characteristics,
+            appliedAt: new Date()
         });
 
         await newData.save();
