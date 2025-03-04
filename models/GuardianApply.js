@@ -8,7 +8,7 @@ const guardianApplySchema = new mongoose.Schema({
     teacherGender: { type: String },
     characteristics: { type: String },
     status: { type: String },
-    comment: { type: String },
+    comment: { type: String, default: "" },
     appliedAt: { type: Date, default: Date.now }
 });
 
