@@ -1,6 +1,7 @@
 const express = require('express');
 const GuardianApply = require('../models/GuardianApply');
 const router = express.Router();
+const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
@@ -22,6 +23,7 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        const localTime = moment().tz(moment.tz.guess()).toDate();
         const newData = new GuardianApply({
             name,
             phone,
@@ -29,7 +31,8 @@ router.post('/add', async (req, res) => {
             studentClass,
             teacherGender,
             characteristics,
-            appliedAt: new Date()
+            appliedAt: localTime,
+            status: "pending"
         });
 
         await newData.save();
@@ -49,6 +52,29 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
+router.put('/update-status/:id', async (req, res) => {
+    const { status } = req.body;
+
+    if (!status) {
+        return res.status(400).json({ message: "Status is required" });
+    }
+
+    try {
+        const updatedData = await GuardianApply.findByIdAndUpdate(
+            req.params.id,
+            { status },
+            { new: true }
+        );
+
+        if (!updatedData) {
+            return res.status(404).json({ message: "Record not found" });
+        }
+
+        res.json(updatedData);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.delete('/delete/:id', async (req, res) => {
     try {

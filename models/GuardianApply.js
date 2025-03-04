@@ -7,6 +7,7 @@ const guardianApplySchema = new mongoose.Schema({
     studentClass: { type: String },
     teacherGender: { type: String },
     characteristics: { type: String },
+    status: { type: String },
     appliedAt: { type: Date, default: Date.now }
 });
 
