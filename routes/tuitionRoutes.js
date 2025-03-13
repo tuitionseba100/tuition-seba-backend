@@ -42,6 +42,7 @@ router.post('/add', async (req, res) => {
         note,
         tutorNumber,
         isUrgent,
+        taskAssignedTo,
     } = req.body;
 
     try {
@@ -64,6 +65,7 @@ router.post('/add', async (req, res) => {
             note,
             tutorNumber,
             isUrgent,
+            taskAssignedTo,
         });
 
         await newTuition.save();
