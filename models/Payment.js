@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-
 const paymentSchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
     tuitionId: { type: String, required: true },
