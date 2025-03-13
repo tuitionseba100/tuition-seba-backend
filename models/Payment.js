@@ -15,6 +15,7 @@ const paymentSchema = new mongoose.Schema({
     paymentStatus: { type: String },
     duePayment: { type: String },
     comment: { type: String },
+    totalReceivedTk: { type: String }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

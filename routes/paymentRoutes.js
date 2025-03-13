@@ -27,6 +27,7 @@ router.post('/add', async (req, res) => {
         duePayment,
         paymentStatus,
         comment,
+        totalReceivedTk,
     } = req.body;
 
     try {
@@ -44,6 +45,7 @@ router.post('/add', async (req, res) => {
             duePayment,
             paymentStatus,
             comment,
+            totalReceivedTk,
         });
 
         await newPayment.save();
