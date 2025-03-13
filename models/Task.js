@@ -10,5 +10,5 @@ const taskSchema = new mongoose.Schema({
     comment: { type: String }
 });
 
-const Task = mongoose.model('GuardianApply', taskSchema);
+const Task = mongoose.model('Task', taskSchema);
 module.exports = Task;
