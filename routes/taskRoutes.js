@@ -15,6 +15,8 @@ router.get('/all', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     const {
+        tuitionCode,
+        tuitionId,
         employeeName,
         employeeId,
         employeeRole,
@@ -27,6 +29,8 @@ router.post('/add', async (req, res) => {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newTask = new Task({
+            tuitionCode,
+            tuitionId,
             employeeName,
             employeeId,
             employeeRole,
