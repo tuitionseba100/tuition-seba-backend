@@ -18,13 +18,11 @@ const tuitionRoutes = require('./routes/tuitionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const guardianApplyRoutes = require('./routes/guardianApplyRoutes');
-const taskRoutes = require('./routes/taskRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/guardianApply', guardianApplyRoutes);
-app.use('/api/taskRoutes', taskRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
