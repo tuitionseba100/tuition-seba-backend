@@ -76,3 +76,19 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 module.exports = router;
+
+router.put('/update-all-totalReceivedTk', async (req, res) => {
+    try {
+        await Payment.updateMany({}, [
+            {
+                $set: {
+                    totalReceivedTk: "$receivedTk"
+                }
+            }
+        ]);
+
+        res.json({ message: "All totalReceivedTk fields updated successfully." });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
