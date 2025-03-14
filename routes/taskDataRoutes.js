@@ -1,11 +1,11 @@
 const express = require('express');
-const Task = require('../models/Task');
+const TaskData = require('../models/TaskData');
 const router = express.Router();
 const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const tasks = await Task.find();
+        const tasks = await TaskData.find();
         res.json(tasks);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -28,7 +28,7 @@ router.post('/add', async (req, res) => {
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-        const newTask = new Task({
+        const newTask = new TaskData({
             tuitionCode,
             tuitionId,
             employeeName,
@@ -50,7 +50,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const updatedTask = await Task.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedTask = await TaskData.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedTask);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -60,7 +60,7 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
-        await Task.findByIdAndDelete(req.params.id);
+        await TaskData.findByIdAndDelete(req.params.id);
         res.status(204).send();
     } catch (err) {
         res.status(500).json({ message: err.message });
