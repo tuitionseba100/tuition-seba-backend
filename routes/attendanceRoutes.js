@@ -46,6 +46,7 @@ router.post('/start', authMiddleware, async (req, res) => {
         const attendance = new Attendance({
             userId,
             userName: user.username,
+            name: user.name,
             role,
             startTime: new Date(),
         });
