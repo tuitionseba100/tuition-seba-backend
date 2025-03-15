@@ -18,16 +18,24 @@ const authMiddleware = (req, res, next) => {
 };
 
 
+const calculateDuration = (start, end) => {
+    const diffMs = end - start;
+    const hours = Math.floor(diffMs / 3600000);
+    const minutes = Math.floor((diffMs % 3600000) / 60000);
+    return `${hours}h ${minutes}m`;
+};
+
+
 router.post('/start', authMiddleware, async (req, res) => {
     try {
-        const { userId, role } = req.user;
+        const { userId, userName, role } = req.user;
         const existingRecord = await Attendance.findOne({ userId, endTime: null });
 
         if (existingRecord) {
             return res.status(400).json({ message: 'You already started your day' });
         }
 
-        const attendance = new Attendance({ userId, role, startTime: new Date() });
+        const attendance = new Attendance({ userId, userName, role, startTime: new Date() });
         await attendance.save();
         res.json({ message: 'Attendance started' });
     } catch (err) {
@@ -46,8 +54,9 @@ router.put('/end', authMiddleware, async (req, res) => {
         }
 
         attendance.endTime = new Date();
+        attendance.duration = calculateDuration(attendance.startTime, attendance.endTime);
         await attendance.save();
-        res.json({ message: 'Attendance ended' });
+        res.json({ message: 'Attendance ended', duration: attendance.duration });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -57,8 +66,8 @@ router.put('/end', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const { userId, role } = req.user;
-
         let attendance;
+
         if (role === 'superadmin') {
             attendance = await Attendance.find();
         } else {
@@ -70,5 +79,27 @@ router.get('/', authMiddleware, async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+router.delete('/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.user;
+
+        if (role !== 'superadmin') {
+            return res.status(403).json({ message: 'Access denied. Only superadmins can delete records.' });
+        }
+
+        const attendance = await Attendance.findById(id);
+        if (!attendance) {
+            return res.status(404).json({ message: 'Attendance record not found' });
+        }
+
+        await Attendance.findByIdAndDelete(id);
+        res.json({ message: 'Attendance record deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 module.exports = router;
