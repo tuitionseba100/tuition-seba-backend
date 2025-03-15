@@ -70,6 +70,31 @@ router.put('/approve/:id', async (req, res) => {
     }
 });
 
+// Edit user
+router.put('/edit/:id', async (req, res) => {
+    const { username, password, role, name } = req.body;
+
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Update user details
+        if (username) user.username = username;
+        if (password) user.password = password;
+        if (role) user.role = role;
+        if (name) user.name = name;
+
+        await user.save();
+
+        res.json({ message: 'User updated successfully', user });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
 // Delete user
 router.delete('/delete/:id', async (req, res) => {
     try {
