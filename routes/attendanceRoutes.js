@@ -28,20 +28,34 @@ const calculateDuration = (start, end) => {
 
 router.post('/start', authMiddleware, async (req, res) => {
     try {
-        const { userId, userName, role } = req.user;
+        const { userId, role } = req.user;
+
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(400).json({ message: 'User not found' });
+        }
+
         const existingRecord = await Attendance.findOne({ userId, endTime: null });
 
         if (existingRecord) {
             return res.status(400).json({ message: 'You already started your day' });
         }
 
-        const attendance = new Attendance({ userId, userName, role, startTime: new Date() });
+        const attendance = new Attendance({
+            userId,
+            userName: user.username,
+            role,
+            startTime: new Date(),
+        });
+
         await attendance.save();
         res.json({ message: 'Attendance started' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 
 router.put('/end', authMiddleware, async (req, res) => {
