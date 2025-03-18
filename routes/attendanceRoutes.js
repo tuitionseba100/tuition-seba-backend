@@ -18,14 +18,12 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-
 const calculateDuration = (start, end) => {
     const diffMs = end - start;
     const hours = Math.floor(diffMs / 3600000);
     const minutes = Math.floor((diffMs % 3600000) / 60000);
     return `${hours}h ${minutes}m`;
 };
-
 
 router.post('/start', authMiddleware, async (req, res) => {
     try {
@@ -58,8 +56,6 @@ router.post('/start', authMiddleware, async (req, res) => {
     }
 });
 
-
-
 router.put('/end', authMiddleware, async (req, res) => {
     try {
         const { userId } = req.user;
@@ -77,7 +73,6 @@ router.put('/end', authMiddleware, async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 router.get('/', authMiddleware, async (req, res) => {
     try {

@@ -4,7 +4,6 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
-
 // Get all users
 router.get('/users', async (req, res) => {
     try {
@@ -14,7 +13,6 @@ router.get('/users', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 // Register user
 router.post('/register', async (req, res) => {
@@ -28,7 +26,6 @@ router.post('/register', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;

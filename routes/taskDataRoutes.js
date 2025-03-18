@@ -2,10 +2,33 @@ const express = require('express');
 const TaskData = require('../models/TaskData');
 const router = express.Router();
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
 
-router.get('/all', async (req, res) => {
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
     try {
-        const tasks = await TaskData.find();
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
+
+
+router.get('/all', authMiddleware, async (req, res) => {
+    try {
+        const { userId, role } = req.user;
+        let tasks;
+
+        if (role === 'superadmin') {
+            tasks = await TaskData.find();
+        } else {
+            tasks = await TaskData.find({ employeeId: userId });
+        }
+
         res.json(tasks);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -13,7 +36,7 @@ router.get('/all', async (req, res) => {
 });
 
 
-router.post('/add', async (req, res) => {
+router.post('/add', authMiddleware, async (req, res) => {
     const {
         tuitionCode,
         tuitionId,
@@ -47,8 +70,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
-
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         const updatedTask = await TaskData.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedTask);
@@ -57,8 +79,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         await TaskData.findByIdAndDelete(req.params.id);
         res.status(204).send();
@@ -68,5 +89,3 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-
