@@ -36,7 +36,7 @@ router.get('/all', authMiddleware, async (req, res) => {
 });
 
 
-router.post('/add', authMiddleware, async (req, res) => {
+router.post('/add', async (req, res) => {
     const {
         tuitionCode,
         tuitionId,
@@ -70,7 +70,7 @@ router.post('/add', authMiddleware, async (req, res) => {
     }
 });
 
-router.put('/edit/:id', authMiddleware, async (req, res) => {
+router.put('/edit/:id', async (req, res) => {
     try {
         const updatedTask = await TaskData.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedTask);
@@ -79,7 +79,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', authMiddleware, async (req, res) => {
+router.delete('/delete/:id', async (req, res) => {
     try {
         await TaskData.findByIdAndDelete(req.params.id);
         res.status(204).send();
