@@ -20,6 +20,7 @@ router.post('/add', async (req, res) => {
         institute,
         department,
         address,
+        status,
     } = req.body;
 
     try {
@@ -34,7 +35,7 @@ router.post('/add', async (req, res) => {
             department,
             address,
             appliedAt: localTime,
-            status: "pending"
+            status
         });
 
         await newApply.save();
