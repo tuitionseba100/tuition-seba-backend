@@ -10,6 +10,7 @@ const tuitionApplySchema = new mongoose.Schema({
     address: { type: String },
     status: { type: String },
     comment: { type: String },
+    commentForTeacher: { type: String },
     appliedAt: { type: Date, default: Date.now }
 });
 

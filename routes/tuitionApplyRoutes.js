@@ -22,6 +22,8 @@ router.post('/add', async (req, res) => {
         department,
         address,
         status,
+        comment,
+        commentForTeacher,
     } = req.body;
 
     try {
@@ -35,12 +37,24 @@ router.post('/add', async (req, res) => {
             institute,
             department,
             address,
+            comment,
+            commentForTeacher,
             appliedAt: localTime,
             status: status || 'pending'
         });
 
         await newApply.save();
         res.status(201).json(newApply);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
+router.get('/getTuitionStatuses', async (req, res) => {
+    try {
+        const summary = await TuitionApply.find({}, 'tuitionCode appliedAt status commentForTeacher phone');
+        res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
