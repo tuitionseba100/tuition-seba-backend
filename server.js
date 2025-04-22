@@ -21,6 +21,7 @@ const guardianApplyRoutes = require('./routes/guardianApplyRoutes');
 const taskDataRoutes = require('./routes/taskDataRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const tuitionApplyRoutes = require('./routes/tuitionApplyRoutes');
+const refundRoutes = require('./routes/refundPaymentRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
@@ -29,6 +30,7 @@ app.use('/api/guardianApply', guardianApplyRoutes);
 app.use('/api/taskData', taskDataRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/tuitionApply', tuitionApplyRoutes);
+app.use('/api/refund', refundRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
