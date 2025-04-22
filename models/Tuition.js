@@ -7,6 +7,7 @@ const tuitionSchema = new mongoose.Schema({
     student: String,
     class: String,
     medium: String,
+    school: String,
     subject: String,
     time: String,
     day: String,
