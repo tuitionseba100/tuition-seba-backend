@@ -28,6 +28,7 @@ router.post('/add', async (req, res) => {
         paymentStatus,
         comment,
         totalReceivedTk,
+        reference,
     } = req.body;
 
     try {
@@ -36,6 +37,7 @@ router.post('/add', async (req, res) => {
             tuitionId,
             paymentReceivedDate,
             duePayDate,
+            reference,
             paymentType,
             tutorName,
             tutorNumber,
