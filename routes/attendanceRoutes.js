@@ -91,6 +91,39 @@ router.get('/', authMiddleware, async (req, res) => {
     }
 });
 
+router.put('/edit/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.user;
+
+        if (role !== 'superadmin') {
+            return res.status(403).json({ message: 'Access denied. Only superadmins can edit records.' });
+        }
+
+        const attendance = await Attendance.findById(id);
+        if (!attendance) {
+            return res.status(404).json({ message: 'Attendance record not found' });
+        }
+
+        const { startTime, endTime } = req.body;
+
+        if (startTime) attendance.startTime = new Date(startTime);
+        if (endTime) attendance.endTime = new Date(endTime);
+
+        if (attendance.startTime && attendance.endTime) {
+            attendance.duration = calculateDuration(attendance.startTime, attendance.endTime);
+        } else {
+            attendance.duration = undefined;
+        }
+
+        await attendance.save();
+
+        res.json({ message: 'Attendance record edited successfully', attendance });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.delete('/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
