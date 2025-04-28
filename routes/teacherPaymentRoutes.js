@@ -1,5 +1,5 @@
 const express = require('express');
-const TeacherPayment = require('./models/TeacherPayment');
+const TeacherPayment = require('../models/TeacherPayment');
 const router = express.Router();
 const moment = require('moment-timezone');
 
