@@ -32,12 +32,11 @@ app.use('/api/taskData', taskDataRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/tuitionApply', tuitionApplyRoutes);
 app.use('/api/refund', refundRoutes);
-app.use('/api/teacher-payment', taecherPaymentRoutes);
+app.use('/api/teacherPayment', taecherPaymentRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
 });
-
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
