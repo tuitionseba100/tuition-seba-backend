@@ -3,8 +3,8 @@ const mongoose = require('mongoose');
 const refundPaymentSchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
     paymentType: { type: String },
-    paymentNumber: { type: Number },
-    personalPhone: { type: Number },
+    paymentNumber: { type: String },
+    personalPhone: { type: String },
     amount: { type: Number },
     name: { type: String },
     note: { type: String },
