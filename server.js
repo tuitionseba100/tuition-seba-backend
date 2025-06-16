@@ -23,6 +23,7 @@ const attendanceRoutes = require('./routes/attendanceRoutes');
 const tuitionApplyRoutes = require('./routes/tuitionApplyRoutes');
 const refundRoutes = require('./routes/refundPaymentRoutes');
 const taecherPaymentRoutes = require('./routes/teacherPaymentRoutes');
+const regTeacherRoutes = require('./routes/regTeacherRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
@@ -33,6 +34,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/tuitionApply', tuitionApplyRoutes);
 app.use('/api/refund', refundRoutes);
 app.use('/api/teacherPayment', taecherPaymentRoutes);
+app.use('/api/regTeacher', regTeacherRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome!');
