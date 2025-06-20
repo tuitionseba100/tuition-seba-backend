@@ -13,6 +13,7 @@ router.get('/all', async (req, res) => {
     }
 });
 
+/*
 router.post('/add', async (req, res) => {
     const {
         premiumCode,
@@ -35,6 +36,47 @@ router.post('/add', async (req, res) => {
             return res.status(404).json({ message: "No registered teacher found with provided premiumCode and phone" });
         }
 
+        const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
+
+        const newApply = new TuitionApply({
+            premiumCode,
+            tuitionCode,
+            tuitionId,
+            name,
+            phone,
+            institute,
+            department,
+            address,
+            comment,
+            commentForTeacher,
+            appliedAt: localTime,
+            status: status || 'pending'
+        });
+
+        await newApply.save();
+        res.status(201).json(newApply);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+*/
+
+router.post('/add', async (req, res) => {
+    const {
+        premiumCode,
+        tuitionCode,
+        tuitionId,
+        name,
+        phone,
+        institute,
+        department,
+        address,
+        status,
+        comment,
+        commentForTeacher,
+    } = req.body;
+
+    try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
