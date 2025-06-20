@@ -13,6 +13,23 @@ router.get('/all', async (req, res) => {
     }
 });
 
+// Check if a record exists with both matching premiumCode AND phone
+router.get('/check-exists', async (req, res) => {
+    const { premiumCode, phone } = req.query;
+
+    if (!premiumCode || !phone) {
+        return res.status(400).json({ message: 'Both premiumCode and phone query parameters are required' });
+    }
+
+    try {
+        const existing = await RegTeacher.findOne({ premiumCode, phone }).lean();
+
+        res.json({ exists: Boolean(existing) });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Add new teacher registration
 router.post('/add', async (req, res) => {
     try {
