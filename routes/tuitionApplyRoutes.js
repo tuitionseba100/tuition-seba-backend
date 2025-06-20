@@ -15,7 +15,7 @@ router.get('/all', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     const {
-        registrationCode,
+        premiumCode,
         tuitionCode,
         tuitionId,
         name,
@@ -29,7 +29,7 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
-        const regTeacherExists = await RegTeacher.findOne({ registrationCode, phone }).lean();
+        const regTeacherExists = await RegTeacher.findOne({ premiumCode, phone }).lean();
 
         if (!regTeacherExists) {
             return res.status(404).json({ message: "No registered teacher found with provided premiumCode and phone" });
@@ -38,7 +38,7 @@ router.post('/add', async (req, res) => {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
-            registrationCode,
+            premiumCode,
             tuitionCode,
             tuitionId,
             name,
