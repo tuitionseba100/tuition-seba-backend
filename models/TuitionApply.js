@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const tuitionApplySchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
     tuitionId: { type: String, required: true },
+    registrationCode: { type: String },
     name: { type: String },
     phone: { type: String },
     institute: { type: String },

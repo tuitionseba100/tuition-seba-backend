@@ -2,6 +2,7 @@ const express = require('express');
 const TuitionApply = require('../models/TuitionApply');
 const router = express.Router();
 const moment = require('moment-timezone');
+const RegTeacher = require('../models/RegTeacher');
 
 router.get('/all', async (req, res) => {
     try {
@@ -14,6 +15,7 @@ router.get('/all', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     const {
+        registrationCode,
         tuitionCode,
         tuitionId,
         name,
@@ -27,9 +29,16 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        const regTeacherExists = await RegTeacher.findOne({ registrationCode, phone }).lean();
+
+        if (!regTeacherExists) {
+            return res.status(404).json({ message: "No registered teacher found with provided premiumCode and phone" });
+        }
+
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
+            registrationCode,
             tuitionCode,
             tuitionId,
             name,
