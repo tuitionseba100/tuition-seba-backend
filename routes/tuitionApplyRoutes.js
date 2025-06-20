@@ -16,6 +16,7 @@ router.post('/add', async (req, res) => {
     const {
         tuitionCode,
         tuitionId,
+        teacherCode,
         name,
         phone,
         institute,
@@ -32,6 +33,7 @@ router.post('/add', async (req, res) => {
         const newApply = new TuitionApply({
             tuitionCode,
             tuitionId,
+            teacherCode,
             name,
             phone,
             institute,

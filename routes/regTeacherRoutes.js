@@ -44,6 +44,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
+
 // Update teacher status and comment
 router.put('/update-status/:id', async (req, res) => {
     const { status, comment } = req.body;
