@@ -5,6 +5,7 @@ const teacherSchema = new mongoose.Schema({
     gender: { type: String },
     phone: { type: String },
     alternativePhone: { type: String },
+    photo: { type: String },
     whatsapp: { type: String },
     email: { type: String },
     facebookLink: { type: String },

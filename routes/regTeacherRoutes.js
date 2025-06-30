@@ -3,6 +3,31 @@ const jwt = require('jsonwebtoken');
 const RegTeacher = require('../models/RegTeacher');
 const router = express.Router();
 const moment = require('moment-timezone');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/');
+    },
+    filename: function (req, file, cb) {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname)); // e.g. 17238475234.png
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only .jpg, .jpeg, .png files are allowed'));
+    }
+};
+
+const upload = multer({ storage, fileFilter });
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -42,11 +67,30 @@ router.get('/check-exists', async (req, res) => {
     }
 });
 
-router.post('/add', async (req, res) => {
+router.get('/check-exists-with-phone', async (req, res) => {
+    const { phone } = req.query;
+
+    if (!phone) {
+        return res.status(400).json({ message: 'Phone is required' });
+    }
+
+    try {
+        const existing = await RegTeacher.findOne({ phone }).lean();
+
+        res.json({ exists: Boolean(existing) });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
+router.post('/add', upload.single('image'), async (req, res) => {
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
+
         const newTeacher = new RegTeacher({
             ...req.body,
+            photo: req.file ? req.file.filename : null,
             createdAt: localTime,
             status: 'pending'
         });
