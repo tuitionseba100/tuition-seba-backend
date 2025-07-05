@@ -3,7 +3,6 @@ const jwt = require('jsonwebtoken');
 const RegTeacher = require('../models/RegTeacher');
 const router = express.Router();
 const moment = require('moment-timezone');
-const multer = require('multer');
 const path = require('path');
 
 const fileFilter = (req, file, cb) => {
