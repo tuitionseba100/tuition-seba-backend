@@ -66,7 +66,6 @@ router.post('/add', async (req, res) => {
 
         const newTeacher = new RegTeacher({
             ...req.body,
-            photo: req.file ? req.file.filename : null,
             createdAt: localTime,
             status: 'pending'
         });
