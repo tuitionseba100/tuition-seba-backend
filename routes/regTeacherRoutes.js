@@ -60,7 +60,7 @@ router.get('/check-exists-with-phone', async (req, res) => {
 });
 
 
-router.post('/add', upload.single('image'), async (req, res) => {
+router.post('/add', async (req, res) => {
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
