@@ -59,9 +59,39 @@ router.get('/check-exists-with-phone', async (req, res) => {
     }
 });
 
-
 router.post('/add', async (req, res) => {
     try {
+        const { phone, alternativePhone, whatsapp } = req.body;
+
+        const existing = await RegTeacher.find({
+            $or: [
+                { phone: { $in: [phone, alternativePhone, whatsapp] } },
+                { alternativePhone: { $in: [phone, alternativePhone, whatsapp] } },
+                { whatsapp: { $in: [phone, alternativePhone, whatsapp] } }
+            ]
+        });
+
+        if (existing.length > 0) {
+            const duplicateFields = new Set();
+
+            existing.forEach(entry => {
+                if ([phone, alternativePhone, whatsapp].includes(entry.phone)) {
+                    duplicateFields.add('phone');
+                }
+                if ([phone, alternativePhone, whatsapp].includes(entry.alternativePhone)) {
+                    duplicateFields.add('alternativePhone');
+                }
+                if ([phone, alternativePhone, whatsapp].includes(entry.whatsapp)) {
+                    duplicateFields.add('whatsapp');
+                }
+            });
+
+            return res.status(400).json({
+                message: 'একই তথ্য দিয়ে ইতোমধ্যে আবেদন করা হয়েছে।',
+                duplicates: Array.from(duplicateFields)
+            });
+        }
+
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newTeacher = new RegTeacher({
