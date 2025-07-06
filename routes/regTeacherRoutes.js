@@ -63,32 +63,36 @@ router.post('/add', async (req, res) => {
     try {
         const { phone, alternativePhone, whatsapp } = req.body;
 
+        const allInputValues = [phone, alternativePhone, whatsapp];
+
         const existing = await RegTeacher.find({
             $or: [
-                { phone: { $in: [phone, alternativePhone, whatsapp] } },
-                { alternativePhone: { $in: [phone, alternativePhone, whatsapp] } },
-                { whatsapp: { $in: [phone, alternativePhone, whatsapp] } }
+                { phone: { $in: allInputValues } },
+                { alternativePhone: { $in: allInputValues } },
+                { whatsapp: { $in: allInputValues } }
             ]
         });
 
         if (existing.length > 0) {
-            const duplicateFields = new Set();
+            const matchedInputs = new Set();
 
             existing.forEach(entry => {
-                if ([phone, alternativePhone, whatsapp].includes(entry.phone)) {
-                    duplicateFields.add('phone');
-                }
-                if ([phone, alternativePhone, whatsapp].includes(entry.alternativePhone)) {
-                    duplicateFields.add('alternativePhone');
-                }
-                if ([phone, alternativePhone, whatsapp].includes(entry.whatsapp)) {
-                    duplicateFields.add('whatsapp');
-                }
+                if (entry.phone === phone) matchedInputs.add('phone');
+                if (entry.phone === alternativePhone) matchedInputs.add('alternativePhone');
+                if (entry.phone === whatsapp) matchedInputs.add('whatsapp');
+
+                if (entry.alternativePhone === phone) matchedInputs.add('phone');
+                if (entry.alternativePhone === alternativePhone) matchedInputs.add('alternativePhone');
+                if (entry.alternativePhone === whatsapp) matchedInputs.add('whatsapp');
+
+                if (entry.whatsapp === phone) matchedInputs.add('phone');
+                if (entry.whatsapp === alternativePhone) matchedInputs.add('alternativePhone');
+                if (entry.whatsapp === whatsapp) matchedInputs.add('whatsapp');
             });
 
             return res.status(400).json({
                 message: 'একই তথ্য দিয়ে ইতোমধ্যে আবেদন করা হয়েছে।',
-                duplicates: Array.from(duplicateFields)
+                duplicates: Array.from(matchedInputs)
             });
         }
 
