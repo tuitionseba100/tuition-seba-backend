@@ -13,21 +13,20 @@ router.get('/all', async (req, res) => {
     }
 });
 
-router.get('/getTableData', async (req, res) => {
+router.get('/', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
     const { search = '', status } = req.query;
 
     const filter = {};
 
-    // General search across multiple fields
     if (search) {
-        const searchRegex = new RegExp(search, 'i');
+        const regex = new RegExp(search, 'i');
         filter.$or = [
-            { tuitionCode: searchRegex },
-            { phone: searchRegex },
-            { address: searchRegex },
-            { name: searchRegex }
+            { tuitionCode: regex },
+            { phone: regex },
+            { address: regex },
+            { name: regex }
         ];
     }
 
@@ -42,8 +41,30 @@ router.get('/getTableData', async (req, res) => {
             .skip((page - 1) * limit)
             .limit(limit);
 
+        const statusBaseFilter = (search || status) ? filter : {};
+        const allForCard = await TuitionApply.find(statusBaseFilter).select('status');
+
+        const cardData = {
+            pending: 0,
+            calledInterested: 0,
+            calledNoResponse: 0,
+            refertoBM: 0,
+            shortlisted: 0,
+            requestedForPayment: 0
+        };
+
+        allForCard.forEach(t => {
+            if (t.status === 'pending') cardData.pending++;
+            if (t.status === 'called (interested)') cardData.calledInterested++;
+            if (t.status === 'called (no response)') cardData.calledNoResponse++;
+            if (t.status === 'refer to bm') cardData.refertoBM++;
+            if (t.status === 'shortlisted') cardData.shortlisted++;
+            if (t.status === 'requested for payment') cardData.requestedForPayment++;
+        });
+
         res.json({
             data,
+            cardData,
             currentPage: page,
             totalPages: Math.ceil(total / limit),
             totalRecords: total
@@ -52,7 +73,6 @@ router.get('/getTableData', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 /*
 router.post('/add', async (req, res) => {
