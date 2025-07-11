@@ -74,8 +74,10 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
+        // Find all matching records, only select 'status'
         const records = await TuitionApply.find(filter).select('status');
 
+        // Prepare counts for each status
         const counts = {
             pending: 0,
             calledInterested: 0,
@@ -94,7 +96,11 @@ router.get('/summary', async (req, res) => {
             else if (tuition.status === 'requested for payment') counts.requestedForPayment++;
         });
 
-        res.json(counts);
+
+        res.json({
+            ...counts,
+            total: records.length
+        });
 
     } catch (err) {
         res.status(500).json({ message: err.message });
