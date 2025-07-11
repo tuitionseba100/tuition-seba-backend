@@ -35,6 +35,7 @@ router.get('/getTableData', async (req, res) => {
     try {
         const total = await TuitionApply.countDocuments(filter);
         const data = await TuitionApply.find(filter)
+            .sort({ appliedAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
 
