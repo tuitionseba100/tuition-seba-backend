@@ -13,6 +13,47 @@ router.get('/all', async (req, res) => {
     }
 });
 
+router.get('/getTableData', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const { search = '', status } = req.query;
+
+    const filter = {};
+
+    // General search across multiple fields
+    if (search) {
+        const searchRegex = new RegExp(search, 'i');
+        filter.$or = [
+            { tuitionCode: searchRegex },
+            { phone: searchRegex },
+            { address: searchRegex },
+            { name: searchRegex }
+        ];
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const total = await TuitionApply.countDocuments(filter);
+        const data = await TuitionApply.find(filter)
+            .sort({ appliedAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
 /*
 router.post('/add', async (req, res) => {
     const {
