@@ -52,6 +52,55 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
+// In routes/tuitionApply.js (or wherever your router is)
+
+router.get('/summary', async (req, res) => {
+    const { search = '', status } = req.query;
+
+    const filter = {};
+
+    if (search) {
+        const regex = new RegExp(search, 'i');
+        filter.$or = [
+            { tuitionCode: regex },
+            { phone: regex },
+            { address: regex },
+            { name: regex }
+        ];
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const records = await TuitionApply.find(filter).select('status');
+
+        const counts = {
+            pending: 0,
+            calledInterested: 0,
+            calledNoResponse: 0,
+            refertoBM: 0,
+            shortlisted: 0,
+            requestedForPayment: 0
+        };
+
+        records.forEach(tuition => {
+            if (tuition.status === 'pending') counts.pending++;
+            else if (tuition.status === 'called (interested)') counts.calledInterested++;
+            else if (tuition.status === 'called (no response)') counts.calledNoResponse++;
+            else if (tuition.status === 'refer to bm') counts.refertoBM++;
+            else if (tuition.status === 'shortlisted') counts.shortlisted++;
+            else if (tuition.status === 'requested for payment') counts.requestedForPayment++;
+        });
+
+        res.json(counts);
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 /*
 router.post('/add', async (req, res) => {
     const {
