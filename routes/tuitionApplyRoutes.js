@@ -16,18 +16,16 @@ router.get('/all', async (req, res) => {
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
-    const { search = '', status } = req.query;
+    const { tuitionCode = '', phone = '', status } = req.query;
 
     const filter = {};
 
-    if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        filter.$or = [
-            { tuitionCode: searchRegex },
-            { phone: searchRegex },
-            { address: searchRegex },
-            { name: searchRegex }
-        ];
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+    }
+
+    if (phone) {
+        filter.phone = new RegExp(phone, 'i');
     }
 
     if (status) {
@@ -37,7 +35,6 @@ router.get('/getTableData', async (req, res) => {
     try {
         const total = await TuitionApply.countDocuments(filter);
         const data = await TuitionApply.find(filter)
-            .sort({ appliedAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
 
@@ -52,21 +49,17 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
-// In routes/tuitionApply.js (or wherever your router is)
-
 router.get('/summary', async (req, res) => {
-    const { search = '', status } = req.query;
+    const { tuitionCode = '', phone = '', status } = req.query;
 
     const filter = {};
 
-    if (search) {
-        const regex = new RegExp(search, 'i');
-        filter.$or = [
-            { tuitionCode: regex },
-            { phone: regex },
-            { address: regex },
-            { name: regex }
-        ];
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+    }
+
+    if (phone) {
+        filter.phone = new RegExp(phone, 'i');
     }
 
     if (status) {
@@ -74,10 +67,8 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        // Find all matching records, only select 'status'
-        const records = await TuitionApply.find(filter).select('status');
+        const records = await TuitionApply.find(filter).select('status').lean();
 
-        // Prepare counts for each status
         const counts = {
             pending: 0,
             calledInterested: 0,
@@ -88,14 +79,15 @@ router.get('/summary', async (req, res) => {
         };
 
         records.forEach(tuition => {
-            if (tuition.status === 'pending') counts.pending++;
-            else if (tuition.status === 'called (interested)') counts.calledInterested++;
-            else if (tuition.status === 'called (no response)') counts.calledNoResponse++;
-            else if (tuition.status === 'refer to bm') counts.refertoBM++;
-            else if (tuition.status === 'shortlisted') counts.shortlisted++;
-            else if (tuition.status === 'requested for payment') counts.requestedForPayment++;
-        });
+            const stat = tuition.status?.toLowerCase();
 
+            if (stat === 'pending') counts.pending++;
+            else if (stat === 'called (interested)') counts.calledInterested++;
+            else if (stat === 'called (no response)') counts.calledNoResponse++;
+            else if (stat === 'refer to bm') counts.refertoBM++;
+            else if (stat === 'shortlisted') counts.shortlisted++;
+            else if (stat === 'requested for payment') counts.requestedForPayment++;
+        });
 
         res.json({
             ...counts,
