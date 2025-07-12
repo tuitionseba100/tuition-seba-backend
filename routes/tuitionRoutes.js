@@ -21,7 +21,131 @@ router.get('/all', async (req, res) => {
     }
 });
 
-// Add tuition record
+router.get('/getTableData', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+
+    const {
+        tuitionCode = '',
+        guardianNumber = '',
+        tutorNumber = '',
+        isPublish,
+        isUrgent,
+        status
+    } = req.query;
+
+    const filter = {};
+
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+    }
+
+    if (guardianNumber) {
+        filter.guardianNumber = new RegExp(guardianNumber, 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(tutorNumber, 'i');
+    }
+
+    if (isPublish !== undefined) {
+        filter.isPublish = isPublish === 'true';
+    }
+
+    if (isUrgent !== undefined) {
+        filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const total = await Tuition.countDocuments(filter);
+        const tuitions = await Tuition.find(filter)
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data: tuitions,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', async (req, res) => {
+    const {
+        tuitionCode = '',
+        guardianNumber = '',
+        tutorNumber = '',
+        isPublish,
+        isUrgent,
+        status
+    } = req.query;
+
+    const filter = {};
+
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+    }
+
+    if (guardianNumber) {
+        filter.guardianNumber = new RegExp(guardianNumber, 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(tutorNumber, 'i');
+    }
+
+    if (isPublish !== undefined) {
+        filter.isPublish = isPublish === 'true';
+    }
+
+    if (isUrgent !== undefined) {
+        filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const records = await Tuition.find(filter).select('status').lean();
+
+        const counts = {
+            available: 0,
+            givenNumber: 0,
+            guardianMeet: 0,
+            demoClassRunning: 0,
+            confirm: 0,
+            cancel: 0
+        };
+
+        records.forEach(tuition => {
+            const stat = tuition.status?.toLowerCase();
+
+            if (stat === 'available') counts.available++;
+            else if (stat === 'given number') counts.givenNumber++;
+            else if (stat === 'guardian meet') counts.guardianMeet++;
+            else if (stat === 'demo class running') counts.demoClassRunning++;
+            else if (stat === 'confirm') counts.confirm++;
+            else if (stat === 'cancel') counts.cancel++;
+        });
+
+        res.json({
+            ...counts,
+            total: records.length
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/add', async (req, res) => {
     const {
         tuitionCode,
