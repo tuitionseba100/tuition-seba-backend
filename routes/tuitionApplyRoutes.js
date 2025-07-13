@@ -13,6 +13,10 @@ router.get('/all', async (req, res) => {
     }
 });
 
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
@@ -21,11 +25,11 @@ router.get('/getTableData', async (req, res) => {
     const filter = {};
 
     if (tuitionCode) {
-        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (phone) {
-        filter.phone = new RegExp(phone, 'i');
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
     }
 
     if (status) {
@@ -56,11 +60,11 @@ router.get('/summary', async (req, res) => {
     const filter = {};
 
     if (tuitionCode) {
-        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (phone) {
-        filter.phone = new RegExp(phone, 'i');
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
     }
 
     if (status) {
