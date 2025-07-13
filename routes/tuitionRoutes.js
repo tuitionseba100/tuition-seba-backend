@@ -11,7 +11,6 @@ router.get('/available', async (req, res) => {
     }
 });
 
-
 router.get('/all', async (req, res) => {
     try {
         const tuitions = await Tuition.find();
@@ -20,6 +19,10 @@ router.get('/all', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
 
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -37,15 +40,15 @@ router.get('/getTableData', async (req, res) => {
     const filter = {};
 
     if (tuitionCode) {
-        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (guardianNumber) {
-        filter.guardianNumber = new RegExp(guardianNumber, 'i');
+        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
     }
 
     if (tutorNumber) {
-        filter.tutorNumber = new RegExp(tutorNumber, 'i');
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
     }
 
     if (isPublish !== undefined) {
@@ -91,15 +94,15 @@ router.get('/summary', async (req, res) => {
     const filter = {};
 
     if (tuitionCode) {
-        filter.tuitionCode = new RegExp(tuitionCode, 'i');
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (guardianNumber) {
-        filter.guardianNumber = new RegExp(guardianNumber, 'i');
+        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
     }
 
     if (tutorNumber) {
-        filter.tutorNumber = new RegExp(tutorNumber, 'i');
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
     }
 
     if (isPublish !== undefined) {
@@ -148,6 +151,7 @@ router.get('/summary', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 router.post('/add', async (req, res) => {
     const {
