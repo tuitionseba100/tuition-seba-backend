@@ -27,6 +27,94 @@ router.get('/all', authMiddleware, async (req, res) => {
     }
 });
 
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+router.get('/getTableData', authMiddleware, async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+    const { premiumCode = '', phone = '', status } = req.query;
+
+    const filter = {};
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
+    }
+
+    if (phone) {
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const total = await RegTeacher.countDocuments(filter);
+        const data = await RegTeacher.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', authMiddleware, async (req, res) => {
+    const { premiumCode = '', phone = '', status } = req.query;
+
+    const filter = {};
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
+    }
+
+    if (phone) {
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const records = await RegTeacher.find(filter).select('status').lean();
+
+        const counts = {
+            pending: 0,
+            under_review: 0,
+            pending_payment: 0,
+            rejected: 0,
+            verified: 0
+        };
+
+        records.forEach(teacher => {
+            const stat = teacher.status?.toLowerCase();
+
+            if (stat === 'pending') counts.pending++;
+            else if (stat === 'under review') counts.under_review++;
+            else if (stat === 'pending payment') counts.pending_payment++;
+            else if (stat === 'rejected') counts.rejected++;
+            else if (stat === 'verified') counts.verified++;
+        });
+
+        res.json({
+            ...counts,
+            total: records.length
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/check-exists', async (req, res) => {
     const { premiumCode, phone } = req.query;
 
