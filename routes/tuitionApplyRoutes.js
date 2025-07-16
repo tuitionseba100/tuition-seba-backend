@@ -179,7 +179,7 @@ router.post('/add', async (req, res) => {
     try {
         const normalizedInputPhone = normalizePhone(phone);
 
-        const spamPhones = await Phone.find({ isSpam: true });
+        const spamPhones = await Phone.find({ isSpam: true, isActive: true });
 
         let isSpam = false;
         for (const spamPhoneEntry of spamPhones) {
