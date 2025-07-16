@@ -176,45 +176,43 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        const normalizedInputPhone = normalizePhone(phone);
 
-        try {
-            const normalizedInputPhone = normalizePhone(phone);
+        const spamPhones = await Phone.find({ isSpam: true });
 
-            const spamPhones = await Phone.find({ isSpam: true });
-
-            let isSpam = false;
-            for (const spamPhoneEntry of spamPhones) {
-                const normalizedSpamPhone = normalizePhone(spamPhoneEntry.phone);
-                if (normalizedSpamPhone === normalizedInputPhone) {
-                    isSpam = true;
-                    break;
-                }
+        let isSpam = false;
+        for (const spamPhoneEntry of spamPhones) {
+            const normalizedSpamPhone = normalizePhone(spamPhoneEntry.phone);
+            if (normalizedSpamPhone === normalizedInputPhone) {
+                isSpam = true;
+                break;
             }
-
-            const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-
-            const newApply = new TuitionApply({
-                premiumCode,
-                tuitionCode,
-                tuitionId,
-                name,
-                phone,
-                institute,
-                department,
-                address,
-                comment,
-                commentForTeacher,
-                appliedAt: localTime,
-                status: status || 'pending',
-                isSpam,
-            });
-
-            await newApply.save();
-            res.status(201).json(newApply);
-        } catch (err) {
-            res.status(500).json({ message: err.message });
         }
-    });
+
+        const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
+
+        const newApply = new TuitionApply({
+            premiumCode,
+            tuitionCode,
+            tuitionId,
+            name,
+            phone,
+            institute,
+            department,
+            address,
+            comment,
+            commentForTeacher,
+            appliedAt: localTime,
+            status: status || 'pending',
+            isSpam,
+        });
+
+        await newApply.save();
+        res.status(201).json(newApply);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.get('/getTuitionStatuses', async (req, res) => {
     try {
