@@ -12,7 +12,7 @@ router.get('/all', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive = true, isSpam = true } = req.body;
+    const { phone, note, isActive, isSpam } = req.body;
 
     try {
         const newPhone = new Phone({ phone, note, isActive, isSpam });
