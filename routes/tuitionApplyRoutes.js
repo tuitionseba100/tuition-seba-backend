@@ -152,6 +152,14 @@ router.post('/add', async (req, res) => {
 });
 */
 
+const normalizePhone = (num) => {
+    if (!num) return '';
+    let digits = num.replace(/\D/g, '');
+    if (digits.startsWith('880')) digits = digits.slice(3);
+    while (digits.startsWith('0')) digits = digits.slice(1);
+    return digits;
+};
+
 router.post('/add', async (req, res) => {
     const {
         premiumCode,
@@ -168,29 +176,45 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
-        const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-        const newApply = new TuitionApply({
-            premiumCode,
-            tuitionCode,
-            tuitionId,
-            name,
-            phone,
-            institute,
-            department,
-            address,
-            comment,
-            commentForTeacher,
-            appliedAt: localTime,
-            status: status || 'pending'
-        });
+        try {
+            const normalizedInputPhone = normalizePhone(phone);
 
-        await newApply.save();
-        res.status(201).json(newApply);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+            const spamPhones = await Phone.find({ isSpam: true });
+
+            let isSpam = false;
+            for (const spamPhoneEntry of spamPhones) {
+                const normalizedSpamPhone = normalizePhone(spamPhoneEntry.phone);
+                if (normalizedSpamPhone === normalizedInputPhone) {
+                    isSpam = true;
+                    break;
+                }
+            }
+
+            const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
+
+            const newApply = new TuitionApply({
+                premiumCode,
+                tuitionCode,
+                tuitionId,
+                name,
+                phone,
+                institute,
+                department,
+                address,
+                comment,
+                commentForTeacher,
+                appliedAt: localTime,
+                status: status || 'pending',
+                isSpam,
+            });
+
+            await newApply.save();
+            res.status(201).json(newApply);
+        } catch (err) {
+            res.status(500).json({ message: err.message });
+        }
+    });
 
 router.get('/getTuitionStatuses', async (req, res) => {
     try {
