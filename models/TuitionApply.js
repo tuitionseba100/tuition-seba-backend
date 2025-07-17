@@ -13,6 +13,7 @@ const tuitionApplySchema = new mongoose.Schema({
     comment: { type: String },
     commentForTeacher: { type: String },
     isSpam: { type: Boolean, default: false },
+    isBest: { type: Boolean, default: false },
     appliedAt: { type: Date, default: Date.now }
 });
 

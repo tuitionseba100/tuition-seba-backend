@@ -179,13 +179,20 @@ router.post('/add', async (req, res) => {
     try {
         const normalizedInputPhone = normalizePhone(phone);
 
-        const spamPhones = await Phone.find({ isSpam: true, isActive: true });
+        const phoneList = await Phone.find({ isActive: true });
 
         let isSpam = false;
-        for (const spamPhoneEntry of spamPhones) {
-            const normalizedSpamPhone = normalizePhone(spamPhoneEntry.phone);
-            if (normalizedSpamPhone === normalizedInputPhone) {
-                isSpam = true;
+        let isBest = false;
+
+        for (const entry of phoneList) {
+            const normalizedDbPhone = normalizePhone(entry.phone);
+
+            if (normalizedDbPhone === normalizedInputPhone) {
+                if (entry.isSpam) {
+                    isSpam = true;
+                } else {
+                    isBest = true;
+                }
                 break;
             }
         }
@@ -206,6 +213,7 @@ router.post('/add', async (req, res) => {
             appliedAt: localTime,
             status: status || 'pending',
             isSpam,
+            isBest,
         });
 
         await newApply.save();
@@ -226,7 +234,38 @@ router.get('/getTuitionStatuses', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const updatedData = await TuitionApply.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        let updatePayload = { ...req.body };
+
+        if (req.body.phone) {
+            const normalizedInputPhone = normalizePhone(req.body.phone);
+            const phoneList = await Phone.find({ isActive: true });
+
+            let isSpam = false;
+            let isBest = false;
+
+            for (const entry of phoneList) {
+                const normalizedDbPhone = normalizePhone(entry.phone);
+
+                if (normalizedDbPhone === normalizedInputPhone) {
+                    if (entry.isSpam) {
+                        isSpam = true;
+                    } else {
+                        isBest = true;
+                    }
+                    break;
+                }
+            }
+
+            updatePayload.isSpam = isSpam;
+            updatePayload.isBest = isBest;
+        }
+
+        const updatedData = await TuitionApply.findByIdAndUpdate(
+            req.params.id,
+            updatePayload,
+            { new: true }
+        );
+
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
