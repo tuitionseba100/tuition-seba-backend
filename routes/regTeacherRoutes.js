@@ -34,7 +34,15 @@ function escapeRegex(str) {
 router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
-    const { premiumCode = '', phone = '', status } = req.query;
+
+    const {
+        premiumCode = '',
+        phone = '',
+        status,
+        gender,
+        name,
+        currentArea,
+    } = req.query;
 
     const filter = {};
 
@@ -43,11 +51,27 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
     }
 
     if (phone) {
-        filter.phone = new RegExp(escapeRegex(phone), 'i');
+        filter.$or = [
+            { phone: new RegExp(escapeRegex(phone), 'i') },
+            { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
+            { whatsapp: new RegExp(escapeRegex(phone), 'i') }
+        ];
     }
 
     if (status) {
         filter.status = status;
+    }
+
+    if (gender) {
+        filter.gender = gender;
+    }
+
+    if (name) {
+        filter.name = new RegExp(escapeRegex(name), 'i');
+    }
+
+    if (currentArea) {
+        filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
     }
 
     try {
@@ -69,7 +93,14 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
 });
 
 router.get('/summary', authMiddleware, async (req, res) => {
-    const { premiumCode = '', phone = '', status } = req.query;
+    const {
+        premiumCode = '',
+        phone = '',
+        status,
+        gender,
+        name,
+        currentArea
+    } = req.query;
 
     const filter = {};
 
@@ -78,15 +109,31 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 
     if (phone) {
-        filter.phone = new RegExp(escapeRegex(phone), 'i');
+        filter.$or = [
+            { phone: new RegExp(escapeRegex(phone), 'i') },
+            { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
+            { whatsapp: new RegExp(escapeRegex(phone), 'i') }
+        ];
     }
 
     if (status) {
         filter.status = status;
     }
 
+    if (gender) {
+        filter.gender = gender;
+    }
+
+    if (name) {
+        filter.name = new RegExp(escapeRegex(name), 'i');
+    }
+
+    if (currentArea) {
+        filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
+    }
+
     try {
-        const records = await RegTeacher.find(filter).select('status').lean();
+        const records = await RegTeacher.find(filter).lean();
 
         const counts = {
             pending: 0,
@@ -109,7 +156,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         res.json({
             ...counts,
             total: records.length,
-            data: records
+            allData: records
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
