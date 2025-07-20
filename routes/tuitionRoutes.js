@@ -118,7 +118,7 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const records = await Tuition.find(filter).select('status').lean();
+        const records = await Tuition.find(filter).lean();
         const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
         const counts = {
