@@ -97,7 +97,8 @@ router.get('/summary', async (req, res) => {
 
         res.json({
             ...counts,
-            total: records.length
+            total: records.length,
+            data: records
         });
 
     } catch (err) {

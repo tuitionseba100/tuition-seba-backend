@@ -144,7 +144,8 @@ router.get('/summary', async (req, res) => {
         res.json({
             ...counts,
             total: records.length,
-            isPublishTrueCount
+            isPublishTrueCount,
+            data: records
         });
 
     } catch (err) {

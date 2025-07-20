@@ -108,7 +108,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         res.json({
             ...counts,
-            total: records.length
+            total: records.length,
+            data: records
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
