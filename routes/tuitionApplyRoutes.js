@@ -73,7 +73,7 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const records = await TuitionApply.find(filter).select('status').lean();
+        const records = await TuitionApply.find(filter).lean();
 
         const counts = {
             pending: 0,
