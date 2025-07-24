@@ -1,6 +1,6 @@
 const express = require('express');
 const TuitionApply = require('../models/TuitionApply');
-const TuitionApply = require('../models/Payment');
+const Payment = require('../models/Payment');
 const router = express.Router();
 const moment = require('moment-timezone');
 const RegTeacher = require('../models/RegTeacher');
