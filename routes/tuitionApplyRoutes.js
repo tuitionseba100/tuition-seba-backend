@@ -53,7 +53,7 @@ router.get('/getTableData', async (req, res) => {
             .limit(limit);
 
         const data = applyList.map(apply => {
-            const hasDue = dueTutorSet.has(apply.number) || duePaymentSet.has(apply.number);
+            const hasDue = dueTutorSet.has(apply.phone) || duePaymentSet.has(apply.phone);
             return {
                 ...apply.toObject(),
                 hasDue
