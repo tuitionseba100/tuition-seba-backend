@@ -44,10 +44,10 @@ router.get('/getTableData', async (req, res) => {
         }).select('tutorNumber paymentNumber');
 
         const dueTutorSet = new Set(
-            paymentsWithDue.map(p => escapeRegExp(p.tutorNumber))
+            paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
         );
         const duePaymentSet = new Set(
-            paymentsWithDue.map(p => escapeRegExp(p.paymentNumber))
+            paymentsWithDue.map(p => escapeRegex(p.paymentNumber))
         );
 
         const total = await TuitionApply.countDocuments(filter);
@@ -57,7 +57,7 @@ router.get('/getTableData', async (req, res) => {
             .limit(limit);
 
         const data = applyList.map(apply => {
-            const escapedPhone = escapeRegExp(apply.phone);
+            const escapedPhone = escapeRegex(apply.phone);
             const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
             return {
                 ...apply.toObject(),
