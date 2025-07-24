@@ -39,11 +39,26 @@ router.get('/getTableData', async (req, res) => {
     }
 
     try {
+        const paymentsWithDue = await Payment.find({
+            duePayment: { $nin: [null, undefined, '', '0'] }
+        }).select('tutorNumber paymentNumber');
+
+        const dueTutorSet = new Set(paymentsWithDue.map(p => p.tutorNumber));
+        const duePaymentSet = new Set(paymentsWithDue.map(p => p.paymentNumber));
+
         const total = await TuitionApply.countDocuments(filter);
-        const data = await TuitionApply.find(filter)
+        const applyList = await TuitionApply.find(filter)
             .sort({ appliedAt: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
+
+        const data = applyList.map(apply => {
+            const hasDue = dueTutorSet.has(apply.number) || duePaymentSet.has(apply.number);
+            return {
+                ...apply.toObject(),
+                hasDue
+            };
+        });
 
         res.json({
             data,
@@ -199,23 +214,6 @@ router.post('/add', async (req, res) => {
             }
         }
 
-        const duePayments = await Payment.find({
-            duePayment: { $nin: [null, '', '0'] }
-        });
-
-        let hasDue = false;
-        for (const payment of duePayments) {
-            const normalizedTutor = normalizePhone(payment.tutorNumber || '');
-            const normalizedPaymentNum = normalizePhone(payment.paymentNumber || '');
-            if (
-                normalizedTutor === normalizedInputPhone ||
-                normalizedPaymentNum === normalizedInputPhone
-            ) {
-                hasDue = true;
-                break;
-            }
-        }
-
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
@@ -233,7 +231,6 @@ router.post('/add', async (req, res) => {
             status: status || 'pending',
             isSpam,
             isBest,
-            hasDue,
         });
 
         await newApply.save();
