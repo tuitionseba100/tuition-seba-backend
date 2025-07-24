@@ -1,5 +1,6 @@
 const express = require('express');
 const TuitionApply = require('../models/TuitionApply');
+const TuitionApply = require('../models/Payment');
 const router = express.Router();
 const moment = require('moment-timezone');
 const RegTeacher = require('../models/RegTeacher');
@@ -198,6 +199,23 @@ router.post('/add', async (req, res) => {
             }
         }
 
+        const duePayments = await Payment.find({
+            duePayment: { $nin: [null, '', '0'] }
+        });
+
+        let hasDue = false;
+        for (const payment of duePayments) {
+            const normalizedTutor = normalizePhone(payment.tutorNumber || '');
+            const normalizedPaymentNum = normalizePhone(payment.paymentNumber || '');
+            if (
+                normalizedTutor === normalizedInputPhone ||
+                normalizedPaymentNum === normalizedInputPhone
+            ) {
+                hasDue = true;
+                break;
+            }
+        }
+
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
@@ -215,6 +233,7 @@ router.post('/add', async (req, res) => {
             status: status || 'pending',
             isSpam,
             isBest,
+            hasDue,
         });
 
         await newApply.save();
