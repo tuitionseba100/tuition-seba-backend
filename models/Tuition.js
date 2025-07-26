@@ -19,6 +19,7 @@ const tuitionSchema = new mongoose.Schema({
     note: String,
     taskAssignedTo: String,
     tutorNumber: String,
+    isWhatsappApply: { type: Boolean, default: false },
     joining: { type: String, default: '' },
     isUrgent: { type: Boolean, default: false },
 });

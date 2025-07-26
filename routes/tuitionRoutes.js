@@ -175,6 +175,7 @@ router.post('/add', async (req, res) => {
         tutorNumber,
         isUrgent,
         taskAssignedTo,
+        isWhatsappApply,
     } = req.body;
 
     try {
@@ -199,6 +200,7 @@ router.post('/add', async (req, res) => {
             tutorNumber,
             isUrgent,
             taskAssignedTo,
+            isWhatsappApply
         });
 
         await newTuition.save();
