@@ -187,6 +187,25 @@ const normalizePhone = (num) => {
     return digits;
 };
 
+function normalizePhoneForSave(phone) {
+    let digits = phone.replace(/\D/g, '');
+
+    if (digits.startsWith('880')) {
+        digits = digits.slice(3);
+    } else if (digits.startsWith('0')) {
+        // do nothing
+    } else if (digits.startsWith('8')) {
+        digits = '0' + digits;
+    }
+
+    if (digits.length === 10 && !digits.startsWith('0')) {
+        digits = '0' + digits;
+    }
+
+    return digits;
+}
+
+
 router.post('/add', async (req, res) => {
     const {
         premiumCode,
@@ -222,7 +241,7 @@ router.post('/add', async (req, res) => {
                 break;
             }
         }
-
+        const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new TuitionApply({
@@ -230,7 +249,7 @@ router.post('/add', async (req, res) => {
             tuitionCode,
             tuitionId,
             name,
-            phone: normalizedInputPhone,
+            phone: normalizedInputPhoneForSave,
             institute,
             department,
             address,
@@ -265,7 +284,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
             return res.status(400).json({ message: 'Phone number is required' });
         }
 
-        const normalizedPhone = normalizePhone(phone);
+        const normalizedPhone = normalizePhoneForSave(phone);
         const matchedTuitions = await TuitionApply.find(
             { phone: normalizedPhone },
             'tuitionCode appliedAt status commentForTeacher phone'
