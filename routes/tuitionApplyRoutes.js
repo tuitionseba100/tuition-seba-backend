@@ -265,8 +265,9 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
             return res.status(400).json({ message: 'Phone number is required' });
         }
 
+        const normalizedPhone = normalizePhone(phone);
         const matchedTuitions = await TuitionApply.find(
-            { phone: phone },
+            { phone: normalizedPhone },
             'tuitionCode appliedAt status commentForTeacher phone'
         );
 
