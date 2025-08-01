@@ -230,7 +230,7 @@ router.post('/add', async (req, res) => {
             tuitionCode,
             tuitionId,
             name,
-            phone,
+            phone: normalizedInputPhone,
             institute,
             department,
             address,
@@ -257,6 +257,29 @@ router.get('/getTuitionStatuses', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+router.get('/getTuitionStatusesByPhone', async (req, res) => {
+    try {
+        const phone = req.query.phone;
+        if (!phone) {
+            return res.status(400).json({ message: 'Phone number is required' });
+        }
+
+        const matchedTuitions = await TuitionApply.find(
+            { phone: phone },
+            'tuitionCode appliedAt status commentForTeacher phone'
+        );
+
+        if (matchedTuitions.length === 0) {
+            return res.status(404).json({ message: 'No applications found for this phone number' });
+        }
+
+        res.json(matchedTuitions);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 router.put('/edit/:id', async (req, res) => {
     try {
