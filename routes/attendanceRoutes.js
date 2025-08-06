@@ -145,5 +145,20 @@ router.delete('/:id', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/is-day-started', authMiddleware, async (req, res) => {
+    try {
+        const { userId } = req.user;
+
+        const existingRecord = await Attendance.findOne({ userId, endTime: null });
+
+        if (existingRecord) {
+            return res.json({ isDayStarted: true, message: 'Day already started' });
+        } else {
+            return res.json({ isDayStarted: false, message: 'Day not started yet' });
+        }
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 module.exports = router;
