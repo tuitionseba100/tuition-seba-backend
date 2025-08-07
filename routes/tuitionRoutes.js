@@ -180,9 +180,9 @@ router.post('/add', async (req, res) => {
         updatedBy,
         lastAvailableCheck,
         lastUpdate,
-        lastUpdaeComment,
+        lastUpdateComment,
         nextUpdateDate,
-        nexrUpdateComment,
+        nextUpdateComment,
         comment1,
         comment2
     } = req.body;
@@ -220,9 +220,9 @@ router.post('/add', async (req, res) => {
             updatedBy,
             lastAvailableCheck: toBangladeshTime(lastAvailableCheck),
             lastUpdate: toBangladeshTime(lastUpdate),
-            lastUpdaeComment,
+            lastUpdateComment,
             nextUpdateDate: toBangladeshTime(nextUpdateDate),
-            nexrUpdateComment,
+            nextUpdateComment,
             comment1,
             comment2
         });
