@@ -176,7 +176,21 @@ router.post('/add', async (req, res) => {
         isUrgent,
         taskAssignedTo,
         isWhatsappApply,
+        updatedBy,
+        lastAvailableCheck,
+        lastUpdate,
+        lastUpdaeComment,
+        nextUpdateDate,
+        nexrUpdateComment,
+        comment1,
+        comment2
     } = req.body;
+
+    function toBangladeshTime(dateString) {
+        if (!dateString) return null;
+        const date = new Date(dateString);
+        return new Date(date.getTime() + 6 * 60 * 60 * 1000);
+    }
 
     try {
         const newTuition = new Tuition({
@@ -200,7 +214,15 @@ router.post('/add', async (req, res) => {
             tutorNumber,
             isUrgent,
             taskAssignedTo,
-            isWhatsappApply
+            isWhatsappApply,
+            updatedBy,
+            lastAvailableCheck: toBangladeshTime(lastAvailableCheck),
+            lastUpdate: toBangladeshTime(lastUpdate),
+            lastUpdaeComment,
+            nextUpdateDate: toBangladeshTime(nextUpdateDate),
+            nexrUpdateComment,
+            comment1,
+            comment2
         });
 
         await newTuition.save();
@@ -210,7 +232,6 @@ router.post('/add', async (req, res) => {
     }
 });
 
-// Edit tuition record
 router.put('/edit/:id', async (req, res) => {
     try {
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -220,7 +241,18 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-// Delete tuition record
+router.get('/:id', async (req, res) => {
+    try {
+        const tuition = await Tuition.findById(req.params.id);
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+        res.json(tuition);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.delete('/delete/:id', async (req, res) => {
     try {
         await Tuition.findByIdAndDelete(req.params.id);

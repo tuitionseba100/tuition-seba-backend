@@ -19,9 +19,19 @@ const tuitionSchema = new mongoose.Schema({
     note: String,
     taskAssignedTo: String,
     tutorNumber: String,
+    updatedBy: String,
+    lastAvailableCheck: { type: Date },
+    lastUpdate: { type: Date },
+    lastUpdaeComment: { type: String },
+    nextUpdateDate: { type: Date },
+    nexrUpdateComment: { type: String },
+    comment1: { type: String },
+    comment2: { type: String },
     isWhatsappApply: { type: Boolean, default: false },
     joining: { type: String, default: '' },
     isUrgent: { type: Boolean, default: false },
+}, {
+    timestamps: true
 });
 
 const Tuition = mongoose.model('Tuition', tuitionSchema);
