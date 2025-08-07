@@ -15,6 +15,7 @@ const tuitionSchema = new mongoose.Schema({
     location: String,
     area: String,
     guardianNumber: String,
+    city: String,
     status: String,
     note: String,
     taskAssignedTo: String,
