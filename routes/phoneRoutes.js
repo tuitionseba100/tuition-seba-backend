@@ -13,11 +13,11 @@ router.get('/all', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive, isSpam } = req.body;
+    const { phone, note, isActive, isSpam, isSpamGuardian } = req.body;
 
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isSpam, createdAt: localTime });
+        const newPhone = new Phone({ phone, note, isActive, isSpam, isSpamGuardian, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {

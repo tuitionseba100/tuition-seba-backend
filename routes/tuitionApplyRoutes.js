@@ -268,6 +268,25 @@ router.post('/add', async (req, res) => {
     }
 });
 
+router.get('/appliedListByTuitionId', async (req, res) => {
+    const { tuitionId } = req.query;
+
+    if (!tuitionId) {
+        return res.status(400).json({ message: 'tuitionId query parameter is required' });
+    }
+
+    try {
+        const appliedList = await TuitionApply.find(
+            { tuitionId },
+            'premiumCode name phone institute department address appliedAt status isSpam isBest'
+        ).sort({ appliedAt: -1 });
+
+        res.json(appliedList);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/getTuitionStatuses', async (req, res) => {
     try {
         const summary = await TuitionApply.find({}, 'tuitionCode appliedAt status commentForTeacher phone');
