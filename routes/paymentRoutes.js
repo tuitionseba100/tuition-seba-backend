@@ -57,7 +57,6 @@ router.post('/add', async (req, res) => {
     }
 });
 
-
 router.put('/edit/:id', async (req, res) => {
     try {
         const updatedPayment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
@@ -76,6 +75,31 @@ router.delete('/delete/:id', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
+router.get('/alert-today', async (req, res) => {
+    try {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const payments = await Payment.find({
+            duePayDate: { $gte: startUTC, $lte: endUTC }
+        }).sort({ duePayDate: 1 });
+
+        res.json(payments);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 module.exports = router;
 
