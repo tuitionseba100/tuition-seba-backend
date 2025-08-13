@@ -187,12 +187,6 @@ router.post('/add', async (req, res) => {
         comment2
     } = req.body;
 
-    function toBangladeshTime(dateString) {
-        if (!dateString) return null;
-        const date = new Date(dateString);
-        return new Date(date.getTime() + 6 * 60 * 60 * 1000);
-    }
-
     try {
         const newTuition = new Tuition({
             tuitionCode,
@@ -218,10 +212,10 @@ router.post('/add', async (req, res) => {
             taskAssignedTo,
             isWhatsappApply,
             updatedBy,
-            lastAvailableCheck: toBangladeshTime(lastAvailableCheck),
-            lastUpdate: toBangladeshTime(lastUpdate),
+            lastAvailableCheck: lastAvailableCheck ? new Date(lastAvailableCheck) : null,
+            lastUpdate: lastUpdate ? new Date(lastUpdate) : null,
             lastUpdateComment,
-            nextUpdateDate: toBangladeshTime(nextUpdateDate),
+            nextUpdateDate: nextUpdateDate ? new Date(nextUpdateDate) : null,
             nextUpdateComment,
             comment1,
             comment2
