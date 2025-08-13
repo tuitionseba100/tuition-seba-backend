@@ -83,13 +83,20 @@ router.get('/getTableData', async (req, res) => {
 
 router.get('/alert-today', async (req, res) => {
     try {
-        const todayBD = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
 
-        const startOfDayUTC = new Date(`${todayBD}T00:00:00+06:00`).toISOString();
-        const endOfDayUTC = new Date(`${todayBD}T23:59:59+06:00`).toISOString();
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
         const tuitions = await Tuition.find({
-            nextUpdateDate: { $gte: startOfDayUTC, $lte: endOfDayUTC }
+            nextUpdateDate: { $gte: startUTC, $lte: endUTC }
         }).sort({ nextUpdateDate: 1 });
 
         res.json(tuitions);
@@ -97,6 +104,7 @@ router.get('/alert-today', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 router.get('/summary', async (req, res) => {
     const {
