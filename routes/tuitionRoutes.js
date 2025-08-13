@@ -84,11 +84,12 @@ router.get('/getTableData', async (req, res) => {
 router.get('/alert-today', async (req, res) => {
     try {
         const todayBD = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
-        const startOfDayBD = new Date(`${todayBD}T00:00:00+06:00`);
-        const endOfDayBD = new Date(`${todayBD}T23:59:59+06:00`);
+
+        const startOfDayUTC = new Date(`${todayBD}T00:00:00+06:00`).toISOString();
+        const endOfDayUTC = new Date(`${todayBD}T23:59:59+06:00`).toISOString();
 
         const tuitions = await Tuition.find({
-            nextUpdateDate: { $gte: startOfDayBD, $lte: endOfDayBD }
+            nextUpdateDate: { $gte: startOfDayUTC, $lte: endOfDayUTC }
         }).sort({ nextUpdateDate: 1 });
 
         res.json(tuitions);
