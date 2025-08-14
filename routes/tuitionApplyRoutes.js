@@ -278,7 +278,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone institute department address appliedAt status isSpam isBest'
+            'premiumCode name phone institute department address appliedAt status isSpam isBest comment commentForTeacher'
         ).sort({ appliedAt: -1 });
 
         res.json(appliedList);
