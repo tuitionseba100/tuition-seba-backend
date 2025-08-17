@@ -1,19 +1,23 @@
+// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
-dotenv.config();
+
+if (process.env.NODE_ENV !== 'production') {
+    require('dotenv').config();
+}
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.DB_URI)
+mongoose.connect(process.env.DB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
     .then(() => console.log('MongoDB connected'))
-    .catch(err => console.log(err));
+    .catch(err => console.log('MongoDB connection error:', err));
 
-// Routes
 const tuitionRoutes = require('./routes/tuitionRoutes');
 const userRoutes = require('./routes/userRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
@@ -22,11 +26,10 @@ const taskDataRoutes = require('./routes/taskDataRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const tuitionApplyRoutes = require('./routes/tuitionApplyRoutes');
 const refundRoutes = require('./routes/refundPaymentRoutes');
-const taecherPaymentRoutes = require('./routes/teacherPaymentRoutes');
+const teacherPaymentRoutes = require('./routes/teacherPaymentRoutes'); // Fixed typo
 const regTeacherRoutes = require('./routes/regTeacherRoutes');
 const phoneRoutes = require('./routes/phoneRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
-
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
@@ -36,18 +39,16 @@ app.use('/api/taskData', taskDataRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/tuitionApply', tuitionApplyRoutes);
 app.use('/api/refund', refundRoutes);
-app.use('/api/teacherPayment', taecherPaymentRoutes);
+app.use('/api/teacherPayment', teacherPaymentRoutes);
 app.use('/api/regTeacher', regTeacherRoutes);
 app.use('/api/phone', phoneRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
-    res.send('Welcome!');
+    res.send('Welcome to TuitionSebaForum API!');
 });
 
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
-
