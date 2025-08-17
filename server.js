@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -11,10 +10,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect(process.env.DB_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
+mongoose.connect(process.env.DB_URI)
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log('MongoDB connection error:', err));
 
@@ -26,7 +22,7 @@ const taskDataRoutes = require('./routes/taskDataRoutes');
 const attendanceRoutes = require('./routes/attendanceRoutes');
 const tuitionApplyRoutes = require('./routes/tuitionApplyRoutes');
 const refundRoutes = require('./routes/refundPaymentRoutes');
-const teacherPaymentRoutes = require('./routes/teacherPaymentRoutes'); // Fixed typo
+const teacherPaymentRoutes = require('./routes/teacherPaymentRoutes');
 const regTeacherRoutes = require('./routes/regTeacherRoutes');
 const phoneRoutes = require('./routes/phoneRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
@@ -45,7 +41,7 @@ app.use('/api/phone', phoneRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
 app.get('/', (req, res) => {
-    res.send('Welcome to TuitionSebaForum API!');
+    res.send('Welcome to TuitionSeba API!');
 });
 
 const PORT = process.env.PORT || 5001;
