@@ -274,11 +274,10 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     if (!tuitionId) {
         return res.status(400).json({ message: 'tuitionId query parameter is required' });
     }
-
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone institute department address appliedAt status isSpam isBest comment commentForTeacher'
+            'premiumCode name phone institute department address appliedAt status isSpam isBest hasDue comment commentForTeacher'
         ).sort({ appliedAt: -1 });
 
         res.json(appliedList);
