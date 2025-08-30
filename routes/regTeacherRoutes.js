@@ -306,7 +306,7 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
 
 const convertNormal = (str) => {
     if (!str) return '';
-    let phone = str.replace(/[\s+-]/g, '');
+    let phone = str.replace(/[\s\-\+]/g, '');
     if (phone.startsWith('880')) phone = phone.slice(3);
     if (!phone.startsWith('0')) phone = '0' + phone;
     return phone;
@@ -326,7 +326,7 @@ router.post('/check-apply-possible', async (req, res) => {
             return res.status(404).json({ message: "No premium code found" });
         }
 
-        const allTeacherPhones = [teacher.phone, teacher.alternativePhone, teacher.whatsapp];
+        const allTeacherPhones = [teacher.phone, teacher.alternativePhone, teacher.whatsapp].filter(Boolean);
         const inputPhone = convertNormal(phone);
 
         const matched = allTeacherPhones.some(p => convertNormal(p) === inputPhone);
@@ -342,13 +342,14 @@ router.post('/check-apply-possible', async (req, res) => {
             message: "OK, matched",
             data: {
                 premiumCode: teacher.premiumCode,
-                phone
+                phone: inputPhone
             }
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 
 module.exports = router;
