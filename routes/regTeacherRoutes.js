@@ -323,7 +323,7 @@ router.post('/check-apply-possible', async (req, res) => {
         const teacher = await RegTeacher.findOne({ premiumCode }).lean();
 
         if (!teacher) {
-            return res.status(404).json({ message: "No premium code found" });
+            return res.status(404).json({ message: "এই প্রিমিয়াম কোড পাওয়া যায়নি। অনুগ্রহ করে সঠিক প্রিমিয়াম কোড প্রদান করুন।" });
         }
 
         const allTeacherPhones = [teacher.phone, teacher.alternativePhone, teacher.whatsapp].filter(Boolean);
@@ -333,7 +333,7 @@ router.post('/check-apply-possible', async (req, res) => {
 
         if (!matched) {
             return res.status(400).json({
-                message: "This phone number doesn't match with the premium code"
+                message: `অনুগ্রহ করে সঠিক ফোন নম্বরটি দিন, যা এই প্রিমিয়াম কোডের (${premiumCode}) সাথে মিলে।`
             });
         }
 
