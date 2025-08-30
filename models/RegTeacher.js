@@ -30,6 +30,7 @@ const teacherSchema = new mongoose.Schema({
     experience: { type: String },
     favoriteSubject: { type: String },
     premiumCode: { type: String },
+    uniCode: { type: String },
     password: { type: String },
     status: { type: String },
     transactionId: { type: String },

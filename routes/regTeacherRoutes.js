@@ -42,6 +42,7 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         gender,
         name,
         currentArea,
+        uniCode
     } = req.query;
 
     const filter = {};
@@ -72,6 +73,10 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
 
     if (currentArea) {
         filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
+    }
+
+    if (uniCode) {
+        filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
     }
 
     try {
@@ -99,7 +104,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
         status,
         gender,
         name,
-        currentArea
+        currentArea,
+        uniCode
     } = req.query;
 
     const filter = {};
@@ -130,6 +136,10 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
     if (currentArea) {
         filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
+    }
+
+    if (uniCode) {
+        filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
     }
 
     try {
