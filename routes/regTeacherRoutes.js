@@ -304,4 +304,51 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
     }
 });
 
+const convertNormal = (str) => {
+    if (!str) return '';
+    let phone = str.replace(/[\s+-]/g, '');
+    if (phone.startsWith('880')) phone = phone.slice(3);
+    if (!phone.startsWith('0')) phone = '0' + phone;
+    return phone;
+};
+
+router.post('/check-apply-possible', async (req, res) => {
+    const { premiumCode, phone } = req.body;
+
+    if (!premiumCode || !phone) {
+        return res.status(400).json({ message: "Both premiumCode and phone are required" });
+    }
+
+    try {
+        const teacher = await RegTeacher.findOne({ premiumCode }).lean();
+
+        if (!teacher) {
+            return res.status(404).json({ message: "No premium code found" });
+        }
+
+        const allTeacherPhones = [teacher.phone, teacher.alternativePhone, teacher.whatsapp];
+        const inputPhone = convertNormal(phone);
+
+        const matched = allTeacherPhones.some(p => convertNormal(p) === inputPhone);
+
+        if (!matched) {
+            return res.status(400).json({
+                message: "This phone number doesn't match with the premium code"
+            });
+        }
+
+        res.json({
+            success: true,
+            message: "OK, matched",
+            data: {
+                premiumCode: teacher.premiumCode,
+                phone
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
 module.exports = router;
