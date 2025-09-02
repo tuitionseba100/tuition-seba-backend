@@ -105,6 +105,18 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
+router.get('/pending-payment-creation', async (req, res) => {
+    try {
+        const tuitions = await Tuition.find(
+            { status: 'confirm', isPaymentCreated: false },
+            'tuitionCode student guardianNumber tutorNumber salary'
+        );
+
+        res.json(tuitions);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.get('/summary', async (req, res) => {
     const {
