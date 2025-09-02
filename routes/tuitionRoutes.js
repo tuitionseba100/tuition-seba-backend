@@ -209,7 +209,8 @@ router.post('/add', async (req, res) => {
         nextUpdateDate,
         nextUpdateComment,
         comment1,
-        comment2
+        comment2,
+        isPaymentCreated
     } = req.body;
 
     try {
@@ -243,7 +244,8 @@ router.post('/add', async (req, res) => {
             nextUpdateDate: nextUpdateDate ? new Date(nextUpdateDate) : null,
             nextUpdateComment,
             comment1,
-            comment2
+            comment2,
+            isPaymentCreated
         });
 
         await newTuition.save();

@@ -31,6 +31,7 @@ const tuitionSchema = new mongoose.Schema({
     isWhatsappApply: { type: Boolean, default: false },
     joining: { type: String, default: '' },
     isUrgent: { type: Boolean, default: false },
+    isPaymentCreated: { type: Boolean, default: false },
 }, {
     timestamps: true
 });
