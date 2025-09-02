@@ -107,10 +107,10 @@ router.get('/alert-today', async (req, res) => {
 
 router.get('/pending-payment-creation', async (req, res) => {
     try {
-        const tuitions = await Tuition.find(
-            { status: 'confirm', isPaymentCreated: false },
-            'tuitionCode student guardianNumber tutorNumber salary'
-        );
+        const tuitions = await Tuition.find({
+            status: 'confirm',
+            isPaymentCreated: false
+        });
 
         res.json(tuitions);
     } catch (err) {
