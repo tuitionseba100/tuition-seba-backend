@@ -13,7 +13,7 @@ const teacherSchema = new mongoose.Schema({
     friendPhone: { type: String },
     city: { type: String },
     division: { type: String },
-    distrcit: { type: String },
+    district: { type: String },
     thana: { type: String },
     currentArea: { type: String },
     expectedTuitionAreas: { type: String },
