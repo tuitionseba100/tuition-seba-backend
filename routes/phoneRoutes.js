@@ -17,7 +17,7 @@ router.post('/add', async (req, res) => {
 
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isSpam, isSpamGuardian, createdAt: localTime });
+        const newPhone = new Phone({ phone, note, isActive, isSpam, isExpress, isSpamGuardian, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {

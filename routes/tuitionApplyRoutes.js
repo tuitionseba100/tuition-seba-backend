@@ -205,7 +205,6 @@ function normalizePhoneForSave(phone) {
     return digits;
 }
 
-
 router.post('/add', async (req, res) => {
     const {
         premiumCode,
@@ -228,6 +227,7 @@ router.post('/add', async (req, res) => {
 
         let isSpam = false;
         let isBest = false;
+        let isExpress = false;
 
         for (const entry of phoneList) {
             const normalizedDbPhone = normalizePhone(entry.phone);
@@ -235,6 +235,8 @@ router.post('/add', async (req, res) => {
             if (normalizedDbPhone === normalizedInputPhone) {
                 if (entry.isSpam) {
                     isSpam = true;
+                } else if (entry.isExpress) {
+                    isExpress = true;
                 } else {
                     isBest = true;
                 }
@@ -259,6 +261,7 @@ router.post('/add', async (req, res) => {
             status: status || 'pending',
             isSpam,
             isBest,
+            isExpress,
         });
 
         await newApply.save();
