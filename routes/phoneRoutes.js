@@ -13,7 +13,7 @@ router.get('/all', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive, isSpam, isSpamGuardian } = req.body;
+    const { phone, note, isActive, isSpam, isExpress, isSpamGuardian } = req.body;
 
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
