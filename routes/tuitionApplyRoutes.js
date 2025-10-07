@@ -237,12 +237,13 @@ router.post('/add', async (req, res) => {
                     isSpam = true;
                 } else if (entry.isExpress) {
                     isExpress = true;
-                } else {
+                } else if (entry.isBest) {
                     isBest = true;
                 }
                 break;
             }
         }
+
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
