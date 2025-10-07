@@ -13,11 +13,11 @@ router.get('/all', async (req, res) => {
 });
 
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive, isSpam, isExpress, isSpamGuardian } = req.body;
+    const { phone, note, isActive, isBest, isSpam, isExpress, isSpamGuardian } = req.body;
 
     try {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isSpam, isExpress, isSpamGuardian, createdAt: localTime });
+        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isSpamGuardian, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {
@@ -38,29 +38,6 @@ router.delete('/delete/:id', async (req, res) => {
     try {
         await Phone.findByIdAndDelete(req.params.id);
         res.status(204).send();
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.put('/update-isBest', async (req, res) => {
-    try {
-        const result = await Phone.updateMany(
-            {},
-            [
-                {
-                    $set: {
-                        isBest: { $cond: [{ $eq: ["$isSpam", false] }, true, false] }
-                    }
-                }
-            ]
-        );
-
-        res.status(200).json({
-            message: 'All phone records updated with isBest based on isSpam',
-            matchedCount: result.matchedCount,
-            modifiedCount: result.modifiedCount
-        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
