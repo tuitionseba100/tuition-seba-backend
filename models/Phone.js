@@ -7,6 +7,7 @@ const phoneSchema = new mongoose.Schema({
     isActive: { type: Boolean, default: true },
     isSpam: { type: Boolean, default: true },
     isExpress: { type: Boolean, default: false },
+    isBest: { type: Boolean, default: false },
     isSpamGuardian: { type: Boolean, default: false },
 });
 
