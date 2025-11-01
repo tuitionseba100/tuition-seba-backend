@@ -209,37 +209,45 @@ router.post('/add', async (req, res) => {
     try {
         const { phone, alternativePhone, whatsapp } = req.body;
 
-        const allInputValues = [phone, alternativePhone, whatsapp];
+        const allInputValues = [phone, alternativePhone, whatsapp].filter(Boolean);
 
-        const existing = await RegTeacher.find({
-            $or: [
-                { phone: { $in: allInputValues } },
-                { alternativePhone: { $in: allInputValues } },
-                { whatsapp: { $in: allInputValues } }
-            ]
-        });
-
-        if (existing.length > 0) {
-            const matchedInputs = new Set();
-
-            existing.forEach(entry => {
-                if (entry.phone === phone) matchedInputs.add('phone');
-                if (entry.phone === alternativePhone) matchedInputs.add('alternativePhone');
-                if (entry.phone === whatsapp) matchedInputs.add('whatsapp');
-
-                if (entry.alternativePhone === phone) matchedInputs.add('phone');
-                if (entry.alternativePhone === alternativePhone) matchedInputs.add('alternativePhone');
-                if (entry.alternativePhone === whatsapp) matchedInputs.add('whatsapp');
-
-                if (entry.whatsapp === phone) matchedInputs.add('phone');
-                if (entry.whatsapp === alternativePhone) matchedInputs.add('alternativePhone');
-                if (entry.whatsapp === whatsapp) matchedInputs.add('whatsapp');
+        if (allInputValues.length > 0) {
+            const existing = await RegTeacher.find({
+                $or: [
+                    { phone: { $in: allInputValues } },
+                    { alternativePhone: { $in: allInputValues } },
+                    { whatsapp: { $in: allInputValues } }
+                ]
             });
 
-            return res.status(400).json({
-                message: 'একই তথ্য দিয়ে ইতোমধ্যে আবেদন করা হয়েছে।',
-                duplicates: Array.from(matchedInputs)
-            });
+            if (existing.length > 0) {
+                const matchedInputs = new Set();
+
+                existing.forEach(entry => {
+                    if (entry.phone && allInputValues.includes(entry.phone)) {
+                        if (entry.phone === phone) matchedInputs.add('phone');
+                        if (entry.phone === alternativePhone) matchedInputs.add('alternativePhone');
+                        if (entry.phone === whatsapp) matchedInputs.add('whatsapp');
+                    }
+
+                    if (entry.alternativePhone && allInputValues.includes(entry.alternativePhone)) {
+                        if (entry.alternativePhone === phone) matchedInputs.add('phone');
+                        if (entry.alternativePhone === alternativePhone) matchedInputs.add('alternativePhone');
+                        if (entry.alternativePhone === whatsapp) matchedInputs.add('whatsapp');
+                    }
+
+                    if (entry.whatsapp && allInputValues.includes(entry.whatsapp)) {
+                        if (entry.whatsapp === phone) matchedInputs.add('phone');
+                        if (entry.whatsapp === alternativePhone) matchedInputs.add('alternativePhone');
+                        if (entry.whatsapp === whatsapp) matchedInputs.add('whatsapp');
+                    }
+                });
+
+                return res.status(400).json({
+                    message: 'একই তথ্য দিয়ে ইতোমধ্যে আবেদন করা হয়েছে।',
+                    duplicates: Array.from(matchedInputs)
+                });
+            }
         }
 
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
