@@ -72,7 +72,10 @@ router.get('/summary', async (req, res) => {
     }
 
     if (address) {
-        filter.address = address;
+        const trimmed = address.trim();
+        if (trimmed.length) {
+            filter.address = new RegExp(escapeRegex(trimmed), 'i');
+        }
     }
 
     if (status) {
