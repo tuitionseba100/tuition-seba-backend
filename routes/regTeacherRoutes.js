@@ -31,6 +31,18 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+router.get('/public-teachers', async (req, res) => {
+    try {
+        const teachers = await RegTeacher.find({
+            premiumCode: { $exists: true, $ne: null, $ne: '' }
+        }).select('name gender division district thana currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode');
+
+        res.json(teachers);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
