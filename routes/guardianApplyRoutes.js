@@ -12,6 +12,101 @@ router.get('/all', async (req, res) => {
     }
 });
 
+router.get('/getTableData', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+
+    const {
+        phone = '',
+        address = '',
+        status
+    } = req.query;
+
+    const filter = {};
+
+    if (phone) {
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
+    }
+
+    if (address) {
+        filter.address = address;
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const total = await GuardianApply.countDocuments(filter);
+        const applies = await GuardianApply.find(filter)
+            .sort({ _id: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data: applies,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', async (req, res) => {
+    const {
+        phone = '',
+        address = '',
+        status
+    } = req.query;
+
+    const filter = {};
+
+    if (phone) {
+        filter.phone = new RegExp(escapeRegex(phone), 'i');
+    }
+
+    if (address) {
+        filter.address = address;
+    }
+
+    if (status) {
+        filter.status = status;
+    }
+
+    try {
+        const records = await GuardianApply.find(filter).lean();
+
+        const counts = {
+            pending: 0,
+            no_response: 0,
+            meeting_scheduled: 0,
+            confirmed: 0,
+            not_interested: 0
+        };
+
+        records.forEach(tuition => {
+            const stat = tuition.status?.toLowerCase();
+
+            if (stat === 'pending') counts.pending++;
+            else if (stat === 'called (no response)') counts.no_response++;
+            else if (stat === 'meeting scheduled') counts.meeting_scheduled++;
+            else if (stat === 'confirmed') counts.confirmed++;
+            else if (stat === 'not interested') counts.not_interested++;
+        });
+
+        res.json({
+            ...counts,
+            total: records.length,
+            data: records
+        });
+
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/add', async (req, res) => {
     const {
         name,
