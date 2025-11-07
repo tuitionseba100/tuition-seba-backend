@@ -12,6 +12,10 @@ router.get('/all', async (req, res) => {
     }
 });
 
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
