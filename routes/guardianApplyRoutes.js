@@ -84,7 +84,6 @@ router.get('/summary', async (req, res) => {
 
     try {
         const records = await GuardianApply.find(filter).lean();
-
         const counts = {
             pending: 0,
             no_response: 0,
