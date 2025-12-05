@@ -26,6 +26,7 @@ const teacherPaymentRoutes = require('./routes/teacherPaymentRoutes');
 const regTeacherRoutes = require('./routes/regTeacherRoutes');
 const phoneRoutes = require('./routes/phoneRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const leadRoutes = require('./routes/leadRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
@@ -39,6 +40,7 @@ app.use('/api/teacherPayment', teacherPaymentRoutes);
 app.use('/api/regTeacher', regTeacherRoutes);
 app.use('/api/phone', phoneRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/lead', leadRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome to TuitionSeba API!');
