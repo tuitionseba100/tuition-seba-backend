@@ -131,7 +131,7 @@ router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     const {
         tuitionCode = '',
         guardianNumber = '',
