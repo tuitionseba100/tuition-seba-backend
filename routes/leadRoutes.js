@@ -41,7 +41,8 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         status = '',
         employeeId = '',
         employeeName = '',
-        createdBy = ''
+        createdBy = '',
+        tuitionCode = ''
     } = req.query;
 
     const filter = {};
@@ -53,6 +54,7 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
     if (employeeName) filter.employeeName = new RegExp(escapeRegex(employeeName), 'i');
     if (createdBy) filter.createdBy = new RegExp(escapeRegex(createdBy), 'i');
     if (status) filter.status = status;
+    if (tuitionCode) filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
 
     try {
         const total = await Lead.countDocuments(filter);
@@ -109,7 +111,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
         status = '',
         employeeId = '',
         employeeName = '',
-        createdBy = ''
+        createdBy = '',
+        tuitionCode = ''
     } = req.query;
 
     const filter = {};
@@ -121,6 +124,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
     if (employeeName) filter.employeeName = new RegExp(escapeRegex(employeeName), 'i');
     if (createdBy) filter.createdBy = new RegExp(escapeRegex(createdBy), 'i');
     if (status) filter.status = status;
+    if (tuitionCode) filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
 
     try {
         const records = await Lead.find(filter).lean();
