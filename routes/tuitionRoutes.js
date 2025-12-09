@@ -1,6 +1,7 @@
 const express = require('express');
 const Tuition = require('../models/Tuition');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
