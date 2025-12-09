@@ -2,6 +2,19 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const router = express.Router();
 
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
+
 router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true }).select('-status -guardianNumber');
@@ -11,7 +24,7 @@ router.get('/available', async (req, res) => {
     }
 });
 
-router.get('/all', async (req, res) => {
+router.get('/all', authMiddleware, async (req, res) => {
     try {
         const tuitions = await Tuition.find();
         res.json(tuitions);
