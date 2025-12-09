@@ -2,19 +2,6 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const router = express.Router();
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
 router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true }).select('-status -guardianNumber');
@@ -24,7 +11,7 @@ router.get('/available', async (req, res) => {
     }
 });
 
-router.get('/all', authMiddleware, async (req, res) => {
+router.get('/all', async (req, res) => {
     try {
         const tuitions = await Tuition.find();
         res.json(tuitions);
@@ -37,7 +24,7 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-router.get('/getTableData', authMiddleware, async (req, res) => {
+router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
 
@@ -94,7 +81,7 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/alert-today', authMiddleware, async (req, res) => {
+router.get('/alert-today', async (req, res) => {
     try {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
@@ -118,7 +105,7 @@ router.get('/alert-today', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
+router.get('/pending-payment-creation', async (req, res) => {
     try {
         const tuitions = await Tuition.find({
             status: 'confirm',
@@ -131,7 +118,7 @@ router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/summary', authMiddleware, async (req, res) => {
+router.get('/summary', async (req, res) => {
     const {
         tuitionCode = '',
         guardianNumber = '',
@@ -203,7 +190,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/add', authMiddleware, async (req, res) => {
+router.post('/add', async (req, res) => {
     const {
         tuitionCode,
         isPublish,
@@ -280,7 +267,7 @@ router.post('/add', authMiddleware, async (req, res) => {
     }
 });
 
-router.put('/edit/:id', authMiddleware, async (req, res) => {
+router.put('/edit/:id', async (req, res) => {
     try {
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedTuition);
@@ -289,7 +276,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/:id', authMiddleware, async (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
         const tuition = await Tuition.findById(req.params.id);
         if (!tuition) {
@@ -301,7 +288,7 @@ router.get('/:id', authMiddleware, async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', authMiddleware, async (req, res) => {
+router.delete('/delete/:id', async (req, res) => {
     try {
         await Tuition.findByIdAndDelete(req.params.id);
         res.status(204).send();
