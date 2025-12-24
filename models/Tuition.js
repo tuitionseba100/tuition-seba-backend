@@ -36,5 +36,29 @@ const tuitionSchema = new mongoose.Schema({
     timestamps: true
 });
 
+tuitionSchema.index({
+    tuitionCode: 'text',
+    wantedTeacher: 'text',
+    student: 'text',
+    institute: 'text',
+    class: 'text',
+    medium: 'text',
+    subject: 'text',
+    time: 'text',
+    day: 'text',
+    salary: 'text',
+    location: 'text',
+    area: 'text',
+    guardianNumber: 'text',
+    city: 'text',
+    status: 'text',
+    note: 'text',
+    taskAssignedTo: 'text',
+    tutorNumber: 'text',
+    joining: 'text',
+    comment1: 'text',
+    comment2: 'text'
+});
+
 const Tuition = mongoose.model('Tuition', tuitionSchema);
 module.exports = Tuition;
