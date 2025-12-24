@@ -48,28 +48,39 @@ router.get('/getTableData', async (req, res) => {
         tutorNumber = '',
         isPublish,
         isUrgent,
-        status,
-        search = ''
+        status
     } = req.query;
 
     const filter = {};
 
-    if (tuitionCode) filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
-    if (guardianNumber) filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
-    if (tutorNumber) filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
-    if (isPublish !== undefined) filter.isPublish = isPublish === 'true';
-    if (isUrgent !== undefined) filter.isUrgent = isUrgent === 'true';
-    if (status) filter.status = status;
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
 
-    if (search) {
-        filter.$text = { $search: search };
+    if (guardianNumber) {
+        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+    }
+
+    if (isPublish !== undefined) {
+        filter.isPublish = isPublish === 'true';
+    }
+
+    if (isUrgent !== undefined) {
+        filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (status) {
+        filter.status = status;
     }
 
     try {
         const total = await Tuition.countDocuments(filter);
-
-        const tuitions = await Tuition.find(filter, search ? { score: { $meta: 'textScore' } } : {})
-            .sort(search ? { score: { $meta: 'textScore' } } : { _id: -1 })
+        const tuitions = await Tuition.find(filter)
+            .sort({ _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit);
 
@@ -128,21 +139,33 @@ router.get('/summary', async (req, res) => {
         tutorNumber = '',
         isPublish,
         isUrgent,
-        status,
-        search = ''
+        status
     } = req.query;
 
     const filter = {};
 
-    if (tuitionCode) filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
-    if (guardianNumber) filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
-    if (tutorNumber) filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
-    if (isPublish !== undefined) filter.isPublish = isPublish === 'true';
-    if (isUrgent !== undefined) filter.isUrgent = isUrgent === 'true';
-    if (status) filter.status = status;
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
 
-    if (search) {
-        filter.$text = { $search: search };
+    if (guardianNumber) {
+        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+    }
+
+    if (isPublish !== undefined) {
+        filter.isPublish = isPublish === 'true';
+    }
+
+    if (isUrgent !== undefined) {
+        filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (status) {
+        filter.status = status;
     }
 
     try {
@@ -175,6 +198,7 @@ router.get('/summary', async (req, res) => {
             isPublishTrueCount,
             data: records
         });
+
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
