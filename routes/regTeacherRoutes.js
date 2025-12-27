@@ -54,7 +54,8 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         gender,
         name,
         currentArea,
-        uniCode
+        uniCode,
+        department
     } = req.query;
 
     const filter = {};
@@ -69,6 +70,23 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
             { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
             { whatsapp: new RegExp(escapeRegex(phone), 'i') }
         ];
+    }
+
+    if (department) {
+        const deptRegex = new RegExp(escapeRegex(department), 'i');
+        const deptClauses = [
+            { department: deptRegex },
+            { mastersDept: deptRegex },
+            { honorsDept: deptRegex }
+        ];
+
+        if (filter.$or && Array.isArray(filter.$or)) {
+            filter.$or = filter.$or.concat(deptClauses);
+        } else if (filter.$or) {
+            filter.$or = [filter.$or].concat(deptClauses);
+        } else {
+            filter.$or = deptClauses;
+        }
     }
 
     if (status) {
@@ -117,7 +135,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
         gender,
         name,
         currentArea,
-        uniCode
+        uniCode,
+        department
     } = req.query;
 
     const filter = {};
@@ -132,6 +151,23 @@ router.get('/summary', authMiddleware, async (req, res) => {
             { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
             { whatsapp: new RegExp(escapeRegex(phone), 'i') }
         ];
+    }
+
+    if (department) {
+        const deptRegex = new RegExp(escapeRegex(department), 'i');
+        const deptClauses = [
+            { department: deptRegex },
+            { mastersDept: deptRegex },
+            { honorsDept: deptRegex }
+        ];
+
+        if (filter.$or && Array.isArray(filter.$or)) {
+            filter.$or = filter.$or.concat(deptClauses);
+        } else if (filter.$or) {
+            filter.$or = [filter.$or].concat(deptClauses);
+        } else {
+            filter.$or = deptClauses;
+        }
     }
 
     if (status) {
