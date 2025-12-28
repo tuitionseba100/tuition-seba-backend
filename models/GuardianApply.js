@@ -14,5 +14,6 @@ const guardianApplySchema = new mongoose.Schema({
     appliedAt: { type: Date, default: Date.now }
 });
 
+
 const GuardianApply = mongoose.model('GuardianApply', guardianApplySchema);
 module.exports = GuardianApply;
