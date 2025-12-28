@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 
 const guardianApplySchema = new mongoose.Schema({
     name: { type: String },
+    teacherId: { type: String },
+    teacherCode: { type: String },
     phone: { type: String, required: true },
     address: { type: String },
     studentClass: { type: String },
