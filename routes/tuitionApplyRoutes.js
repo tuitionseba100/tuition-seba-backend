@@ -104,7 +104,7 @@ router.get('/summary', async (req, res) => {
             pending: 0,
             calledInterested: 0,
             calledNoResponse: 0,
-            refertoBM: 0,
+            selected: 0,
             shortlisted: 0,
             requestedForPayment: 0
         };
@@ -115,7 +115,7 @@ router.get('/summary', async (req, res) => {
             if (stat === 'pending') counts.pending++;
             else if (stat === 'called (interested)') counts.calledInterested++;
             else if (stat === 'called (no response)') counts.calledNoResponse++;
-            else if (stat === 'refer to bm') counts.refertoBM++;
+            else if (stat === 'selected') counts.selected++;
             else if (stat === 'shortlisted') counts.shortlisted++;
             else if (stat === 'requested for payment') counts.requestedForPayment++;
         });
