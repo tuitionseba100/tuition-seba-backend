@@ -37,7 +37,7 @@ router.get('/public-teachers', async (req, res) => {
             premiumCode: { $exists: true, $ne: null, $ne: '' },
             status: { $ne: 'suspended' }
         }).select(
-            'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject'
+            'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject hscGroup sscGroup school college'
         );
 
         res.json(teachers);
