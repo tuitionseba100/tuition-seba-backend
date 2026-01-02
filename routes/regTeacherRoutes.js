@@ -34,8 +34,12 @@ function escapeRegex(str) {
 router.get('/public-teachers', async (req, res) => {
     try {
         const teachers = await RegTeacher.find({
-            premiumCode: { $exists: true, $ne: null, $ne: '' }
-        }).select('name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject');
+            premiumCode: { $exists: true, $ne: null, $ne: '' },
+            status: { $ne: 'suspended' }
+        })
+            .select(
+                'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject'
+            );
 
         res.json(teachers);
     } catch (err) {
