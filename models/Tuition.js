@@ -20,6 +20,7 @@ const tuitionSchema = new mongoose.Schema({
     note: String,
     taskAssignedTo: String,
     tutorNumber: String,
+    createdBy: String,
     updatedBy: String,
     lastAvailableCheck: { type: Date },
     lastUpdate: { type: Date },
