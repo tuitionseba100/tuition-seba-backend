@@ -36,10 +36,9 @@ router.get('/public-teachers', async (req, res) => {
         const teachers = await RegTeacher.find({
             premiumCode: { $exists: true, $ne: null, $ne: '' },
             status: { $ne: 'suspended' }
-        })
-            .select(
-                'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject'
-            );
+        }).select(
+            'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject'
+        );
 
         res.json(teachers);
     } catch (err) {
