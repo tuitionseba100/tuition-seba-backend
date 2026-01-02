@@ -39,6 +39,8 @@ const teacherSchema = new mongoose.Schema({
     password: { type: String },
     status: { type: String },
     transactionId: { type: String },
+    rating: { type: Number },
+    review: { type: String },
     paymentType: { type: String },
     amount: { type: String },
     commentFromTeacher: { type: String },
