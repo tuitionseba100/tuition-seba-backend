@@ -380,45 +380,72 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
-router.get('/exportAll/csv', async (req, res) => {
+router.get('/exportAll', async (req, res) => {
     try {
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', 'attachment; filename=tuition_apply_all.csv');
-
-        res.write(
-            `Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n`
+        // Set headers for Excel download
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=tuition_apply_all.xlsx'
+        );
+
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
+        const sheet = workbook.addWorksheet('TuitionApply');
+
+        // Define columns
+        sheet.columns = [
+            { header: 'Tuition Code', key: 'tuitionCode', width: 20 },
+            { header: 'Tuition ID', key: 'tuitionId', width: 20 },
+            { header: 'Premium Code', key: 'premiumCode', width: 20 },
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Institute', key: 'institute', width: 25 },
+            { header: 'Department', key: 'department', width: 20 },
+            { header: 'Address', key: 'address', width: 30 },
+            { header: 'Status', key: 'status', width: 20 },
+            { header: 'Applied At', key: 'appliedAt', width: 20 },
+            { header: 'Comment', key: 'comment', width: 30 },
+            { header: 'Comment For Teacher', key: 'commentForTeacher', width: 30 },
+            { header: 'Is Spam', key: 'isSpam', width: 10 },
+            { header: 'Is Best', key: 'isBest', width: 10 },
+            { header: 'Is Express', key: 'isExpress', width: 10 }
+        ];
 
         const cursor = TuitionApply.find().cursor();
 
         for await (const doc of cursor) {
-            const row = [
-                doc.tuitionCode,
-                doc.tuitionId,
-                doc.premiumCode,
-                `"${doc.name || ''}"`,
-                doc.phone,
-                `"${doc.institute || ''}"`,
-                `"${doc.department || ''}"`,
-                `"${doc.address || ''}"`,
-                doc.status,
-                doc.appliedAt ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19) : '',
-                `"${(doc.comment || '').replace(/"/g, '""')}"`,
-                `"${(doc.commentForTeacher || '').replace(/"/g, '""')}"`,
-                doc.isSpam ? 'Yes' : 'No',
-                doc.isBest ? 'Yes' : 'No',
-                doc.isExpress ? 'Yes' : 'No'
-            ];
-            res.write(row.join(',') + '\n');
+            sheet.addRow({
+                tuitionCode: doc.tuitionCode,
+                tuitionId: doc.tuitionId,
+                premiumCode: doc.premiumCode,
+                name: doc.name,
+                phone: doc.phone,
+                institute: doc.institute,
+                department: doc.department,
+                address: doc.address,
+                status: doc.status,
+                appliedAt: doc.appliedAt
+                    ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
+                    : '',
+                comment: doc.comment,
+                commentForTeacher: doc.commentForTeacher,
+                isSpam: doc.isSpam ? 'Yes' : 'No',
+                isBest: doc.isBest ? 'Yes' : 'No',
+                isExpress: doc.isExpress ? 'Yes' : 'No'
+            }).commit();
         }
 
-        res.end();
+        await sheet.commit();
+        await workbook.commit();
+
     } catch (err) {
-        console.error('CSV Export failed:', err);
-        res.status(500).json({ message: 'CSV Export failed' });
+        console.error('Export failed:', err);
+        res.status(500).json({ message: 'Export failed' });
     }
 });
-
 
 module.exports = router;
 
