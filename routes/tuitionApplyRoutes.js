@@ -411,8 +411,7 @@ router.get('/exportAll', async (req, res) => {
             { header: 'Comment For Teacher', key: 'commentForTeacher', width: 30 },
             { header: 'Is Spam', key: 'isSpam', width: 10 },
             { header: 'Is Best', key: 'isBest', width: 10 },
-            { header: 'Is Express', key: 'isExpress', width: 10 },
-            { header: 'Has Due', key: 'hasDue', width: 10 },
+            { header: 'Is Express', key: 'isExpress', width: 10 }
         ];
 
         const cursor = TuitionApply.find().cursor();
@@ -435,8 +434,7 @@ router.get('/exportAll', async (req, res) => {
                 commentForTeacher: doc.commentForTeacher,
                 isSpam: doc.isSpam ? 'Yes' : 'No',
                 isBest: doc.isBest ? 'Yes' : 'No',
-                isExpress: doc.isExpress ? 'Yes' : 'No',
-                hasDue: doc.hasDue ? 'Yes' : 'No',
+                isExpress: doc.isExpress ? 'Yes' : 'No'
             }).commit();
         }
 
