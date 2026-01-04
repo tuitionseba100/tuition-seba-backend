@@ -1,4 +1,5 @@
 const express = require('express');
+const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
 const router = express.Router();
@@ -21,7 +22,6 @@ function escapeRegex(str) {
     }
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-
 
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
@@ -98,7 +98,15 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const records = await TuitionApply.find(filter).lean();
+        const countsAggregation = await TuitionApply.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
 
         const counts = {
             pending: 0,
@@ -109,24 +117,24 @@ router.get('/summary', async (req, res) => {
             requestedForPayment: 0
         };
 
-        records.forEach(tuition => {
-            const stat = tuition.status?.toLowerCase();
-
-            if (stat === 'pending') counts.pending++;
-            else if (stat === 'called (interested)') counts.calledInterested++;
-            else if (stat === 'called (no response)') counts.calledNoResponse++;
-            else if (stat === 'selected') counts.selected++;
-            else if (stat === 'shortlisted') counts.shortlisted++;
-            else if (stat === 'requested for payment') counts.requestedForPayment++;
+        countsAggregation.forEach(item => {
+            const stat = item._id?.toLowerCase();
+            if (stat === 'pending') counts.pending = item.count;
+            else if (stat === 'called (interested)') counts.calledInterested = item.count;
+            else if (stat === 'called (no response)') counts.calledNoResponse = item.count;
+            else if (stat === 'selected') counts.selected = item.count;
+            else if (stat === 'shortlisted') counts.shortlisted = item.count;
+            else if (stat === 'requested for payment') counts.requestedForPayment = item.count;
         });
+
+        const total = await TuitionApply.countDocuments(filter);
 
         res.json({
             ...counts,
-            total: records.length,
-            data: records
+            total
         });
-
     } catch (err) {
+        console.error(err);
         res.status(500).json({ message: err.message });
     }
 });
@@ -369,6 +377,67 @@ router.delete('/delete/:id', async (req, res) => {
         res.status(204).send();
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/exportAll', async (req, res) => {
+    try {
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('TuitionApply');
+
+        sheet.columns = [
+            { header: 'Tuition Code', key: 'tuitionCode', width: 20 },
+            { header: 'Tuition ID', key: 'tuitionId', width: 20 },
+            { header: 'Premium Code', key: 'premiumCode', width: 20 },
+            { header: 'Name', key: 'name', width: 25 },
+            { header: 'Phone', key: 'phone', width: 15 },
+            { header: 'Institute', key: 'institute', width: 25 },
+            { header: 'Department', key: 'department', width: 20 },
+            { header: 'Address', key: 'address', width: 30 },
+            { header: 'Status', key: 'status', width: 20 },
+            { header: 'Applied At', key: 'appliedAt', width: 20 },
+            { header: 'Comment', key: 'comment', width: 30 },
+            { header: 'Comment For Teacher', key: 'commentForTeacher', width: 30 },
+            { header: 'Is Spam', key: 'isSpam', width: 10 },
+            { header: 'Is Best', key: 'isBest', width: 10 },
+            { header: 'Is Express', key: 'isExpress', width: 10 },
+            { header: 'Has Due', key: 'hasDue', width: 10 }
+        ];
+
+        const cursor = TuitionApply.find().cursor();
+
+        for await (const doc of cursor) {
+            sheet.addRow({
+                tuitionCode: doc.tuitionCode,
+                tuitionId: doc.tuitionId,
+                premiumCode: doc.premiumCode,
+                name: doc.name,
+                phone: doc.phone,
+                institute: doc.institute,
+                department: doc.department,
+                address: doc.address,
+                status: doc.status,
+                appliedAt: doc.appliedAt ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19) : '',
+                comment: doc.comment,
+                commentForTeacher: doc.commentForTeacher,
+                isSpam: doc.isSpam ? 'Yes' : 'No',
+                isBest: doc.isBest ? 'Yes' : 'No',
+                isExpress: doc.isExpress ? 'Yes' : 'No',
+                hasDue: doc.hasDue ? 'Yes' : 'No'
+            });
+        }
+
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader('Content-Disposition', 'attachment; filename=tuition_apply_all.xlsx');
+
+        await workbook.xlsx.write(res);
+        res.end();
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Export failed' });
     }
 });
 
