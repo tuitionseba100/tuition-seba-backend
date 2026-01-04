@@ -382,9 +382,20 @@ router.delete('/delete/:id', async (req, res) => {
 
 router.get('/exportAll', async (req, res) => {
     try {
-        const workbook = new ExcelJS.Workbook();
+        // Set headers for Excel download
+        res.setHeader(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=tuition_apply_all.xlsx'
+        );
+
+        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
         const sheet = workbook.addWorksheet('TuitionApply');
 
+        // Define columns
         sheet.columns = [
             { header: 'Tuition Code', key: 'tuitionCode', width: 20 },
             { header: 'Tuition ID', key: 'tuitionId', width: 20 },
@@ -401,7 +412,7 @@ router.get('/exportAll', async (req, res) => {
             { header: 'Is Spam', key: 'isSpam', width: 10 },
             { header: 'Is Best', key: 'isBest', width: 10 },
             { header: 'Is Express', key: 'isExpress', width: 10 },
-            { header: 'Has Due', key: 'hasDue', width: 10 }
+            { header: 'Has Due', key: 'hasDue', width: 10 },
         ];
 
         const cursor = TuitionApply.find().cursor();
@@ -417,26 +428,23 @@ router.get('/exportAll', async (req, res) => {
                 department: doc.department,
                 address: doc.address,
                 status: doc.status,
-                appliedAt: doc.appliedAt ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19) : '',
+                appliedAt: doc.appliedAt
+                    ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
+                    : '',
                 comment: doc.comment,
                 commentForTeacher: doc.commentForTeacher,
                 isSpam: doc.isSpam ? 'Yes' : 'No',
                 isBest: doc.isBest ? 'Yes' : 'No',
                 isExpress: doc.isExpress ? 'Yes' : 'No',
-                hasDue: doc.hasDue ? 'Yes' : 'No'
-            });
+                hasDue: doc.hasDue ? 'Yes' : 'No',
+            }).commit();
         }
 
-        res.setHeader(
-            'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        );
-        res.setHeader('Content-Disposition', 'attachment; filename=tuition_apply_all.xlsx');
+        await sheet.commit();
+        await workbook.commit();
 
-        await workbook.xlsx.write(res);
-        res.end();
     } catch (err) {
-        console.error(err);
+        console.error('Export failed:', err);
         res.status(500).json({ message: 'Export failed' });
     }
 });
