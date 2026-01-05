@@ -299,27 +299,6 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.get('/:id', async (req, res) => {
-    try {
-        const tuition = await Tuition.findById(req.params.id);
-        if (!tuition) {
-            return res.status(404).json({ message: 'Tuition not found' });
-        }
-        res.json(tuition);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.delete('/delete/:id', async (req, res) => {
-    try {
-        await Tuition.findByIdAndDelete(req.params.id);
-        res.status(204).send();
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
 router.get('/exportAll', async (req, res) => {
     try {
         // Set headers for CSV download
@@ -334,7 +313,7 @@ router.get('/exportAll', async (req, res) => {
 
         // Create a writable stream to send data directly to response
         const { Transform } = require('stream');
-        
+
         // Write CSV header
         const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created\n';
         res.write(header);
@@ -415,6 +394,27 @@ router.get('/exportAll', async (req, res) => {
     } catch (err) {
         console.error('Export failed:', err);
         res.status(500).json({ message: 'Export failed' });
+    }
+});
+
+router.get('/:id', async (req, res) => {
+    try {
+        const tuition = await Tuition.findById(req.params.id);
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+        res.json(tuition);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.delete('/delete/:id', async (req, res) => {
+    try {
+        await Tuition.findByIdAndDelete(req.params.id);
+        res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 
