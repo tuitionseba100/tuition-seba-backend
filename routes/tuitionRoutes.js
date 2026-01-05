@@ -199,12 +199,10 @@ router.get('/summary', async (req, res) => {
         });
 
         const total = await Tuition.countDocuments(filter);
-        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
         res.json({
             ...counts,
-            total,
-            isPublishTrueCount
+            total
         });
 
     } catch (err) {
@@ -336,7 +334,7 @@ router.get('/exportAll', async (req, res) => {
 
         // Create a writable stream to send data directly to response
         const { Transform } = require('stream');
-
+        
         // Write CSV header
         const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created\n';
         res.write(header);
@@ -344,14 +342,14 @@ router.get('/exportAll', async (req, res) => {
         // Process documents in batches to avoid memory issues
         const batchSize = 1000; // Process 1000 records at a time
         let skip = 0;
-
+        
         while (true) {
             const batch = await Tuition.find().skip(skip).limit(batchSize).lean();
-
+            
             if (batch.length === 0) {
                 break; // No more records
             }
-
+            
             // Process each document in the batch
             for (const doc of batch) {
                 // Escape CSV fields that might contain commas, quotes, or newlines
@@ -363,7 +361,7 @@ router.get('/exportAll', async (req, res) => {
                     }
                     return field;
                 };
-
+                
                 const row = [
                     escapeCsvField(doc.tuitionCode || ''),
                     escapeCsvField(doc.isPublish ? 'Yes' : 'No'),
@@ -404,13 +402,13 @@ router.get('/exportAll', async (req, res) => {
                     escapeCsvField(doc.comment2 || ''),
                     escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No')
                 ].join(',') + '\n';
-
+                
                 res.write(row);
             }
-
+            
             skip += batchSize;
         }
-
+        
         // End the response
         res.end();
 

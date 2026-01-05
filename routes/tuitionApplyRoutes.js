@@ -399,14 +399,14 @@ router.get('/exportAll', async (req, res) => {
         // Process documents in batches to avoid memory issues
         const batchSize = 1000; // Process 1000 records at a time
         let skip = 0;
-
+        
         while (true) {
             const batch = await TuitionApply.find().skip(skip).limit(batchSize).lean();
-
+            
             if (batch.length === 0) {
                 break; // No more records
             }
-
+            
             // Process each document in the batch
             for (const doc of batch) {
                 // Escape CSV fields that might contain commas, quotes, or newlines
@@ -418,7 +418,7 @@ router.get('/exportAll', async (req, res) => {
                     }
                     return field;
                 };
-
+                
                 const row = [
                     escapeCsvField(doc.tuitionCode || ''),
                     escapeCsvField(doc.tuitionId || ''),
@@ -438,13 +438,13 @@ router.get('/exportAll', async (req, res) => {
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')
                 ].join(',') + '\n';
-
+                
                 res.write(row);
             }
-
+            
             skip += batchSize;
         }
-
+        
         // End the response
         res.end();
 
