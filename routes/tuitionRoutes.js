@@ -199,10 +199,12 @@ router.get('/summary', async (req, res) => {
         });
 
         const total = await Tuition.countDocuments(filter);
+        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
         res.json({
             ...counts,
-            total
+            total,
+            isPublishTrueCount
         });
 
     } catch (err) {
