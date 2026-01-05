@@ -169,8 +169,15 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const records = await Tuition.find(filter).lean();
-        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
+        const countsAggregation = await Tuition.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
 
         const counts = {
             available: 0,
@@ -181,25 +188,27 @@ router.get('/summary', async (req, res) => {
             cancel: 0
         };
 
-        records.forEach(tuition => {
-            const stat = tuition.status?.toLowerCase();
-
-            if (stat === 'available') counts.available++;
-            else if (stat === 'given number') counts.givenNumber++;
-            else if (stat === 'guardian meet') counts.guardianMeet++;
-            else if (stat === 'demo class running') counts.demoClassRunning++;
-            else if (stat === 'confirm') counts.confirm++;
-            else if (stat === 'cancel') counts.cancel++;
+        countsAggregation.forEach(item => {
+            const stat = item._id?.toLowerCase();
+            if (stat === 'available') counts.available = item.count;
+            else if (stat === 'given number') counts.givenNumber = item.count;
+            else if (stat === 'guardian meet') counts.guardianMeet = item.count;
+            else if (stat === 'demo class running') counts.demoClassRunning = item.count;
+            else if (stat === 'confirm') counts.confirm = item.count;
+            else if (stat === 'cancel') counts.cancel = item.count;
         });
+
+        const total = await Tuition.countDocuments(filter);
+        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
         res.json({
             ...counts,
-            total: records.length,
-            isPublishTrueCount,
-            data: records
+            total,
+            isPublishTrueCount
         });
 
     } catch (err) {
+        console.error(err);
         res.status(500).json({ message: err.message });
     }
 });
@@ -310,6 +319,104 @@ router.delete('/delete/:id', async (req, res) => {
         res.status(204).send();
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/exportAll', async (req, res) => {
+    try {
+        // Set headers for CSV download
+        res.setHeader(
+            'Content-Type',
+            'text/csv'
+        );
+        res.setHeader(
+            'Content-Disposition',
+            'attachment; filename=tuitions_all.csv'
+        );
+
+        // Create a writable stream to send data directly to response
+        const { Transform } = require('stream');
+
+        // Write CSV header
+        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created\n';
+        res.write(header);
+
+        // Process documents in batches to avoid memory issues
+        const batchSize = 1000; // Process 1000 records at a time
+        let skip = 0;
+
+        while (true) {
+            const batch = await Tuition.find().skip(skip).limit(batchSize).lean();
+
+            if (batch.length === 0) {
+                break; // No more records
+            }
+
+            // Process each document in the batch
+            for (const doc of batch) {
+                // Escape CSV fields that might contain commas, quotes, or newlines
+                const escapeCsvField = (field) => {
+                    if (field === null || field === undefined) return '';
+                    field = String(field);
+                    if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+                        return '"' + field.replace(/"/g, '""') + '"';
+                    }
+                    return field;
+                };
+
+                const row = [
+                    escapeCsvField(doc.tuitionCode || ''),
+                    escapeCsvField(doc.isPublish ? 'Yes' : 'No'),
+                    escapeCsvField(doc.wantedTeacher || ''),
+                    escapeCsvField(doc.student || ''),
+                    escapeCsvField(doc.createdBy || ''),
+                    escapeCsvField(doc.class || ''),
+                    escapeCsvField(doc.medium || ''),
+                    escapeCsvField(doc.institute || ''),
+                    escapeCsvField(doc.subject || ''),
+                    escapeCsvField(doc.day || ''),
+                    escapeCsvField(doc.time || ''),
+                    escapeCsvField(doc.salary || ''),
+                    escapeCsvField(doc.location || ''),
+                    escapeCsvField(doc.city || ''),
+                    escapeCsvField(doc.area || ''),
+                    escapeCsvField(doc.guardianNumber || ''),
+                    escapeCsvField(doc.status || ''),
+                    escapeCsvField(doc.joining || ''),
+                    escapeCsvField(doc.note || ''),
+                    escapeCsvField(doc.tutorNumber || ''),
+                    escapeCsvField(doc.isUrgent ? 'Yes' : 'No'),
+                    escapeCsvField(doc.taskAssignedTo || ''),
+                    escapeCsvField(doc.isWhatsappApply ? 'Yes' : 'No'),
+                    escapeCsvField(doc.updatedBy || ''),
+                    escapeCsvField(doc.lastAvailableCheck
+                        ? doc.lastAvailableCheck.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.lastUpdate
+                        ? doc.lastUpdate.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.lastUpdateComment || ''),
+                    escapeCsvField(doc.nextUpdateDate
+                        ? doc.nextUpdateDate.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.nextUpdateComment || ''),
+                    escapeCsvField(doc.comment1 || ''),
+                    escapeCsvField(doc.comment2 || ''),
+                    escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No')
+                ].join(',') + '\n';
+
+                res.write(row);
+            }
+
+            skip += batchSize;
+        }
+
+        // End the response
+        res.end();
+
+    } catch (err) {
+        console.error('Export failed:', err);
+        res.status(500).json({ message: 'Export failed' });
     }
 });
 

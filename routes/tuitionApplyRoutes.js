@@ -382,64 +382,71 @@ router.delete('/delete/:id', async (req, res) => {
 
 router.get('/exportAll', async (req, res) => {
     try {
-        // Set headers for Excel download
+        // Set headers for CSV download
         res.setHeader(
             'Content-Type',
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            'text/csv'
         );
         res.setHeader(
             'Content-Disposition',
-            'attachment; filename=tuition_apply_all.xlsx'
+            'attachment; filename=tuition_apply_all.csv'
         );
 
-        const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
-        const sheet = workbook.addWorksheet('TuitionApply');
+        // Write CSV header
+        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        res.write(header);
 
-        // Define columns
-        sheet.columns = [
-            { header: 'Tuition Code', key: 'tuitionCode', width: 20 },
-            { header: 'Tuition ID', key: 'tuitionId', width: 20 },
-            { header: 'Premium Code', key: 'premiumCode', width: 20 },
-            { header: 'Name', key: 'name', width: 25 },
-            { header: 'Phone', key: 'phone', width: 15 },
-            { header: 'Institute', key: 'institute', width: 25 },
-            { header: 'Department', key: 'department', width: 20 },
-            { header: 'Address', key: 'address', width: 30 },
-            { header: 'Status', key: 'status', width: 20 },
-            { header: 'Applied At', key: 'appliedAt', width: 20 },
-            { header: 'Comment', key: 'comment', width: 30 },
-            { header: 'Comment For Teacher', key: 'commentForTeacher', width: 30 },
-            { header: 'Is Spam', key: 'isSpam', width: 10 },
-            { header: 'Is Best', key: 'isBest', width: 10 },
-            { header: 'Is Express', key: 'isExpress', width: 10 }
-        ];
+        // Process documents in batches to avoid memory issues
+        const batchSize = 1000; // Process 1000 records at a time
+        let skip = 0;
 
-        const cursor = TuitionApply.find().cursor();
+        while (true) {
+            const batch = await TuitionApply.find().skip(skip).limit(batchSize).lean();
 
-        for await (const doc of cursor) {
-            sheet.addRow({
-                tuitionCode: doc.tuitionCode,
-                tuitionId: doc.tuitionId,
-                premiumCode: doc.premiumCode,
-                name: doc.name,
-                phone: doc.phone,
-                institute: doc.institute,
-                department: doc.department,
-                address: doc.address,
-                status: doc.status,
-                appliedAt: doc.appliedAt
-                    ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
-                    : '',
-                comment: doc.comment,
-                commentForTeacher: doc.commentForTeacher,
-                isSpam: doc.isSpam ? 'Yes' : 'No',
-                isBest: doc.isBest ? 'Yes' : 'No',
-                isExpress: doc.isExpress ? 'Yes' : 'No'
-            }).commit();
+            if (batch.length === 0) {
+                break; // No more records
+            }
+
+            // Process each document in the batch
+            for (const doc of batch) {
+                // Escape CSV fields that might contain commas, quotes, or newlines
+                const escapeCsvField = (field) => {
+                    if (field === null || field === undefined) return '';
+                    field = String(field);
+                    if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+                        return '"' + field.replace(/"/g, '""') + '"';
+                    }
+                    return field;
+                };
+
+                const row = [
+                    escapeCsvField(doc.tuitionCode || ''),
+                    escapeCsvField(doc.tuitionId || ''),
+                    escapeCsvField(doc.premiumCode || ''),
+                    escapeCsvField(doc.name || ''),
+                    escapeCsvField(doc.phone || ''),
+                    escapeCsvField(doc.institute || ''),
+                    escapeCsvField(doc.department || ''),
+                    escapeCsvField(doc.address || ''),
+                    escapeCsvField(doc.status || ''),
+                    escapeCsvField(doc.appliedAt
+                        ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.comment || ''),
+                    escapeCsvField(doc.commentForTeacher || ''),
+                    escapeCsvField(doc.isSpam ? 'Yes' : 'No'),
+                    escapeCsvField(doc.isBest ? 'Yes' : 'No'),
+                    escapeCsvField(doc.isExpress ? 'Yes' : 'No')
+                ].join(',') + '\n';
+
+                res.write(row);
+            }
+
+            skip += batchSize;
         }
 
-        await sheet.commit();
-        await workbook.commit();
+        // End the response
+        res.end();
 
     } catch (err) {
         console.error('Export failed:', err);
