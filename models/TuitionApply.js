@@ -7,6 +7,8 @@ const tuitionApplySchema = new mongoose.Schema({
     name: { type: String },
     phone: { type: String },
     institute: { type: String },
+    createdBy: { type: String },
+    updatedBy: { type: String },
     department: { type: String },
     address: { type: String },
     status: { type: String },
