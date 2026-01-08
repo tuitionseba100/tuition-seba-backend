@@ -371,27 +371,27 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/exportData', async (req, res) => {
     try {
         const { status } = req.query;
-        
+
         // Build filter based on status
         const filter = {};
         if (status && status !== 'all') {
             filter.status = status;
         }
-        
+
         // Set headers for CSV download
         res.setHeader(
             'Content-Type',
             'text/csv'
         );
-        
+
         // Generate filename based on status
-        const fileName = status && status !== 'all' 
+        const fileName = status && status !== 'all'
             ? `tuition_apply_${status.replace(/\s+/g, '_').toLowerCase()}.csv`
             : 'tuition_apply_all.csv';
-        
+
         res.setHeader(
             'Content-Disposition',
             `attachment; filename=${fileName}`
@@ -404,14 +404,14 @@ router.get('/export', async (req, res) => {
         // Process documents in batches to avoid memory issues
         const batchSize = 1000; // Process 1000 records at a time
         let skip = 0;
-        
+
         while (true) {
             const batch = await TuitionApply.find(filter).skip(skip).limit(batchSize).lean();
-            
+
             if (batch.length === 0) {
                 break; // No more records
             }
-            
+
             // Process each document in the batch
             for (const doc of batch) {
                 // Escape CSV fields that might contain commas, quotes, or newlines
@@ -423,7 +423,7 @@ router.get('/export', async (req, res) => {
                     }
                     return field;
                 };
-                
+
                 const row = [
                     escapeCsvField(doc.tuitionCode || ''),
                     escapeCsvField(doc.tuitionId || ''),
@@ -443,13 +443,13 @@ router.get('/export', async (req, res) => {
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')
                 ].join(',') + '\n';
-                
+
                 res.write(row);
             }
-            
+
             skip += batchSize;
         }
-        
+
         // End the response
         res.end();
 
@@ -478,14 +478,14 @@ router.get('/exportAll', async (req, res) => {
         // Process documents in batches to avoid memory issues
         const batchSize = 1000; // Process 1000 records at a time
         let skip = 0;
-        
+
         while (true) {
             const batch = await TuitionApply.find().skip(skip).limit(batchSize).lean();
-            
+
             if (batch.length === 0) {
                 break; // No more records
             }
-            
+
             // Process each document in the batch
             for (const doc of batch) {
                 // Escape CSV fields that might contain commas, quotes, or newlines
@@ -497,7 +497,7 @@ router.get('/exportAll', async (req, res) => {
                     }
                     return field;
                 };
-                
+
                 const row = [
                     escapeCsvField(doc.tuitionCode || ''),
                     escapeCsvField(doc.tuitionId || ''),
@@ -517,13 +517,13 @@ router.get('/exportAll', async (req, res) => {
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')
                 ].join(',') + '\n';
-                
+
                 res.write(row);
             }
-            
+
             skip += batchSize;
         }
-        
+
         // End the response
         res.end();
 

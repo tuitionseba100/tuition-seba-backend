@@ -304,24 +304,24 @@ router.put('/edit/:id', async (req, res) => {
 router.get('/export', async (req, res) => {
     try {
         const { status } = req.query;
-        
+
         // Build filter based on status
         const filter = {};
         if (status && status !== 'all') {
             filter.status = status;
         }
-        
+
         // Set headers for CSV download
         res.setHeader(
             'Content-Type',
             'text/csv'
         );
-        
+
         // Generate filename based on status
-        const fileName = status && status !== 'all' 
+        const fileName = status && status !== 'all'
             ? `tuitions_${status.replace(/\s+/g, '_').toLowerCase()}.csv`
             : 'tuitions_all.csv';
-        
+
         res.setHeader(
             'Content-Disposition',
             `attachment; filename=${fileName}`
@@ -410,7 +410,7 @@ router.get('/export', async (req, res) => {
     }
 });
 
-router.get('/exportAll', async (req, res) => {
+router.get('/exportData', async (req, res) => {
     try {
         // Set headers for CSV download
         res.setHeader(
