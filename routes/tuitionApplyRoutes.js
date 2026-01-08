@@ -7,15 +7,6 @@ const moment = require('moment-timezone');
 const RegTeacher = require('../models/RegTeacher');
 const Phone = require('../models/Phone');
 
-router.get('/all', async (req, res) => {
-    try {
-        const allApply = await TuitionApply.find();
-        res.json(allApply);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
 function escapeRegex(str) {
     if (typeof str !== 'string') {
         str = String(str ?? '');
@@ -377,6 +368,94 @@ router.delete('/delete/:id', async (req, res) => {
         res.status(204).send();
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/export', async (req, res) => {
+    try {
+        const { status } = req.query;
+        
+        // Build filter based on status
+        const filter = {};
+        if (status && status !== 'all') {
+            filter.status = status;
+        }
+        
+        // Set headers for CSV download
+        res.setHeader(
+            'Content-Type',
+            'text/csv'
+        );
+        
+        // Generate filename based on status
+        const fileName = status && status !== 'all' 
+            ? `tuition_apply_${status.replace(/\s+/g, '_').toLowerCase()}.csv`
+            : 'tuition_apply_all.csv';
+        
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=${fileName}`
+        );
+
+        // Write CSV header
+        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        res.write(header);
+
+        // Process documents in batches to avoid memory issues
+        const batchSize = 1000; // Process 1000 records at a time
+        let skip = 0;
+        
+        while (true) {
+            const batch = await TuitionApply.find(filter).skip(skip).limit(batchSize).lean();
+            
+            if (batch.length === 0) {
+                break; // No more records
+            }
+            
+            // Process each document in the batch
+            for (const doc of batch) {
+                // Escape CSV fields that might contain commas, quotes, or newlines
+                const escapeCsvField = (field) => {
+                    if (field === null || field === undefined) return '';
+                    field = String(field);
+                    if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+                        return '"' + field.replace(/"/g, '""') + '"';
+                    }
+                    return field;
+                };
+                
+                const row = [
+                    escapeCsvField(doc.tuitionCode || ''),
+                    escapeCsvField(doc.tuitionId || ''),
+                    escapeCsvField(doc.premiumCode || ''),
+                    escapeCsvField(doc.name || ''),
+                    escapeCsvField(doc.phone || ''),
+                    escapeCsvField(doc.institute || ''),
+                    escapeCsvField(doc.department || ''),
+                    escapeCsvField(doc.address || ''),
+                    escapeCsvField(doc.status || ''),
+                    escapeCsvField(doc.appliedAt
+                        ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.comment || ''),
+                    escapeCsvField(doc.commentForTeacher || ''),
+                    escapeCsvField(doc.isSpam ? 'Yes' : 'No'),
+                    escapeCsvField(doc.isBest ? 'Yes' : 'No'),
+                    escapeCsvField(doc.isExpress ? 'Yes' : 'No')
+                ].join(',') + '\n';
+                
+                res.write(row);
+            }
+            
+            skip += batchSize;
+        }
+        
+        // End the response
+        res.end();
+
+    } catch (err) {
+        console.error('Export failed:', err);
+        res.status(500).json({ message: 'Export failed' });
     }
 });
 
