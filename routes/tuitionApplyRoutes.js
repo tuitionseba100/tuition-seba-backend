@@ -382,63 +382,67 @@ router.get('/exportData', async (req, res) => {
         }
 
         // Set headers for CSV download
-        res.setHeader(
-            'Content-Type',
-            'text/csv'
-        );
+        res.setHeader('Content-Type', 'text/csv');
 
-        // Generate filename based on status
-        const fileName = status && status !== 'all'
-            ? `tuition_apply_${status.replace(/\s+/g, '_').toLowerCase()}.csv`
-            : 'tuition_apply_all.csv';
+        const fileName =
+            status && status !== 'all'
+                ? `tuition_apply_${status.replace(/\s+/g, '_').toLowerCase()}.csv`
+                : 'tuition_apply_all.csv';
 
         res.setHeader(
             'Content-Disposition',
             `attachment; filename=${fileName}`
         );
 
-        // Write CSV header
-        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        // CSV header
+        const header =
+            'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+
         res.write(header);
 
-        // Process documents in batches to avoid memory issues
-        const batchSize = 1000; // Process 1000 records at a time
+        const batchSize = 1000;
         let skip = 0;
 
-        while (true) {
-            const batch = await TuitionApply.find(filter).skip(skip).limit(batchSize).lean();
-
-            if (batch.length === 0) {
-                break; // No more records
+        const escapeCsvField = (field) => {
+            if (field === null || field === undefined) return '';
+            field = String(field);
+            if (
+                field.includes(',') ||
+                field.includes('"') ||
+                field.includes('\n') ||
+                field.includes('\r')
+            ) {
+                return `"${field.replace(/"/g, '""')}"`;
             }
+            return field;
+        };
 
-            // Process each document in the batch
+        while (true) {
+            const batch = await TuitionApply.find(filter)
+                .skip(skip)
+                .limit(batchSize)
+                .lean();
+
+            if (batch.length === 0) break;
+
             for (const doc of batch) {
-                // Escape CSV fields that might contain commas, quotes, or newlines
-                const escapeCsvField = (field) => {
-                    if (field === null || field === undefined) return '';
-                    field = String(field);
-                    if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
-                        return '"' + field.replace(/"/g, '""') + '"';
-                    }
-                    return field;
-                };
-
                 const row = [
-                    escapeCsvField(doc.tuitionCode || ''),
-                    escapeCsvField(doc.tuitionId || ''),
-                    escapeCsvField(doc.premiumCode || ''),
-                    escapeCsvField(doc.name || ''),
-                    escapeCsvField(doc.phone || ''),
-                    escapeCsvField(doc.institute || ''),
-                    escapeCsvField(doc.department || ''),
-                    escapeCsvField(doc.address || ''),
-                    escapeCsvField(doc.status || ''),
-                    escapeCsvField(doc.appliedAt
-                        ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.comment || ''),
-                    escapeCsvField(doc.commentForTeacher || ''),
+                    escapeCsvField(doc.tuitionCode),
+                    escapeCsvField(doc.tuitionId),
+                    escapeCsvField(doc.premiumCode),
+                    escapeCsvField(doc.name),
+                    escapeCsvField(doc.phone),
+                    escapeCsvField(doc.institute),
+                    escapeCsvField(doc.department),
+                    escapeCsvField(doc.address),
+                    escapeCsvField(doc.status),
+                    escapeCsvField(
+                        doc.appliedAt
+                            ? doc.appliedAt.toISOString().replace('T', ' ').slice(0, 19)
+                            : ''
+                    ),
+                    escapeCsvField(doc.comment),
+                    escapeCsvField(doc.commentForTeacher),
                     escapeCsvField(doc.isSpam ? 'Yes' : 'No'),
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')
@@ -450,7 +454,6 @@ router.get('/exportData', async (req, res) => {
             skip += batchSize;
         }
 
-        // End the response
         res.end();
 
     } catch (err) {
@@ -458,6 +461,7 @@ router.get('/exportData', async (req, res) => {
         res.status(500).json({ message: 'Export failed' });
     }
 });
+
 
 router.get('/exportAll', async (req, res) => {
     try {
