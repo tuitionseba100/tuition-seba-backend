@@ -401,7 +401,8 @@ router.post('/check-apply-possible', async (req, res) => {
             message: "OK, matched",
             data: {
                 premiumCode: teacher.premiumCode,
-                phone: inputPhone
+                phone: inputPhone,
+                data: teacher
             }
         });
     } catch (err) {
