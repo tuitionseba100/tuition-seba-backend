@@ -1,6 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
+const https = require('https');
+
+// Create axios instance with SSL certificate verification disabled
+const axiosInstance = axios.create({
+    httpsAgent: new https.Agent({
+        rejectUnauthorized: false
+    })
+});
 
 const SMS_CONFIG = {
     apiKey: process.env.SMS_API_KEY || 'a0d26e48e3a0d1c3859e42127ab678d2',
@@ -63,7 +71,7 @@ router.post('/send', async (req, res) => {
             contacts: msisdn
         };
 
-        const response = await axios.post(
+        const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapiv4`,
             requestBody,
             {
@@ -123,7 +131,7 @@ router.post('/send-bulk', async (req, res) => {
             contacts: contactString
         };
 
-        const response = await axios.post(
+        const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapiv4`,
             requestBody,
             {
@@ -167,7 +175,7 @@ router.post('/send-dynamic', async (req, res) => {
             messages: messages
         };
 
-        const response = await axios.post(
+        const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapimany`,
             requestBody,
             {
@@ -196,7 +204,7 @@ router.post('/send-dynamic', async (req, res) => {
 // Check SMS balance
 router.get('/balance', async (req, res) => {
     try {
-        const response = await axios.get(
+        const response = await axiosInstance.get(
             `${SMS_CONFIG.baseURL}/getbalancev3`,
             {
                 params: {
