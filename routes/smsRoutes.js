@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 const https = require('https');
 
-// Axios instance with SSL disabled (as before)
+// Create axios instance with SSL certificate verification disabled
 const axiosInstance = axios.create({
     httpsAgent: new https.Agent({
         rejectUnauthorized: false
@@ -16,7 +16,7 @@ const SMS_CONFIG = {
     baseURL: 'https://bsms.automas.com.bd/api'
 };
 
-// Map status codes to messages
+// Helper function to get status message
 function getStatusMessage(statusCode) {
     const statusCodes = {
         0: 'Success',
@@ -42,9 +42,14 @@ function getStatusMessage(statusCode) {
     return statusCodes[statusCode] || 'Unknown Status Code';
 }
 
-// ==========================
-// Send Single SMS
-// ==========================
+// Helper to format Bangladesh numbers to international format
+function formatNumber(number) {
+    number = number.toString().trim();
+    if (number.startsWith('0')) return '88' + number.slice(1);
+    return number;
+}
+
+// Send single SMS
 router.post('/send', async (req, res) => {
     try {
         const { msisdn, message, type = 'text', scheduledDateTime = '' } = req.body;
@@ -64,12 +69,12 @@ router.post('/send', async (req, res) => {
         }
 
         const requestBody = {
-            apikey: SMS_CONFIG.apiKey,       // corrected
-            sender: SMS_CONFIG.senderId,     // corrected
+            api_key: SMS_CONFIG.apiKey,
+            senderid: SMS_CONFIG.senderId,
             type: type,
             scheduledDateTime: scheduledDateTime,
-            smstext: message,                // corrected
-            contacts: msisdn                 // ok
+            msg: message,
+            contacts: formatNumber(msisdn)
         };
 
         const response = await axiosInstance.post(
@@ -84,7 +89,7 @@ router.post('/send', async (req, res) => {
         res.status(200).json({
             success: statusCode === 0,
             data: response.data,
-            statusMessage: statusMessage
+            statusMessage
         });
 
     } catch (error) {
@@ -97,9 +102,7 @@ router.post('/send', async (req, res) => {
     }
 });
 
-// ==========================
-// Send Bulk SMS
-// ==========================
+// Send bulk SMS
 router.post('/send-bulk', async (req, res) => {
     try {
         const { contacts, message, type = 'text', scheduledDateTime = '' } = req.body;
@@ -118,14 +121,14 @@ router.post('/send-bulk', async (req, res) => {
             });
         }
 
-        const contactString = contacts.join('+');
+        const contactString = contacts.map(formatNumber).join('+');
 
         const requestBody = {
-            apikey: SMS_CONFIG.apiKey,       // corrected
-            sender: SMS_CONFIG.senderId,     // corrected
+            api_key: SMS_CONFIG.apiKey,
+            senderid: SMS_CONFIG.senderId,
             type: type,
             scheduledDateTime: scheduledDateTime,
-            smstext: message,                // corrected
+            msg: message,
             contacts: contactString
         };
 
@@ -151,9 +154,7 @@ router.post('/send-bulk', async (req, res) => {
     }
 });
 
-// ==========================
-// Send Dynamic SMS (Different message per number)
-// ==========================
+// Send dynamic SMS (different messages per number)
 router.post('/send-dynamic', async (req, res) => {
     try {
         const { messages } = req.body;
@@ -168,7 +169,11 @@ router.post('/send-dynamic', async (req, res) => {
         const requestBody = {
             apikey: SMS_CONFIG.apiKey,
             sender: SMS_CONFIG.senderId,
-            messages: messages
+            messages: messages.map(msg => ({
+                id: msg.id,
+                msisdn: formatNumber(msg.msisdn),
+                smstext: msg.smstext
+            }))
         };
 
         const response = await axiosInstance.post(
@@ -193,9 +198,7 @@ router.post('/send-dynamic', async (req, res) => {
     }
 });
 
-// ==========================
-// Check SMS Balance
-// ==========================
+// Check SMS balance
 router.get('/balance', async (req, res) => {
     try {
         const response = await axiosInstance.get(
