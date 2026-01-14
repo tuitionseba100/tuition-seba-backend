@@ -3,7 +3,7 @@ const router = express.Router();
 const axios = require('axios');
 const https = require('https');
 
-// Create axios instance with SSL certificate verification disabled
+// Axios instance with SSL disabled (as before)
 const axiosInstance = axios.create({
     httpsAgent: new https.Agent({
         rejectUnauthorized: false
@@ -16,7 +16,7 @@ const SMS_CONFIG = {
     baseURL: 'https://bsms.automas.com.bd/api'
 };
 
-// Helper function to get status message
+// Map status codes to messages
 function getStatusMessage(statusCode) {
     const statusCodes = {
         0: 'Success',
@@ -42,7 +42,9 @@ function getStatusMessage(statusCode) {
     return statusCodes[statusCode] || 'Unknown Status Code';
 }
 
-// Send single SMS
+// ==========================
+// Send Single SMS
+// ==========================
 router.post('/send', async (req, res) => {
     try {
         const { msisdn, message, type = 'text', scheduledDateTime = '' } = req.body;
@@ -54,7 +56,6 @@ router.post('/send', async (req, res) => {
             });
         }
 
-        // Validate message length
         if (message.length > 160) {
             return res.status(400).json({
                 success: false,
@@ -63,22 +64,18 @@ router.post('/send', async (req, res) => {
         }
 
         const requestBody = {
-            api_key: SMS_CONFIG.apiKey,
-            senderid: SMS_CONFIG.senderId,
+            apikey: SMS_CONFIG.apiKey,       // corrected
+            sender: SMS_CONFIG.senderId,     // corrected
             type: type,
             scheduledDateTime: scheduledDateTime,
-            msg: message,
-            contacts: msisdn
+            smstext: message,                // corrected
+            contacts: msisdn                 // ok
         };
 
         const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapiv4`,
             requestBody,
-            {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
+            { headers: { 'Content-Type': 'application/json' } }
         );
 
         const statusCode = response.data.response[0].status;
@@ -91,16 +88,18 @@ router.post('/send', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('SMS sending error:', error.message);
+        console.error('SMS sending error:', error.response?.data || error.message);
         res.status(500).json({
             success: false,
             message: 'Failed to send SMS',
-            error: error.message
+            error: error.response?.data || error.message
         });
     }
 });
 
-// Send bulk SMS
+// ==========================
+// Send Bulk SMS
+// ==========================
 router.post('/send-bulk', async (req, res) => {
     try {
         const { contacts, message, type = 'text', scheduledDateTime = '' } = req.body;
@@ -119,26 +118,21 @@ router.post('/send-bulk', async (req, res) => {
             });
         }
 
-        // Join contacts with +
         const contactString = contacts.join('+');
 
         const requestBody = {
-            api_key: SMS_CONFIG.apiKey,
-            senderid: SMS_CONFIG.senderId,
+            apikey: SMS_CONFIG.apiKey,       // corrected
+            sender: SMS_CONFIG.senderId,     // corrected
             type: type,
             scheduledDateTime: scheduledDateTime,
-            msg: message,
+            smstext: message,                // corrected
             contacts: contactString
         };
 
         const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapiv4`,
             requestBody,
-            {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
+            { headers: { 'Content-Type': 'application/json' } }
         );
 
         res.status(200).json({
@@ -148,16 +142,18 @@ router.post('/send-bulk', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Bulk SMS sending error:', error.message);
+        console.error('Bulk SMS sending error:', error.response?.data || error.message);
         res.status(500).json({
             success: false,
             message: 'Failed to send bulk SMS',
-            error: error.message
+            error: error.response?.data || error.message
         });
     }
 });
 
-// Send dynamic SMS (different messages to different numbers)
+// ==========================
+// Send Dynamic SMS (Different message per number)
+// ==========================
 router.post('/send-dynamic', async (req, res) => {
     try {
         const { messages } = req.body;
@@ -178,11 +174,7 @@ router.post('/send-dynamic', async (req, res) => {
         const response = await axiosInstance.post(
             `${SMS_CONFIG.baseURL}/smsapimany`,
             requestBody,
-            {
-                headers: {
-                    'Content-Type': 'application/json'
-                }
-            }
+            { headers: { 'Content-Type': 'application/json' } }
         );
 
         res.status(200).json({
@@ -192,25 +184,23 @@ router.post('/send-dynamic', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Dynamic SMS sending error:', error.message);
+        console.error('Dynamic SMS sending error:', error.response?.data || error.message);
         res.status(500).json({
             success: false,
             message: 'Failed to send dynamic SMS',
-            error: error.message
+            error: error.response?.data || error.message
         });
     }
 });
 
-// Check SMS balance
+// ==========================
+// Check SMS Balance
+// ==========================
 router.get('/balance', async (req, res) => {
     try {
         const response = await axiosInstance.get(
             `${SMS_CONFIG.baseURL}/getbalancev3`,
-            {
-                params: {
-                    apikey: SMS_CONFIG.apiKey
-                }
-            }
+            { params: { apikey: SMS_CONFIG.apiKey } }
         );
 
         res.status(200).json({
@@ -219,11 +209,11 @@ router.get('/balance', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Balance check error:', error.message);
+        console.error('Balance check error:', error.response?.data || error.message);
         res.status(500).json({
             success: false,
             message: 'Failed to check balance',
-            error: error.message
+            error: error.response?.data || error.message
         });
     }
 });
