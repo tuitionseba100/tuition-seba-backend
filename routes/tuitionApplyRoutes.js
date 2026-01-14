@@ -213,6 +213,7 @@ router.post('/add', async (req, res) => {
         phone,
         institute,
         department,
+        academicYear,
         address,
         status,
         comment,
