@@ -1,59 +1,30 @@
 const express = require('express');
-const router = express.Router();
 const axios = require('axios');
-const https = require('https');
+const router = express.Router();
 
-// Axios instance with SSL verification disabled
-const axiosInstance = axios.create({
-    httpsAgent: new https.Agent({ rejectUnauthorized: false }) // <--- important
-});
-
-const SMS_CONFIG = {
-    apiKey: process.env.SMS_API_KEY || 'a0d26e48e3a0d1c3859e42127ab678d2',
-    senderId: process.env.SMS_SENDER_ID || '8809617621855',
-    baseURL: 'https://bsms.automas.com.bd/api'
-};
-
-// Single SMS endpoint
-router.post('/send', async (req, res) => {
+// POST endpoint to send SMS
+router.post('/send-sms', async (req, res) => {
     try {
-        const { phone, message, type = 'text', scheduledDateTime = '' } = req.body;
+        const { number, message } = req.body;
 
-        if (!phone || !message) {
-            return res.status(400).json({ success: false, message: 'Phone and message required' });
+        if (!number || !message) {
+            return res.status(400).json({ error: 'Number and message are required' });
         }
 
-        const requestBody = {
-            api_key: SMS_CONFIG.apiKey,
-            senderid: SMS_CONFIG.senderId,
-            type: type,
-            scheduledDateTime,
-            msg: message,
-            contacts: phone
-        };
+        const encodedMessage = encodeURIComponent(message);
 
-        const response = await axiosInstance.post(
-            `${SMS_CONFIG.baseURL}/smsapiv4`,
-            requestBody,
-            { headers: { 'Content-Type': 'application/json' } }
-        );
+        const apiUrl = `https://bsms.automas.com.bd/api/smsapiv3?apikey=c72211cb4ba10d6e2435045554b7d4d6&sender=8809617621855&msisdn=${number}&smstext=${encodedMessage}`;
 
-        const statusCode = response.data.response[0].status;
-        const statusMessage = statusCode === 0 ? 'Success' : 'Failed';
+        const response = await axios.get(apiUrl);
 
-        res.status(200).json({
-            success: statusCode === 0,
-            data: response.data,
-            statusMessage
+        res.json({
+            status: 'success',
+            apiResponse: response.data
         });
 
-    } catch (err) {
-        console.error('SMS sending error:', err.message || err);
-        res.status(500).json({
-            success: false,
-            message: 'Failed to send SMS',
-            error: err.message || err
-        });
+    } catch (error) {
+        console.error('SMS sending failed:', error.message);
+        res.status(500).json({ status: 'fail', error: error.message });
     }
 });
 
