@@ -255,6 +255,7 @@ router.post('/add', async (req, res) => {
             phone: normalizedInputPhoneForSave,
             institute,
             department,
+            academicYear,
             address,
             comment,
             commentForTeacher,
@@ -282,7 +283,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone institute department address appliedAt status isSpam isBest hasDue comment updatedBy agentComment commentForTeacher'
+            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest hasDue comment updatedBy agentComment commentForTeacher'
         ).sort({ appliedAt: -1 });
 
         res.json(appliedList);
@@ -398,7 +399,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+            'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
 
         res.write(header);
 
@@ -435,6 +436,7 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.name),
                     escapeCsvField(doc.phone),
                     escapeCsvField(doc.institute),
+                    escapeCsvField(doc.academicYear),
                     escapeCsvField(doc.department),
                     escapeCsvField(doc.address),
                     escapeCsvField(doc.status),
@@ -478,7 +480,7 @@ router.get('/exportAll', async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -511,6 +513,7 @@ router.get('/exportAll', async (req, res) => {
                     escapeCsvField(doc.name || ''),
                     escapeCsvField(doc.phone || ''),
                     escapeCsvField(doc.institute || ''),
+                    escapeCsvField(doc.academicYear || ''),
                     escapeCsvField(doc.department || ''),
                     escapeCsvField(doc.address || ''),
                     escapeCsvField(doc.status || ''),

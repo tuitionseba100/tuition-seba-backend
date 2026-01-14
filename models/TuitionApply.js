@@ -13,6 +13,7 @@ const tuitionApplySchema = new mongoose.Schema({
     address: { type: String },
     status: { type: String },
     comment: { type: String },
+    academicYear: { type: String },
     commentForTeacher: { type: String },
     agentComment: { type: String },
     isSpam: { type: Boolean, default: false },
