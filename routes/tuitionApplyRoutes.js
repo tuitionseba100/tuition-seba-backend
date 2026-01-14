@@ -217,6 +217,7 @@ router.post('/add', async (req, res) => {
         status,
         comment,
         commentForTeacher,
+        agentComment,
     } = req.body;
 
     try {
@@ -262,6 +263,7 @@ router.post('/add', async (req, res) => {
             isSpam,
             isBest,
             isExpress,
+            agentComment
         });
 
         await newApply.save();

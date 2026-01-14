@@ -14,6 +14,7 @@ const tuitionApplySchema = new mongoose.Schema({
     status: { type: String },
     comment: { type: String },
     commentForTeacher: { type: String },
+    agentComment: { type: String },
     isSpam: { type: Boolean, default: false },
     isBest: { type: Boolean, default: false },
     isExpress: { type: Boolean, default: false },
