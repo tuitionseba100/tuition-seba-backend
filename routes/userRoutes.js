@@ -4,8 +4,21 @@ const bcrypt = require('bcryptjs');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
+
 // Get all users
-router.get('/users', async (req, res) => {
+router.get('/users', authMiddleware, async (req, res) => {
     try {
         const users = await User.find();
         res.json(users);
@@ -15,7 +28,7 @@ router.get('/users', async (req, res) => {
 });
 
 // Register user
-router.post('/register', async (req, res) => {
+router.post('/register', authMiddleware, async (req, res) => {
     const { username, password, role, name } = req.body;
 
     try {
@@ -54,7 +67,7 @@ router.post('/login', async (req, res) => {
 });
 
 // Approve user
-router.put('/approve/:id', async (req, res) => {
+router.put('/approve/:id', authMiddleware, async (req, res) => {
     try {
         const updatedUser = await User.findByIdAndUpdate(
             req.params.id,
@@ -68,7 +81,7 @@ router.put('/approve/:id', async (req, res) => {
 });
 
 // Edit user
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     const { username, password, role, name } = req.body;
 
     try {
@@ -93,7 +106,7 @@ router.put('/edit/:id', async (req, res) => {
 
 
 // Delete user
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.status(204).send();
