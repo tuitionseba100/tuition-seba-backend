@@ -48,7 +48,8 @@ router.get('/getTableData', async (req, res) => {
         tutorNumber = '',
         isPublish,
         isUrgent,
-        status
+        status,
+        area
     } = req.query;
 
     const filter = {};
@@ -75,6 +76,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (status) {
         filter.status = status;
+    }
+
+    if (area) {
+        filter.area = new RegExp(escapeRegex(area), 'i');
     }
 
     try {
@@ -139,7 +144,8 @@ router.get('/summary', async (req, res) => {
         tutorNumber = '',
         isPublish,
         isUrgent,
-        status
+        status,
+        area
     } = req.query;
 
     const filter = {};
@@ -166,6 +172,10 @@ router.get('/summary', async (req, res) => {
 
     if (status) {
         filter.status = status;
+    }
+
+    if (area) {
+        filter.area = new RegExp(escapeRegex(area), 'i');
     }
 
     try {
