@@ -326,6 +326,31 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
 });
 
 
+router.get('/byPremiumCode', async (req, res) => {
+    try {
+        const { premiumCode } = req.query;
+
+        if (!premiumCode) {
+            return res.status(400).json({ message: 'Premium code is required' });
+        }
+
+        const tuitionApplies = await TuitionApply.find(
+            { premiumCode },
+            'premiumCode tuitionCode name phone status appliedAt'
+        ).sort({ appliedAt: -1 });
+
+        if (tuitionApplies.length === 0) {
+            return res.status(404).json({ message: 'No applications found for this premium code' });
+        }
+
+        res.json(tuitionApplies);
+    } catch (err) {
+        console.error('Error fetching tuition applies by premium code:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+
 router.put('/edit/:id', async (req, res) => {
     try {
         let updatePayload = { ...req.body };
