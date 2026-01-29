@@ -8,6 +8,7 @@ const leadSchema = new mongoose.Schema({
     employeeId: { type: String },
     employeeName: { type: String },
     createdBy: { type: String },
+    updatedBy: { type: String },
     status: { type: String },
     note: { type: String },
     followUpDate: { type: Date },
