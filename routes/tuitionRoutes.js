@@ -25,6 +25,50 @@ router.get('/available', async (req, res) => {
     }
 });
 
+router.get('/published-summary', async (req, res) => {
+    try {
+        const threeDaysAgo = new Date();
+        threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+
+        const total = await Tuition.countDocuments({ isPublish: true });
+
+        const totalNew = await Tuition.countDocuments({
+            createdAt: { $gte: threeDaysAgo }
+        });
+
+        const newCount = await Tuition.countDocuments({
+            isPublish: true,
+            createdAt: { $gte: threeDaysAgo }
+        });
+
+        const areaWiseCount = await Tuition.aggregate([
+            { $match: { isPublish: true } },
+            {
+                $group: {
+                    _id: "$area",
+                    count: { $sum: 1 }
+                }
+            },
+            {
+                $project: {
+                    _id: 0,
+                    area: "$_id",
+                    count: 1
+                }
+            }
+        ]);
+
+        res.json({
+            total,
+            totalNew,
+            newCount,
+            areaWiseCount
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/all', authMiddleware, async (req, res) => {
     try {
         const tuitions = await Tuition.find();
