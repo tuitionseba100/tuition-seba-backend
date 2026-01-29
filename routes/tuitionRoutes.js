@@ -30,39 +30,29 @@ router.get('/published-summary', async (req, res) => {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const total = await Tuition.countDocuments({ isPublish: true });
+        const publishedTuitions = await Tuition.find({ isPublish: true });
 
-        const totalNew = await Tuition.countDocuments({
-            createdAt: { $gte: threeDaysAgo }
-        });
+        const total = publishedTuitions.length;
 
-        const newCount = await Tuition.countDocuments({
-            isPublish: true,
-            createdAt: { $gte: threeDaysAgo }
-        });
+        const newCount = publishedTuitions.filter(tuition =>
+            new Date(tuition.createdAt) >= threeDaysAgo
+        ).length;
 
-        const areaWiseCount = await Tuition.aggregate([
-            { $match: { isPublish: true } },
-            {
-                $group: {
-                    _id: "$area",
-                    count: { $sum: 1 }
-                }
-            },
-            {
-                $project: {
-                    _id: 0,
-                    area: "$_id",
-                    count: 1
-                }
-            }
-        ]);
+        const areaWiseCount = publishedTuitions.reduce((acc, tuition) => {
+            const area = tuition.area || 'Unknown';
+            acc[area] = (acc[area] || 0) + 1;
+            return acc;
+        }, {});
+
+        const areaWiseCountArray = Object.entries(areaWiseCount).map(([area, count]) => ({
+            area,
+            count
+        }));
 
         res.json({
             total,
-            totalNew,
             newCount,
-            areaWiseCount
+            areaWiseCount: areaWiseCountArray
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
