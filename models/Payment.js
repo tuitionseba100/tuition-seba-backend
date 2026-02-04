@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const paymentSchema = new mongoose.Schema({
     tuitionCode: { type: String, required: true },
     tuitionId: { type: String },
+    createdBy: { type: String },
+    updatedBy: { type: String },
     paymentReceivedDate: { type: Date },
     duePayDate: { type: Date },
     paymentType: { type: String },

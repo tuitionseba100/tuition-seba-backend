@@ -29,6 +29,7 @@ router.post('/add', async (req, res) => {
         comment,
         totalReceivedTk,
         reference,
+        createdBy
     } = req.body;
 
     try {
@@ -48,6 +49,7 @@ router.post('/add', async (req, res) => {
             paymentStatus,
             comment,
             totalReceivedTk,
+            createdBy
         });
 
         await newPayment.save();
