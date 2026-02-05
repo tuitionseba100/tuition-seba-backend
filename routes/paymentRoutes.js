@@ -1,8 +1,22 @@
 const express = require('express');
 const Payment = require('../models/Payment');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 
-router.get('/all', async (req, res) => {
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
+
+router.get('/all', authMiddleware, async (req, res) => {
     try {
         const payments = await Payment.find();
         res.json(payments);
@@ -98,6 +112,143 @@ router.get('/alert-today', async (req, res) => {
 
         res.json(payments);
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+router.get('/getTableData', async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+
+    const {
+        tuitionCode = '',
+        tutorNumber = '',
+        paymentNumber = '',
+        paymentStatus = '',
+        paymentType = ''
+    } = req.query;
+
+    const filter = {};
+
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+    }
+
+    if (paymentNumber) {
+        filter.paymentNumber = new RegExp(escapeRegex(paymentNumber), 'i');
+    }
+
+    if (paymentStatus) {
+        filter.paymentStatus = paymentStatus;
+    }
+
+    if (paymentType) {
+        filter.paymentType = paymentType;
+    }
+
+    try {
+        const total = await Payment.countDocuments(filter);
+        const payments = await Payment.find(filter)
+            .sort({ _id: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data: payments,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', async (req, res) => {
+    const {
+        tuitionCode = '',
+        tutorNumber = '',
+        paymentNumber = '',
+        paymentStatus = '',
+        paymentType = ''
+    } = req.query;
+
+    const filter = {};
+
+    if (tuitionCode) {
+        filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (tutorNumber) {
+        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+    }
+
+    if (paymentNumber) {
+        filter.paymentNumber = new RegExp(escapeRegex(paymentNumber), 'i');
+    }
+
+    if (paymentStatus) {
+        filter.paymentStatus = paymentStatus;
+    }
+
+    if (paymentType) {
+        filter.paymentType = paymentType;
+    }
+
+    try {
+        const filteredPayments = await Payment.find(filter);
+
+        const totalPaymentsCount = filteredPayments.length;
+
+        const totalPaymentTK = filteredPayments.reduce((sum, payment) =>
+            sum + parseFloat(payment.totalReceivedTk || 0), 0
+        );
+
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const todayPayments = filteredPayments.filter(payment => {
+            const paymentDate = new Date(payment.paymentReceivedDate);
+            return paymentDate >= startUTC && paymentDate <= endUTC;
+        });
+
+        const totalPaymentsTodayCount = todayPayments.length;
+        const totalPaymentTKToday = todayPayments.reduce((sum, payment) =>
+            sum + parseFloat(payment.receivedTk || 0), 0
+        );
+
+        const totalDues = filteredPayments.reduce((sum, payment) =>
+            sum + parseFloat(payment.duePayment || 0), 0
+        );
+        const totalDuesCount = filteredPayments.filter(payment =>
+            parseFloat(payment.duePayment || 0) > 0
+        ).length;
+
+        res.json({
+            totalPaymentsCount,
+            totalPaymentTK,
+            totalPaymentsTodayCount,
+            totalPaymentTKToday,
+            totalDues,
+            totalDuesCount
+        });
+
+    } catch (err) {
+        console.error(err);
         res.status(500).json({ message: err.message });
     }
 });
