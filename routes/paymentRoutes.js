@@ -116,6 +116,91 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
+router.get('/exportData', async (req, res) => {
+    try {
+        const { paymentStatus } = req.query;
+
+        // Build filter based on paymentStatus
+        const filter = {};
+        if (paymentStatus && paymentStatus !== 'all') {
+            filter.paymentStatus = paymentStatus;
+        }
+
+        // Set headers for CSV download
+        res.setHeader('Content-Type', 'text/csv');
+
+        const fileName = paymentStatus && paymentStatus !== 'all'
+            ? `payments_${paymentStatus.replace(/\s+/g, '_').toLowerCase()}.csv`
+            : 'payments_all.csv';
+
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=${fileName}`
+        );
+
+        // CSV header
+        const header =
+            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Comment,Reference,Created By\n';
+
+        res.write(header);
+
+        const batchSize = 1000;
+        let skip = 0;
+
+        const escapeCsvField = (field) => {
+            if (field === null || field === undefined) return '';
+            field = String(field);
+            if (field.includes(',') || field.includes('"') || field.includes('\n') || field.includes('\r')) {
+                return `"${field.replace(/"/g, '""')}"`;
+            }
+            return field;
+        };
+
+        while (true) {
+            const batch = await Payment.find(filter)
+                .skip(skip)
+                .limit(batchSize)
+                .lean();
+
+            if (batch.length === 0) break;
+
+            for (const doc of batch) {
+                const row = [
+                    escapeCsvField(doc.tuitionCode),
+                    escapeCsvField(doc.paymentStatus),
+                    escapeCsvField(doc.paymentReceivedDate
+                        ? doc.paymentReceivedDate.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.duePayDate
+                        ? doc.duePayDate.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.paymentType),
+                    escapeCsvField(doc.tutorName),
+                    escapeCsvField(doc.tutorNumber),
+                    escapeCsvField(doc.paymentNumber),
+                    escapeCsvField(doc.transactionId),
+                    escapeCsvField(doc.receivedTk),
+                    escapeCsvField(doc.duePayment),
+                    escapeCsvField(doc.totalReceivedTk),
+                    escapeCsvField(doc.comment),
+                    escapeCsvField(doc.reference),
+                    escapeCsvField(doc.createdBy)
+                ].join(',') + '\n';
+
+                res.write(row);
+            }
+
+            skip += batchSize;
+        }
+
+        res.end();
+
+    } catch (err) {
+        console.error('Export failed:', err);
+        res.status(500).json({ message: 'Export failed' });
+    }
+});
+
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
