@@ -164,16 +164,22 @@ router.put('/edit/:id', async (req, res) => {
 });
 
 router.put('/update-status/:id', async (req, res) => {
-    const { status, comment } = req.body;
+    const { status, comment, updatedBy } = req.body;
 
     if (!status) {
         return res.status(400).json({ message: "Status is required" });
     }
 
     try {
+        const updateFields = { status, comment };
+        
+        if (updatedBy !== undefined && updatedBy !== null) {
+            updateFields.updatedBy = updatedBy;
+        }
+
         const updatedData = await GuardianApply.findByIdAndUpdate(
             req.params.id,
-            { status, comment },
+            updateFields,
             { new: true }
         );
 
