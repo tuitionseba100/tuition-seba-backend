@@ -4,6 +4,8 @@ const guardianApplySchema = new mongoose.Schema({
     name: { type: String },
     teacherId: { type: String },
     teacherCode: { type: String },
+    createdBy: { type: String },
+    updatedBy: { type: String },
     phone: { type: String, required: true },
     address: { type: String },
     studentClass: { type: String },

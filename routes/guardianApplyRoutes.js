@@ -119,6 +119,7 @@ router.get('/summary', async (req, res) => {
 router.post('/add', async (req, res) => {
     const {
         name,
+        createdBy,
         teacherId,
         teacherCode,
         phone,
@@ -133,6 +134,7 @@ router.post('/add', async (req, res) => {
 
         const newData = new GuardianApply({
             name,
+            createdBy,
             teacherId,
             teacherCode,
             phone,
