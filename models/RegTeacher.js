@@ -46,6 +46,8 @@ const teacherSchema = new mongoose.Schema({
     amount: { type: String },
     commentFromTeacher: { type: String },
     comment: { type: String },
+    createdBy: { type: String },
+    updatedBy: { type: String },
     isBiodataShow: { type: Boolean, default: false },
     isResultShow: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
