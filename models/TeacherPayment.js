@@ -6,6 +6,8 @@ const teacherPaymentSchema = new mongoose.Schema({
     paymentNumber: { type: String },
     personalPhone: { type: String },
     transactionId: { type: String },
+    createdBy: { type: String },
+    updatedBy: { type: String },
     amount: { type: Number },
     name: { type: String },
     note: { type: String },

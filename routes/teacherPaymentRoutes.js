@@ -27,6 +27,7 @@ router.post('/add', async (req, res) => {
         note,
         status,
         comment,
+        createdBy
     } = req.body;
 
     try {
@@ -45,6 +46,7 @@ router.post('/add', async (req, res) => {
             name,
             note,
             comment,
+            createdBy: createdBy || 'teacher',
             requestedAt: localTime,
             status: status || 'pending'
         });
