@@ -336,7 +336,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher'
         ).sort({ appliedAt: -1 });
 
         if (tuitionApplies.length === 0) {
