@@ -387,6 +387,10 @@ router.post('/check-apply-possible', async (req, res) => {
             return res.status(404).json({ message: "এই প্রিমিয়াম কোড পাওয়া যায়নি। অনুগ্রহ করে সঠিক প্রিমিয়াম কোড প্রদান করুন।" });
         }
 
+        if (teacher.status === 'suspended') {
+            return res.status(403).json({ message: "Please contact to office" });
+        }
+
         const allTeacherPhones = [teacher.phone, teacher.alternativePhone, teacher.whatsapp].filter(Boolean);
         const inputPhone = convertNormal(phone);
 
