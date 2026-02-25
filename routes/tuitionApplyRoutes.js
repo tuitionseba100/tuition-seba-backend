@@ -265,7 +265,80 @@ router.post('/add', async (req, res) => {
             isSpam,
             isBest,
             isExpress,
-            agentComment
+            agentComment,
+            isAppApply: true
+        });
+
+        await newApply.save();
+        res.status(201).json(newApply);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/add-web', async (req, res) => {
+    const {
+        premiumCode,
+        tuitionCode,
+        tuitionId,
+        name,
+        phone,
+        institute,
+        department,
+        academicYear,
+        address,
+        status,
+        comment,
+        commentForTeacher,
+        agentComment,
+    } = req.body;
+
+    try {
+        const normalizedInputPhone = normalizePhone(phone);
+
+        const phoneList = await Phone.find({ isActive: true });
+
+        let isSpam = false;
+        let isBest = false;
+        let isExpress = false;
+
+        for (const entry of phoneList) {
+            const normalizedDbPhone = normalizePhone(entry.phone);
+
+            if (normalizedDbPhone === normalizedInputPhone) {
+                if (entry.isSpam) {
+                    isSpam = true;
+                } else if (entry.isExpress) {
+                    isExpress = true;
+                } else if (entry.isBest) {
+                    isBest = true;
+                }
+                break;
+            }
+        }
+
+        const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
+        const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
+
+        const newApply = new TuitionApply({
+            premiumCode,
+            tuitionCode,
+            tuitionId,
+            name,
+            phone: normalizedInputPhoneForSave,
+            institute,
+            department,
+            academicYear,
+            address,
+            comment,
+            commentForTeacher,
+            appliedAt: localTime,
+            status: status || 'pending',
+            isSpam,
+            isBest,
+            isExpress,
+            agentComment,
+            isAppApply: false
         });
 
         await newApply.save();
@@ -284,7 +357,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest hasDue comment updatedBy agentComment commentForTeacher'
+            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest hasDue isAppApply comment updatedBy agentComment commentForTeacher'
         ).sort({ appliedAt: -1 });
 
         res.json(appliedList);
@@ -336,7 +409,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt commentForTeacher'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply'
         ).sort({ appliedAt: -1 });
 
         if (tuitionApplies.length === 0) {
