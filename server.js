@@ -28,6 +28,8 @@ const phoneRoutes = require('./routes/phoneRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
 const leadRoutes = require('./routes/leadRoutes');
 const smsRoutes = require('./routes/smsRoutes');
+const generalSearchRoutes = require('./routes/generalSearchRoutes');
+
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/user', userRoutes);
@@ -43,6 +45,8 @@ app.use('/api/phone', phoneRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/lead', leadRoutes);
 app.use('/api/sms', smsRoutes);
+app.use('/api/generalSearch', generalSearchRoutes);
+
 
 app.get('/', (req, res) => {
     res.send('Welcome to TuitionSeba API!');
