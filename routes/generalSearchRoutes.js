@@ -9,6 +9,7 @@ const TuitionApply = require('../models/TuitionApply');
 const TeacherPayment = require('../models/TeacherPayment');
 const Payment = require('../models/Payment');
 const RefundPayment = require('../models/RefundPayment');
+const TaskData = require('../models/TaskData');
 
 
 // General Phone Search Route
@@ -91,6 +92,46 @@ router.get('/phone/:phoneNumber', async (req, res) => {
 
     } catch (err) {
         console.error('General Search Error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// General Tuition Code Search Route
+router.get('/tuition/:tuitionCode', async (req, res) => {
+    try {
+        const { tuitionCode } = req.params;
+
+        // Search across models
+        const [
+            tuitionApplies,
+            tuitions,
+            teacherPayments,
+            taskDatas,
+            refunds,
+            payments,
+            leads
+        ] = await Promise.all([
+            TuitionApply.find({ tuitionCode }),
+            Tuition.find({ tuitionCode }),
+            TeacherPayment.find({ tuitionCode }),
+            TaskData.find({ tuitionCode }),
+            RefundPayment.find({ tuitionCode }),
+            Payment.find({ tuitionCode }),
+            Lead.find({ tuitionCode })
+        ]);
+
+        res.json({
+            tuitionApplies,
+            tuitions,
+            teacherPayments,
+            taskDatas,
+            refunds,
+            payments,
+            leads
+        });
+
+    } catch (err) {
+        console.error('Tuition Search Error:', err);
         res.status(500).json({ message: err.message });
     }
 });
