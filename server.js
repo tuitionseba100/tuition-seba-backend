@@ -1,6 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const dns = require('node:dns');
+
+// Set global DNS servers to resolve MongoDB SRV records reliably across different networks
+dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config();
