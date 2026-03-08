@@ -44,6 +44,9 @@ router.post('/add', async (req, res) => {
         totalReceivedTk,
         reference,
         createdBy,
+        tuitionSalary,
+        totalPaymentTk,
+        discount,
         comment1,
         comment2,
         comment3
@@ -67,6 +70,9 @@ router.post('/add', async (req, res) => {
             comment,
             totalReceivedTk,
             createdBy,
+            tuitionSalary,
+            totalPaymentTk,
+            discount,
             createdAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
             comment1,
             comment2,
@@ -147,7 +153,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Created At\n';
+            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Created At\n';
 
         res.write(header);
 
@@ -189,6 +195,9 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.receivedTk),
                     escapeCsvField(doc.duePayment),
                     escapeCsvField(doc.totalReceivedTk),
+                    escapeCsvField(doc.tuitionSalary),
+                    escapeCsvField(doc.totalPaymentTk),
+                    escapeCsvField(doc.discount),
                     escapeCsvField(doc.comment),
                     escapeCsvField(doc.comment1),
                     escapeCsvField(doc.comment2),

@@ -19,6 +19,9 @@ const paymentSchema = new mongoose.Schema({
     totalReceivedTk: { type: String },
     reference: { type: String },
     createdAt: { type: String },
+    tuitionSalary: { type: String },
+    totalPaymentTk: { type: String },
+    discount: { type: String },
     comment1: { type: String },
     comment2: { type: String },
     comment3: { type: String }
