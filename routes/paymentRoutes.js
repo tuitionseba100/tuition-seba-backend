@@ -3,6 +3,7 @@ const Payment = require('../models/Payment');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
+
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
     if (!token) return res.status(401).json({ message: 'Access Denied' });
@@ -15,6 +16,7 @@ const authMiddleware = (req, res, next) => {
         res.status(400).json({ message: 'Invalid Token' });
     }
 };
+
 
 router.get('/all', authMiddleware, async (req, res) => {
     try {
@@ -36,9 +38,15 @@ router.post('/add', async (req, res) => {
         paymentReceivedDate4,
         duePayDate,
         paymentType,
+        paymentType2,
+        paymentType3,
+        paymentType4,
         tutorName,
         tutorNumber,
         paymentNumber,
+        paymentNumber2,
+        paymentNumber3,
+        paymentNumber4,
         transactionId,
         receivedTk,
         receivedTk2,
@@ -50,7 +58,6 @@ router.post('/add', async (req, res) => {
         totalReceivedTk,
         reference,
         createdBy,
-        updatedBy,
         tuitionSalary,
         totalPaymentTk,
         discount,
@@ -70,9 +77,15 @@ router.post('/add', async (req, res) => {
             duePayDate,
             reference,
             paymentType,
+            paymentType2,
+            paymentType3,
+            paymentType4,
             tutorName,
             tutorNumber,
             paymentNumber,
+            paymentNumber2,
+            paymentNumber3,
+            paymentNumber4,
             transactionId,
             receivedTk,
             receivedTk2,
@@ -83,7 +96,6 @@ router.post('/add', async (req, res) => {
             comment,
             totalReceivedTk,
             createdBy,
-            updatedBy,
             tuitionSalary,
             totalPaymentTk,
             discount,
@@ -147,13 +159,11 @@ router.get('/exportData', async (req, res) => {
     try {
         const { paymentStatus } = req.query;
 
-        // Build filter based on paymentStatus
         const filter = {};
         if (paymentStatus && paymentStatus !== 'all') {
             filter.paymentStatus = paymentStatus;
         }
 
-        // Set headers for CSV download
         res.setHeader('Content-Type', 'text/csv');
 
         const fileName = paymentStatus && paymentStatus !== 'all'
@@ -165,9 +175,8 @@ router.get('/exportData', async (req, res) => {
             `attachment; filename=${fileName}`
         );
 
-        // CSV header
         const header =
-            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Updated By,Created At\n';
+            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type 1,Payment Type 2,Payment Type 3,Payment Type 4,Tutor Name,Tutor Number,Payment Number 1,Payment Number 2,Payment Number 3,Payment Number 4,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Updated By,Created At\n';
 
         res.write(header);
 
@@ -211,9 +220,15 @@ router.get('/exportData', async (req, res) => {
                         ? doc.duePayDate.toISOString().replace('T', ' ').slice(0, 19)
                         : ''),
                     escapeCsvField(doc.paymentType),
+                    escapeCsvField(doc.paymentType2),
+                    escapeCsvField(doc.paymentType3),
+                    escapeCsvField(doc.paymentType4),
                     escapeCsvField(doc.tutorName),
                     escapeCsvField(doc.tutorNumber),
                     escapeCsvField(doc.paymentNumber),
+                    escapeCsvField(doc.paymentNumber2),
+                    escapeCsvField(doc.paymentNumber3),
+                    escapeCsvField(doc.paymentNumber4),
                     escapeCsvField(doc.transactionId),
                     escapeCsvField(doc.receivedTk),
                     escapeCsvField(doc.receivedTk2),
