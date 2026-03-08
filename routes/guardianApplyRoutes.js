@@ -127,6 +127,7 @@ router.post('/add', async (req, res) => {
         studentClass,
         teacherGender,
         characteristics,
+        comment
     } = req.body;
 
     try {
@@ -142,6 +143,7 @@ router.post('/add', async (req, res) => {
             studentClass,
             teacherGender,
             characteristics,
+            comment,
             appliedAt: localTime,
             status: "pending"
         });
@@ -172,7 +174,7 @@ router.put('/update-status/:id', async (req, res) => {
 
     try {
         const updateFields = { status, comment };
-        
+
         if (updatedBy !== undefined && updatedBy !== null) {
             updateFields.updatedBy = updatedBy;
         }
