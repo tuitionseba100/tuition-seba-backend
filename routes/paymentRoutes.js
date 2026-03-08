@@ -31,6 +31,9 @@ router.post('/add', async (req, res) => {
         tuitionCode,
         tuitionId,
         paymentReceivedDate,
+        paymentReceivedDate2,
+        paymentReceivedDate3,
+        paymentReceivedDate4,
         duePayDate,
         paymentType,
         tutorName,
@@ -38,12 +41,16 @@ router.post('/add', async (req, res) => {
         paymentNumber,
         transactionId,
         receivedTk,
+        receivedTk2,
+        receivedTk3,
+        receivedTk4,
         duePayment,
         paymentStatus,
         comment,
         totalReceivedTk,
         reference,
         createdBy,
+        updatedBy,
         tuitionSalary,
         totalPaymentTk,
         discount,
@@ -57,6 +64,9 @@ router.post('/add', async (req, res) => {
             tuitionCode,
             tuitionId,
             paymentReceivedDate,
+            paymentReceivedDate2,
+            paymentReceivedDate3,
+            paymentReceivedDate4,
             duePayDate,
             reference,
             paymentType,
@@ -65,11 +75,15 @@ router.post('/add', async (req, res) => {
             paymentNumber,
             transactionId,
             receivedTk,
+            receivedTk2,
+            receivedTk3,
+            receivedTk4,
             duePayment,
             paymentStatus,
             comment,
             totalReceivedTk,
             createdBy,
+            updatedBy,
             tuitionSalary,
             totalPaymentTk,
             discount,
@@ -153,7 +167,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Created At\n';
+            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Updated By,Created At\n';
 
         res.write(header);
 
@@ -184,6 +198,15 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.paymentReceivedDate
                         ? doc.paymentReceivedDate.toISOString().replace('T', ' ').slice(0, 19)
                         : ''),
+                    escapeCsvField(doc.paymentReceivedDate2
+                        ? doc.paymentReceivedDate2.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.paymentReceivedDate3
+                        ? doc.paymentReceivedDate3.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
+                    escapeCsvField(doc.paymentReceivedDate4
+                        ? doc.paymentReceivedDate4.toISOString().replace('T', ' ').slice(0, 19)
+                        : ''),
                     escapeCsvField(doc.duePayDate
                         ? doc.duePayDate.toISOString().replace('T', ' ').slice(0, 19)
                         : ''),
@@ -193,6 +216,9 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.paymentNumber),
                     escapeCsvField(doc.transactionId),
                     escapeCsvField(doc.receivedTk),
+                    escapeCsvField(doc.receivedTk2),
+                    escapeCsvField(doc.receivedTk3),
+                    escapeCsvField(doc.receivedTk4),
                     escapeCsvField(doc.duePayment),
                     escapeCsvField(doc.totalReceivedTk),
                     escapeCsvField(doc.tuitionSalary),
@@ -204,6 +230,7 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.comment3),
                     escapeCsvField(doc.reference),
                     escapeCsvField(doc.createdBy),
+                    escapeCsvField(doc.updatedBy),
                     escapeCsvField(doc.createdAt)
                 ].join(',') + '\n';
 
@@ -326,15 +353,40 @@ router.get('/summary', async (req, res) => {
         const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        const todayPayments = filteredPayments.filter(payment => {
-            const paymentDate = new Date(payment.paymentReceivedDate);
-            return paymentDate >= startUTC && paymentDate <= endUTC;
-        });
+        let totalPaymentTKToday = 0;
+        let totalPaymentsTodayCount = 0;
 
-        const totalPaymentsTodayCount = todayPayments.length;
-        const totalPaymentTKToday = todayPayments.reduce((sum, payment) =>
-            sum + parseFloat(payment.receivedTk || 0), 0
-        );
+        filteredPayments.forEach(payment => {
+            let isCountedForToday = false;
+
+            // Check each of the 4 payment dates
+            const dates = [
+                payment.paymentReceivedDate,
+                payment.paymentReceivedDate2,
+                payment.paymentReceivedDate3,
+                payment.paymentReceivedDate4
+            ];
+            const amounts = [
+                payment.receivedTk,
+                payment.receivedTk2,
+                payment.receivedTk3,
+                payment.receivedTk4
+            ];
+
+            dates.forEach((date, index) => {
+                if (date) {
+                    const pDate = new Date(date);
+                    if (pDate >= startUTC && pDate <= endUTC) {
+                        totalPaymentTKToday += parseFloat(amounts[index] || 0);
+                        isCountedForToday = true;
+                    }
+                }
+            });
+
+            if (isCountedForToday) {
+                totalPaymentsTodayCount++;
+            }
+        });
 
         const totalDues = filteredPayments.reduce((sum, payment) =>
             sum + parseFloat(payment.duePayment || 0), 0
