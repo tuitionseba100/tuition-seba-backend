@@ -43,7 +43,10 @@ router.post('/add', async (req, res) => {
         comment,
         totalReceivedTk,
         reference,
-        createdBy
+        createdBy,
+        comment1,
+        comment2,
+        comment3
     } = req.body;
 
     try {
@@ -63,7 +66,11 @@ router.post('/add', async (req, res) => {
             paymentStatus,
             comment,
             totalReceivedTk,
-            createdBy
+            createdBy,
+            createdAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            comment1,
+            comment2,
+            comment3
         });
 
         await newPayment.save();
@@ -140,7 +147,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Comment,Reference,Created By\n';
+            'Tuition Code,Payment Status,Payment Received Date,Due Payment Date,Payment Type,Tutor Name,Tutor Number,Payment Number,Transaction ID,Received TK,Due Payment,Total Received TK,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Created At\n';
 
         res.write(header);
 
@@ -183,8 +190,12 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.duePayment),
                     escapeCsvField(doc.totalReceivedTk),
                     escapeCsvField(doc.comment),
+                    escapeCsvField(doc.comment1),
+                    escapeCsvField(doc.comment2),
+                    escapeCsvField(doc.comment3),
                     escapeCsvField(doc.reference),
-                    escapeCsvField(doc.createdBy)
+                    escapeCsvField(doc.createdBy),
+                    escapeCsvField(doc.createdAt)
                 ].join(',') + '\n';
 
                 res.write(row);

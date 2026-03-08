@@ -17,7 +17,11 @@ const paymentSchema = new mongoose.Schema({
     duePayment: { type: String },
     comment: { type: String },
     totalReceivedTk: { type: String },
-    reference: { type: String }
+    reference: { type: String },
+    createdAt: { type: String },
+    comment1: { type: String },
+    comment2: { type: String },
+    comment3: { type: String }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);
