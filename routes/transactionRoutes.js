@@ -60,7 +60,7 @@ router.get('/all', authMiddleware, async (req, res) => {
 // Get Summary Data
 router.get('/summary', authMiddleware, async (req, res) => {
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, category } = req.query;
         let query = {};
 
         if (startDate || endDate) {
@@ -68,6 +68,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
             if (startDate) query.date.$gte = new Date(startDate);
             if (endDate) query.date.$lte = new Date(endDate);
         }
+
+        if (category) query.category = category;
 
         const transactions = await Transaction.find(query);
 
