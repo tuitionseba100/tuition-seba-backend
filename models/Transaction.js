@@ -24,6 +24,9 @@ const transactionSchema = new mongoose.Schema({
     createdBy: {
         type: String,
         required: true
+    },
+    updatedBy: {
+        type: String
     }
 }, { timestamps: true });
 

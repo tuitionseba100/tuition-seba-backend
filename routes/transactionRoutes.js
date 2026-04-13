@@ -19,14 +19,14 @@ const authMiddleware = (req, res, next) => {
 // Add Transaction
 router.post('/add', authMiddleware, async (req, res) => {
     try {
-        const { type, amount, category, note, date } = req.body;
+        const { type, amount, category, note, date, createdBy } = req.body;
         const newTransaction = new Transaction({
             type,
             amount,
             category,
             note,
             date: date || new Date(),
-            createdBy: req.user.name || 'Admin'
+            createdBy
         });
         const savedTransaction = await newTransaction.save();
         res.status(201).json(savedTransaction);
