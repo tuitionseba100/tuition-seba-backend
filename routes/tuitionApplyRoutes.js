@@ -266,8 +266,10 @@ router.post('/add', async (req, res) => {
                 } else if (normalizedTuitionStatus === 'guardian meet') {
                     autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                 } else if (normalizedTuitionStatus === 'cancel') {
+                    autoStatus = 'cancelled';
                     autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
                 } else if (normalizedTuitionStatus === 'confirm') {
+                    autoStatus = 'cancelled';
                     autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
                 } else {
                     // Default for Available or unspecified
@@ -367,8 +369,10 @@ router.post('/add-web', async (req, res) => {
                 } else if (normalizedTuitionStatus === 'guardian meet') {
                     autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                 } else if (normalizedTuitionStatus === 'cancel') {
+                    autoStatus = 'cancelled';
                     autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
                 } else if (normalizedTuitionStatus === 'confirm') {
+                    autoStatus = 'cancelled';
                     autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
                 } else {
                     // Default for Available or unspecified
