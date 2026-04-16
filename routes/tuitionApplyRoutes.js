@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
@@ -249,7 +249,7 @@ router.post('/add', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-        // Fetch tuition status for automated feedback
+                // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
 
@@ -257,23 +257,28 @@ router.post('/add', async (req, res) => {
             const tuition = await Tuition.findById(tuitionId);
             if (tuition) {
                 const normalizedTuitionStatus = tuition.status?.toLowerCase();
-                autoStatus = 'shortlisted';
 
-                if (normalizedTuitionStatus === 'given number') {
-                    autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'demo class running') {
-                    autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'guardian meet') {
-                    autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'cancel') {
+                if (normalizedTuitionStatus === 'confirm' || normalizedTuitionStatus === 'cancel' || normalizedTuitionStatus === 'suspended') {
                     autoStatus = 'cancelled';
-                    autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'confirm') {
-                    autoStatus = 'cancelled';
-                    autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                    if (normalizedTuitionStatus === 'cancel') {
+                        autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                    } else if (normalizedTuitionStatus === 'confirm') {
+                        autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                    } else { // suspended
+                        autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                    }
+                } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+                    autoStatus = 'shortlisted';
+                    if (normalizedTuitionStatus === 'given number') {
+                        autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    } else if (normalizedTuitionStatus === 'demo class running') {
+                        autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    } else { // guardian meet
+                        autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    }
                 } else {
-                    // Default for Available or unspecified
-                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+                    autoStatus = 'pending';
+                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
                 }
             }
         } catch (tErr) {
@@ -352,7 +357,7 @@ router.post('/add-web', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-        // Fetch tuition status for automated feedback
+                // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
 
@@ -360,23 +365,28 @@ router.post('/add-web', async (req, res) => {
             const tuition = await Tuition.findById(tuitionId);
             if (tuition) {
                 const normalizedTuitionStatus = tuition.status?.toLowerCase();
-                autoStatus = 'shortlisted';
 
-                if (normalizedTuitionStatus === 'given number') {
-                    autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'demo class running') {
-                    autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'guardian meet') {
-                    autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'cancel') {
+                if (normalizedTuitionStatus === 'confirm' || normalizedTuitionStatus === 'cancel' || normalizedTuitionStatus === 'suspended') {
                     autoStatus = 'cancelled';
-                    autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'confirm') {
-                    autoStatus = 'cancelled';
-                    autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                    if (normalizedTuitionStatus === 'cancel') {
+                        autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                    } else if (normalizedTuitionStatus === 'confirm') {
+                        autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                    } else { // suspended
+                        autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                    }
+                } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+                    autoStatus = 'shortlisted';
+                    if (normalizedTuitionStatus === 'given number') {
+                        autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    } else if (normalizedTuitionStatus === 'demo class running') {
+                        autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    } else { // guardian meet
+                        autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                    }
                 } else {
-                    // Default for Available or unspecified
-                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+                    autoStatus = 'pending';
+                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
                 }
             }
         } catch (tErr) {
@@ -707,24 +717,33 @@ router.get('/exportAll', async (req, res) => {
 router.get('/get-auto-comment/:tuitionId', async (req, res) => {
     try {
         const tuition = await Tuition.findById(req.params.tuitionId);
-        let autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+        let autoStatus = 'pending';
+        let autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
 
         if (tuition) {
             const normalizedTuitionStatus = tuition.status?.toLowerCase();
 
-            if (normalizedTuitionStatus === 'given number') {
-                autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-            } else if (normalizedTuitionStatus === 'demo class running') {
-                autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-            } else if (normalizedTuitionStatus === 'guardian meet') {
-                autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-            } else if (normalizedTuitionStatus === 'cancel') {
-                autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
-            } else if (normalizedTuitionStatus === 'confirm') {
-                autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+            if (normalizedTuitionStatus === 'confirm' || normalizedTuitionStatus === 'cancel' || normalizedTuitionStatus === 'suspended') {
+                autoStatus = 'cancelled';
+                if (normalizedTuitionStatus === 'cancel') {
+                    autoCommentForTeacher = 'টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                } else if (normalizedTuitionStatus === 'confirm') {
+                    autoCommentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                } else { // suspended
+                    autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                }
+            } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+                autoStatus = 'shortlisted';
+                if (normalizedTuitionStatus === 'given number') {
+                    autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                } else if (normalizedTuitionStatus === 'demo class running') {
+                    autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                } else { // guardian meet
+                    autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
+                }
             }
         }
-        res.json({ comment: autoCommentForTeacher });
+        res.json({ comment: autoCommentForTeacher, status: autoStatus });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
