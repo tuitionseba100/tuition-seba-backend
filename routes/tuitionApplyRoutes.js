@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
@@ -718,7 +718,7 @@ router.get('/get-auto-comment/:tuitionId', async (req, res) => {
     try {
         const tuition = await Tuition.findById(req.params.tuitionId);
         let autoStatus = 'pending';
-        let autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+        let autoCommentForTeacher = 'টিউশনটি এভেইলেবল আছে। আপনার সিভি অভিভাবক এর কাছে পাঠানো হবে। অভিভাবক আপনার সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
 
         if (tuition) {
             const normalizedTuitionStatus = tuition.status?.toLowerCase();
@@ -741,6 +741,9 @@ router.get('/get-auto-comment/:tuitionId', async (req, res) => {
                 } else { // guardian meet
                     autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                 }
+            } else {
+                autoStatus = 'pending';
+                autoCommentForTeacher = 'টিউশনটি এভেইলেবল আছে। আপনার সিভি অভিভাবক এর কাছে পাঠানো হবে। অভিভাবক আপনার সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
             }
         }
         res.json({ comment: autoCommentForTeacher, status: autoStatus });
@@ -748,6 +751,7 @@ router.get('/get-auto-comment/:tuitionId', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
+
 
 module.exports = router;
 
