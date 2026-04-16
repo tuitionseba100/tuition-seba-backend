@@ -249,7 +249,7 @@ router.post('/add', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-                // Fetch tuition status for automated feedback
+        // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
 
@@ -278,7 +278,7 @@ router.post('/add', async (req, res) => {
                     }
                 } else {
                     autoStatus = 'pending';
-                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+                    autoCommentForTeacher = 'টিউশনটি এভেইলেবল আছে। আপনার সিভি অভিভাবক এর কাছে পাঠানো হবে। অভিভাবক আপনার সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
                 }
             }
         } catch (tErr) {
@@ -357,7 +357,7 @@ router.post('/add-web', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
-                // Fetch tuition status for automated feedback
+        // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
 
@@ -386,7 +386,7 @@ router.post('/add-web', async (req, res) => {
                     }
                 } else {
                     autoStatus = 'pending';
-                    autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+                    autoCommentForTeacher = 'টিউশনটি এভেইলেবল আছে। আপনার সিভি অভিভাবক এর কাছে পাঠানো হবে। অভিভাবক আপনার সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
                 }
             }
         } catch (tErr) {
