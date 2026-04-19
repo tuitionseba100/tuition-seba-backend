@@ -428,12 +428,32 @@ router.get('/appliedListByTuitionId', async (req, res) => {
         return res.status(400).json({ message: 'tuitionId query parameter is required' });
     }
     try {
+        const paymentsWithDue = await Payment.find({
+            duePayment: { $nin: [null, undefined, '', '0'] }
+        }).select('tutorNumber paymentNumber');
+
+        const dueTutorSet = new Set(
+            paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
+        );
+        const duePaymentSet = new Set(
+            paymentsWithDue.map(p => escapeRegex(p.paymentNumber))
+        );
+
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest hasDue isAppApply comment updatedBy agentComment commentForTeacher'
+            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher'
         ).sort({ appliedAt: -1 });
 
-        res.json(appliedList);
+        const data = appliedList.map(apply => {
+            const escapedPhone = escapeRegex(apply.phone);
+            const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
+            return {
+                ...apply.toObject(),
+                hasDue
+            };
+        });
+
+        res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
