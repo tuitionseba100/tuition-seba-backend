@@ -527,6 +527,7 @@ router.put('/edit/:id', async (req, res) => {
 
             let isSpam = false;
             let isBest = false;
+            let isExpress = false;
 
             for (const entry of phoneList) {
                 const normalizedDbPhone = normalizePhone(entry.phone);
@@ -534,7 +535,9 @@ router.put('/edit/:id', async (req, res) => {
                 if (normalizedDbPhone === normalizedInputPhone) {
                     if (entry.isSpam) {
                         isSpam = true;
-                    } else {
+                    } else if (entry.isExpress) {
+                        isExpress = true;
+                    } else if (entry.isBest) {
                         isBest = true;
                     }
                     break;
@@ -543,6 +546,7 @@ router.put('/edit/:id', async (req, res) => {
 
             updatePayload.isSpam = isSpam;
             updatePayload.isBest = isBest;
+            updatePayload.isExpress = isExpress;
         }
 
         const updatedData = await TuitionApply.findByIdAndUpdate(
