@@ -30,10 +30,17 @@ router.get('/users', authMiddleware, async (req, res) => {
 
 // Register user
 router.post('/register', authMiddleware, async (req, res) => {
-    const { username, password, role, name, permissions } = req.body;
+    const { username, password, role, name, permissions, autoLock } = req.body;
 
     try {
-        const newUser = new User({ username, password, role, name, permissions: permissions || [] });
+        const newUser = new User({ 
+            username, 
+            password, 
+            role, 
+            name, 
+            permissions: permissions || [],
+            autoLock: autoLock || false
+        });
         await newUser.save();
         res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
@@ -52,6 +59,21 @@ router.post('/login', async (req, res) => {
 
         if (user.isLocked) {
             return res.status(403).json({ message: 'Your account is locked. Please contact Superadmin.' });
+        }
+
+        // Night Lock Logic (Only for standard admins)
+        if (user.autoLock && user.role !== 'superadmin') {
+            const bdHour = parseInt(new Intl.DateTimeFormat('en-GB', {
+                timeZone: 'Asia/Dhaka',
+                hour: 'numeric',
+                hour12: false
+            }).format(new Date()));
+            
+            if (bdHour >= 0 && bdHour < 7) {
+                return res.status(403).json({ 
+                    message: 'Night Lock Active: Access restricted between 12:00 AM and 07:00 AM (Bangladesh Time).' 
+                });
+            }
         }
 
         const token = jwt.sign(
@@ -102,7 +124,7 @@ router.put('/approve/:id', authMiddleware, async (req, res) => {
 
 // Edit user
 router.put('/edit/:id', authMiddleware, async (req, res) => {
-    const { username, password, role, name, permissions } = req.body;
+    const { username, password, role, name, permissions, autoLock } = req.body;
 
     try {
         const user = await User.findById(req.params.id);
@@ -116,6 +138,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         if (role) user.role = role;
         if (name) user.name = name;
         if (permissions !== undefined) user.permissions = permissions;
+        if (autoLock !== undefined) user.autoLock = autoLock;
 
         await user.save();
 
@@ -167,7 +190,7 @@ router.get('/history/:userId', authMiddleware, async (req, res) => {
         const history = await LoginHistory.find({ userId: req.params.userId })
             .sort({ timestamp: -1 })
             .limit(30);
-            
+
         res.json(history);
     } catch (err) {
         res.status(500).json({ message: err.message });
