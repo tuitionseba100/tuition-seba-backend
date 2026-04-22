@@ -461,7 +461,9 @@ router.get('/appliedListByTuitionId', async (req, res) => {
 
 router.get('/getTuitionStatuses', async (req, res) => {
     try {
-        const summary = await TuitionApply.find({}, 'tuitionCode appliedAt status commentForTeacher phone');
+        const summary = await TuitionApply.find({}, 'tuitionCode appliedAt status commentForTeacher phone')
+            .sort({ appliedAt: -1 })
+            .limit(500); // Limit added to prevent OOM
         res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });
