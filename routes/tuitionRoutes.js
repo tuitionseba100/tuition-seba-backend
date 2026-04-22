@@ -88,7 +88,8 @@ router.get('/getTableData', async (req, res) => {
         isPublish,
         isUrgent,
         status,
-        area
+        area,
+        assignedTo
     } = req.query;
 
     const filter = {};
@@ -119,6 +120,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (area) {
         filter.area = new RegExp(escapeRegex(area), 'i');
+    }
+
+    if (assignedTo) {
+        filter.assignedTo = assignedTo;
     }
 
     try {
@@ -153,9 +158,16 @@ router.get('/alert-today', async (req, res) => {
         const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        const tuitions = await Tuition.find({
+        const { assignedTo } = req.query;
+        const filter = {
             nextUpdateDate: { $gte: startUTC, $lte: endUTC }
-        }).sort({ nextUpdateDate: 1 });
+        };
+
+        if (assignedTo) {
+            filter.assignedTo = assignedTo;
+        }
+
+        const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 });
 
         res.json(tuitions);
     } catch (err) {
@@ -165,10 +177,17 @@ router.get('/alert-today', async (req, res) => {
 
 router.get('/pending-payment-creation', async (req, res) => {
     try {
-        const tuitions = await Tuition.find({
+        const { assignedTo } = req.query;
+        const filter = {
             status: 'confirm',
             isPaymentCreated: false
-        });
+        };
+
+        if (assignedTo) {
+            filter.assignedTo = assignedTo;
+        }
+
+        const tuitions = await Tuition.find(filter);
 
         res.json(tuitions);
     } catch (err) {
@@ -184,7 +203,8 @@ router.get('/summary', async (req, res) => {
         isPublish,
         isUrgent,
         status,
-        area
+        area,
+        assignedTo
     } = req.query;
 
     const filter = {};
@@ -215,6 +235,10 @@ router.get('/summary', async (req, res) => {
 
     if (area) {
         filter.area = new RegExp(escapeRegex(area), 'i');
+    }
+
+    if (assignedTo) {
+        filter.assignedTo = assignedTo;
     }
 
     try {
@@ -293,9 +317,9 @@ router.post('/add', async (req, res) => {
         lastUpdateComment,
         nextUpdateDate,
         nextUpdateComment,
-        comment1,
         comment2,
-        isPaymentCreated
+        isPaymentCreated,
+        assignedTo
     } = req.body;
 
     try {
@@ -331,7 +355,8 @@ router.post('/add', async (req, res) => {
             nextUpdateComment,
             comment1,
             comment2,
-            isPaymentCreated
+            isPaymentCreated,
+            assignedTo
         });
 
         await newTuition.save();
@@ -377,7 +402,7 @@ router.get('/export', async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created\n';
+        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created,Assigned To\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -441,7 +466,8 @@ router.get('/export', async (req, res) => {
                     escapeCsvField(doc.nextUpdateComment || ''),
                     escapeCsvField(doc.comment1 || ''),
                     escapeCsvField(doc.comment2 || ''),
-                    escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No')
+                    escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No'),
+                    escapeCsvField(doc.assignedTo || '')
                 ].join(',') + '\n';
 
                 res.write(row);
@@ -478,7 +504,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created\n';
+            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Is Payment Created,Assigned To\n';
 
         res.write(header);
 
@@ -541,7 +567,8 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.nextUpdateComment),
                     escapeCsvField(doc.comment1),
                     escapeCsvField(doc.comment2),
-                    escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No')
+                    escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No'),
+                    escapeCsvField(doc.assignedTo)
                 ].join(',') + '\n';
 
                 res.write(row);

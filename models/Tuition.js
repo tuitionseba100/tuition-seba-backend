@@ -33,6 +33,7 @@ const tuitionSchema = new mongoose.Schema({
     joining: { type: String, default: '' },
     isUrgent: { type: Boolean, default: false },
     isPaymentCreated: { type: Boolean, default: false },
+    assignedTo: { type: String, default: '' },
 }, {
     timestamps: true
 });
