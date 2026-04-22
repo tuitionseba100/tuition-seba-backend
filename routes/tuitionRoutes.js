@@ -317,6 +317,7 @@ router.post('/add', async (req, res) => {
         lastUpdateComment,
         nextUpdateDate,
         nextUpdateComment,
+        comment1,
         comment2,
         isPaymentCreated,
         assignedTo
