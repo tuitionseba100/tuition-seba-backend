@@ -6,6 +6,7 @@ const userSchema = new mongoose.Schema({
     role: { type: String, required: true },
     name: { type: String, required: true },
     status: { type: String, default: 'approved' },
+    permissions: { type: [String], default: [] },
 });
 
 const User = mongoose.model('User', userSchema);

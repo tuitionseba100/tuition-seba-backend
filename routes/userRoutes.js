@@ -29,10 +29,10 @@ router.get('/users', authMiddleware, async (req, res) => {
 
 // Register user
 router.post('/register', authMiddleware, async (req, res) => {
-    const { username, password, role, name } = req.body;
+    const { username, password, role, name, permissions } = req.body;
 
     try {
-        const newUser = new User({ username, password, role, name });
+        const newUser = new User({ username, password, role, name, permissions: permissions || [] });
         await newUser.save();
         res.status(201).json({ message: 'User registered successfully' });
     } catch (err) {
@@ -59,7 +59,8 @@ router.post('/login', async (req, res) => {
             message: 'Login successful',
             token,
             role: user.role,
-            username: user.username
+            username: user.username,
+            permissions: user.permissions || []
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -82,7 +83,7 @@ router.put('/approve/:id', authMiddleware, async (req, res) => {
 
 // Edit user
 router.put('/edit/:id', authMiddleware, async (req, res) => {
-    const { username, password, role, name } = req.body;
+    const { username, password, role, name, permissions } = req.body;
 
     try {
         const user = await User.findById(req.params.id);
@@ -95,6 +96,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         if (password) user.password = password;
         if (role) user.role = role;
         if (name) user.name = name;
+        if (permissions !== undefined) user.permissions = permissions;
 
         await user.save();
 
