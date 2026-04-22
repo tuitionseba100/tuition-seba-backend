@@ -116,6 +116,8 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.status(204).send();
+    } catch (err) {
+        res.status(500).json({ message: err.message });
     }
 });
 
