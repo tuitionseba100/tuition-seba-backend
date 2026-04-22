@@ -7,6 +7,7 @@ const userSchema = new mongoose.Schema({
     name: { type: String, required: true },
     status: { type: String, default: 'approved' },
     permissions: { type: [String], default: [] },
+    isLocked: { type: Boolean, default: false },
 });
 
 const User = mongoose.model('User', userSchema);

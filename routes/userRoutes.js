@@ -49,6 +49,10 @@ router.post('/login', async (req, res) => {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
+        if (user.isLocked) {
+            return res.status(403).json({ message: 'Your account is locked. Please contact Superadmin.' });
+        }
+
         const token = jwt.sign(
             { userId: user._id, role: user.role },
             'mahedi1000abcdefgh100',
@@ -112,6 +116,25 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         await User.findByIdAndDelete(req.params.id);
         res.status(204).send();
+    }
+});
+
+// Toggle user lock status (Superadmin only)
+router.put('/toggle-lock/:id', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Only Superadmins can lock/unlock users' });
+        }
+
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.isLocked = !user.isLocked;
+        await user.save();
+
+        res.json({ message: `User ${user.isLocked ? 'locked' : 'unlocked'} successfully`, isLocked: user.isLocked });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
