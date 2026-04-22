@@ -1,5 +1,6 @@
 const express = require('express');
 const User = require('../models/User');
+const LoginHistory = require('../models/LoginHistory');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -58,6 +59,20 @@ router.post('/login', async (req, res) => {
             'mahedi1000abcdefgh100',
             { expiresIn: '12h' }
         );
+
+        // Record login history
+        try {
+            const history = new LoginHistory({
+                userId: user._id,
+                username: user.username,
+                ip: req.headers['x-forwarded-for'] || req.ip || req.socket.remoteAddress,
+                userAgent: req.headers['user-agent']
+            });
+            await history.save();
+        } catch (historyErr) {
+            console.error('Error saving login history:', historyErr);
+            // Don't block login if history fails
+        }
 
         res.json({
             message: 'Login successful',
@@ -137,6 +152,23 @@ router.put('/toggle-lock/:id', authMiddleware, async (req, res) => {
         await user.save();
 
         res.json({ message: `User ${user.isLocked ? 'locked' : 'unlocked'} successfully`, isLocked: user.isLocked });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get login history for a specific user (Superadmin only)
+router.get('/history/:userId', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Only Superadmins can view login history' });
+        }
+
+        const history = await LoginHistory.find({ userId: req.params.userId })
+            .sort({ timestamp: -1 })
+            .limit(30);
+            
+        res.json(history);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
