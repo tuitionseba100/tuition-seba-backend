@@ -8,7 +8,8 @@ const userSchema = new mongoose.Schema({
     status: { type: String, default: 'approved' },
     permissions: { type: [String], default: [] },
     isLocked: { type: Boolean, default: false },
-});
+    autoLock: { type: Boolean, default: false }
+}, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
 module.exports = User;
