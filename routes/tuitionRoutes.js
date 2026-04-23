@@ -16,10 +16,11 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
+//available tuition
 router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true })
-            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -createdAt -updatedAt')
+            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt')
             .limit(400);
 
         res.json(tuitions);
