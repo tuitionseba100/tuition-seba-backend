@@ -20,7 +20,6 @@ router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true })
             .select('-status -guardianNumber')
-            .sort({ createdAt: -1 }) // latest first (correct way)
             .limit(400);
 
         res.json(tuitions);
