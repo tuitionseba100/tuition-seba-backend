@@ -20,8 +20,9 @@ router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true })
             .select('-status -guardianNumber')
-            .sort({ _id: -1 })
-            .limit(300); // Limit changed to 300 to save memory while providing more data
+            .sort({ createdAt: -1 }) // latest first (correct way)
+            .limit(400);
+
         res.json(tuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
