@@ -381,32 +381,35 @@ router.put('/edit/:id', async (req, res) => {
 
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
 
-        if (req.body.status && req.body.status.toLowerCase() === 'confirm') {
+        const triggerStatus = req.body.status ? req.body.status.toLowerCase() : null;
+        if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {
             try {
-                await TuitionApply.updateMany(
-                    { tuitionCode: updatedTuition.tuitionCode, status: 'pending' },
-                    { 
-                        status: 'cancelled', 
-                        commentForTeacher: 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।',
-                        comment: 'auto updated'
-                    }
-                );
-            } catch (applyErr) {
-                console.error('Error updating tuition applications:', applyErr);
-            }
-        }
+                const targetStatuses = [
+                    'pending',
+                    'called (interested)',
+                    'called (no response)',
+                    'called (guardian no response)',
+                    'shortlisted',
+                    'requested for payment',
+                    'refer to bm',
+                    'meet to office'
+                ];
 
-        if (req.body.status && req.body.status.toLowerCase() === 'cancel') {
-            try {
+                let commentForTeacher = 'দুঃখিত, টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                if (triggerStatus === 'confirm') {
+                    commentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                }
+
                 await TuitionApply.updateMany(
-                    { 
-                        tuitionCode: updatedTuition.tuitionCode, 
-                        status: { $nin: ['confirm', 'selected', 'cancelled'] } 
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: { $in: targetStatuses }
                     },
-                    { 
-                        status: 'cancelled', 
-                        commentForTeacher: 'দুঃখিত, এই টিউশনটি বাতিল করা হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।',
-                        comment: 'auto updated'
+                    {
+                        status: 'cancelled',
+                        commentForTeacher: commentForTeacher,
+                        comment: 'auto updated',
+                        updatedBy: 'System'
                     }
                 );
             } catch (applyErr) {
