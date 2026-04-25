@@ -118,7 +118,7 @@ router.post('/add', async (req, res) => {
             requestedAt: localTime,
             createdBy: createdBy || 'teacher',
             status: status || 'pending',
-            returnDate: returnDate || ''
+            returnDate: returnDate && returnDate !== "" ? returnDate : null
         });
 
         await newApply.save();
@@ -139,7 +139,11 @@ router.get('/getRefundRequestStatuses', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const updatedData = await RefundPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updateData = { ...req.body };
+        if (updateData.returnDate === "") {
+            updateData.returnDate = null;
+        }
+        const updatedData = await RefundPayment.findByIdAndUpdate(req.params.id, updateData, { new: true });
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
