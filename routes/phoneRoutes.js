@@ -79,6 +79,7 @@ router.get('/export', async (req, res) => {
     }
 });
 
+//add
 router.post('/add', async (req, res) => {
     const { phone, note, isActive, isBest, isSpam, isExpress, isSpamGuardian } = req.body;
 
@@ -92,6 +93,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
+//for edit
 router.put('/edit/:id', async (req, res) => {
     try {
         const updatedData = await Phone.findByIdAndUpdate(req.params.id, req.body, { new: true });
