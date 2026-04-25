@@ -178,17 +178,10 @@ router.get('/alert-today', async (req, res) => {
 
 router.get('/pending-payment-creation', async (req, res) => {
     try {
-        const { assignedTo } = req.query;
-        const filter = {
+        const tuitions = await Tuition.find({
             status: 'confirm',
             isPaymentCreated: false
-        };
-
-        if (assignedTo) {
-            filter.assignedTo = assignedTo;
-        }
-
-        const tuitions = await Tuition.find(filter);
+        });
 
         res.json(tuitions);
     } catch (err) {
