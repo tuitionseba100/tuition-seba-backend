@@ -5,7 +5,74 @@ const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const data = await Phone.find();
+        const { page = 1, limit = 10, phone, type } = req.query;
+        const query = {};
+
+        if (phone) {
+            query.phone = { $regex: phone, $options: 'i' };
+        }
+
+        if (type === 'spam') {
+            query.isSpam = true;
+        } else if (type === 'best') {
+            query.isBest = true;
+        } else if (type === 'express') {
+            query.isExpress = true;
+        }
+
+        const totalRecords = await Phone.countDocuments(query);
+        const data = await Phone.find(query)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(parseInt(limit));
+
+        res.json({
+            data,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalRecords / limit),
+            totalRecords
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', async (req, res) => {
+    try {
+        const total = await Phone.countDocuments();
+        const spam = await Phone.countDocuments({ isSpam: true });
+        const best = await Phone.countDocuments({ isBest: true });
+        const express = await Phone.countDocuments({ isExpress: true });
+
+        res.json({
+            total,
+            spam,
+            best,
+            express
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/export', async (req, res) => {
+    try {
+        const { phone, type } = req.query;
+        const query = {};
+
+        if (phone) {
+            query.phone = { $regex: phone, $options: 'i' };
+        }
+
+        if (type === 'spam') {
+            query.isSpam = true;
+        } else if (type === 'best') {
+            query.isBest = true;
+        } else if (type === 'express') {
+            query.isExpress = true;
+        }
+
+        const data = await Phone.find(query).sort({ createdAt: -1 });
         res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message });
