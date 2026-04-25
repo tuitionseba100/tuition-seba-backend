@@ -97,7 +97,7 @@ router.get('/alert-today', async (req, res) => {
                 $gte: startOfToday,
                 $lte: endOfToday
             },
-            status: { $ne: 'completed' }
+            status: 'approved'
         }).sort({ requestedAt: -1 });
 
         res.json(data);
