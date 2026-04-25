@@ -5,8 +5,83 @@ const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const all = await RefundPayment.find();
-        res.json(all);
+        const { 
+            page = 1, 
+            limit = 20, 
+            tuitionCode, 
+            paymentNumber, 
+            personalPhone, 
+            status 
+        } = req.query;
+
+        const query = {};
+
+        if (tuitionCode) {
+            query.tuitionCode = { $regex: tuitionCode, $options: 'i' };
+        }
+        if (paymentNumber) {
+            query.paymentNumber = { $regex: paymentNumber, $options: 'i' };
+        }
+        if (personalPhone) {
+            query.personalPhone = { $regex: personalPhone, $options: 'i' };
+        }
+        if (status) {
+            query.status = status;
+        }
+
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const data = await RefundPayment.find(query)
+            .sort({ requestedAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const totalRecords = await RefundPayment.countDocuments(query);
+
+        res.json({
+            data,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(totalRecords / parseInt(limit)),
+            totalRecords
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', async (req, res) => {
+    try {
+        const stats = await RefundPayment.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
+
+        const counts = {
+            total: 0,
+            pending: 0,
+            underReview: 0,
+            approved: 0,
+            rejected: 0,
+            completed: 0,
+            cancelled: 0
+        };
+
+        stats.forEach(stat => {
+            const status = stat._id || 'pending';
+            const count = stat.count;
+            counts.total += count;
+            if (status === 'pending') counts.pending = count;
+            else if (status === 'under review') counts.underReview = count;
+            else if (status === 'approved') counts.approved = count;
+            else if (status === 'rejected') counts.rejected = count;
+            else if (status === 'completed') counts.completed = count;
+            else if (status === 'cancelled') counts.cancelled = count;
+        });
+
+        res.json(counts);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
