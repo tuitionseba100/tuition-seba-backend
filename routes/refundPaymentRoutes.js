@@ -25,6 +25,7 @@ router.post('/add', async (req, res) => {
         status,
         comment,
         createdBy,
+        returnDate
     } = req.body;
 
     try {
@@ -41,7 +42,8 @@ router.post('/add', async (req, res) => {
             comment,
             requestedAt: localTime,
             createdBy: createdBy || 'teacher',
-            status: status || 'pending'
+            status: status || 'pending',
+            returnDate: returnDate || ''
         });
 
         await newApply.save();

@@ -14,6 +14,7 @@ const refundPaymentSchema = new mongoose.Schema({
     status: { type: String },
     requestedAt: { type: Date, default: Date.now },
     commentFromAgent: { type: String },
+    returnDate: { type: String },
 });
 
 const RefundPayment = mongoose.model('RefundPayment', refundPaymentSchema);
