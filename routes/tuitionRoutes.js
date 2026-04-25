@@ -1,5 +1,6 @@
 const express = require('express');
 const Tuition = require('../models/Tuition');
+const TuitionApply = require('../models/TuitionApply');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -318,6 +319,11 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        const existingTuition = await Tuition.findOne({ tuitionCode });
+        if (existingTuition) {
+            return res.status(400).json({ message: 'Tuition code already exists' });
+        }
+
         const newTuition = new Tuition({
             tuitionCode,
             isPublish,
@@ -363,7 +369,51 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        if (req.body.tuitionCode) {
+            const duplicateTuition = await Tuition.findOne({
+                tuitionCode: req.body.tuitionCode,
+                _id: { $ne: req.params.id }
+            });
+            if (duplicateTuition) {
+                return res.status(400).json({ message: 'Tuition code already exists' });
+            }
+        }
+
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
+
+        if (req.body.status && req.body.status.toLowerCase() === 'confirm') {
+            try {
+                await TuitionApply.updateMany(
+                    { tuitionCode: updatedTuition.tuitionCode, status: 'pending' },
+                    { 
+                        status: 'cancelled', 
+                        commentForTeacher: 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।',
+                        comment: 'auto updated'
+                    }
+                );
+            } catch (applyErr) {
+                console.error('Error updating tuition applications:', applyErr);
+            }
+        }
+
+        if (req.body.status && req.body.status.toLowerCase() === 'cancel') {
+            try {
+                await TuitionApply.updateMany(
+                    { 
+                        tuitionCode: updatedTuition.tuitionCode, 
+                        status: { $nin: ['confirm', 'selected', 'cancelled'] } 
+                    },
+                    { 
+                        status: 'cancelled', 
+                        commentForTeacher: 'দুঃখিত, এই টিউশনটি বাতিল করা হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।',
+                        comment: 'auto updated'
+                    }
+                );
+            } catch (applyErr) {
+                console.error('Error updating tuition applications:', applyErr);
+            }
+        }
+
         res.json(updatedTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
