@@ -87,6 +87,25 @@ router.get('/summary', async (req, res) => {
     }
 });
 
+router.get('/alert-today', async (req, res) => {
+    try {
+        const startOfToday = moment().startOf('day').toDate();
+        const endOfToday = moment().endOf('day').toDate();
+
+        const data = await RefundPayment.find({
+            returnDate: {
+                $gte: startOfToday,
+                $lte: endOfToday
+            },
+            status: { $ne: 'completed' }
+        }).sort({ requestedAt: -1 });
+
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 router.post('/add', async (req, res) => {
     const {
