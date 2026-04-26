@@ -24,5 +24,7 @@ const tuitionApplySchema = new mongoose.Schema({
     appliedAt: { type: Date, default: Date.now }
 });
 
+tuitionApplySchema.index({ tuitionCode: 1, status: 1 });
+
 const TuitionApply = mongoose.model('TuitionApply', tuitionApplySchema);
 module.exports = TuitionApply;

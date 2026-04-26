@@ -135,8 +135,23 @@ router.get('/getTableData', async (req, res) => {
             .skip((page - 1) * limit)
             .limit(limit);
 
+        // Optimized way to check for pending applications
+        const tuitionCodes = tuitions.map(t => t.tuitionCode);
+        const pendingApplies = await TuitionApply.find({
+            tuitionCode: { $in: tuitionCodes },
+            status: 'pending'
+        }).distinct('tuitionCode');
+        
+        const pendingSet = new Set(pendingApplies);
+
+        const dataWithPendingFlag = tuitions.map(t => {
+            const obj = t.toObject();
+            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return obj;
+        });
+
         res.json({
-            data: tuitions,
+            data: dataWithPendingFlag,
             currentPage: page,
             totalPages: Math.ceil(total / limit),
             totalRecords: total
@@ -171,7 +186,20 @@ router.get('/alert-today', async (req, res) => {
 
         const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 });
 
-        res.json(tuitions);
+        const tuitionCodes = tuitions.map(t => t.tuitionCode);
+        const pendingApplies = await TuitionApply.find({
+            tuitionCode: { $in: tuitionCodes },
+            status: 'pending'
+        }).distinct('tuitionCode');
+        const pendingSet = new Set(pendingApplies);
+
+        const dataWithPendingFlag = tuitions.map(t => {
+            const obj = t.toObject();
+            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return obj;
+        });
+
+        res.json(dataWithPendingFlag);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -184,7 +212,20 @@ router.get('/pending-payment-creation', async (req, res) => {
             isPaymentCreated: false
         });
 
-        res.json(tuitions);
+        const tuitionCodes = tuitions.map(t => t.tuitionCode);
+        const pendingApplies = await TuitionApply.find({
+            tuitionCode: { $in: tuitionCodes },
+            status: 'pending'
+        }).distinct('tuitionCode');
+        const pendingSet = new Set(pendingApplies);
+
+        const dataWithPendingFlag = tuitions.map(t => {
+            const obj = t.toObject();
+            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return obj;
+        });
+
+        res.json(dataWithPendingFlag);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
