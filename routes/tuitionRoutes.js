@@ -108,11 +108,11 @@ router.get('/getTableData', async (req, res) => {
         filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
     }
 
-    if (isPublish !== undefined) {
+    if (isPublish === 'true' || isPublish === 'false') {
         filter.isPublish = isPublish === 'true';
     }
 
-    if (isUrgent !== undefined) {
+    if (isUrgent === 'true' || isUrgent === 'false') {
         filter.isUrgent = isUrgent === 'true';
     }
 
@@ -257,11 +257,11 @@ router.get('/summary', async (req, res) => {
         filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
     }
 
-    if (isPublish !== undefined) {
+    if (isPublish === 'true' || isPublish === 'false') {
         filter.isPublish = isPublish === 'true';
     }
 
-    if (isUrgent !== undefined) {
+    if (isUrgent === 'true' || isUrgent === 'false') {
         filter.isUrgent = isUrgent === 'true';
     }
 
@@ -310,18 +310,25 @@ router.get('/summary', async (req, res) => {
         const total = await Tuition.countDocuments(filter);
         const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
-        // Count tuitions with pending applications within the filtered set
-        const matchingTuitionCodes = await Tuition.find(filter).distinct('tuitionCode');
-        const pendingApplyTuitions = await TuitionApply.find({
-            tuitionCode: { $in: matchingTuitionCodes },
-            status: 'pending'
-        }).distinct('tuitionCode');
+        // Optimized and more informative pending application count
+        let pendingApplyCount = 0;
+        if (Object.keys(filter).length === 0) {
+            // If no filters, count all pending applications directly
+            pendingApplyCount = await TuitionApply.countDocuments({ status: 'pending' });
+        } else {
+            // If filters are applied, count applications for the filtered tuitions
+            const matchingTuitionCodes = await Tuition.find(filter).distinct('tuitionCode');
+            pendingApplyCount = await TuitionApply.countDocuments({
+                tuitionCode: { $in: matchingTuitionCodes },
+                status: 'pending'
+            });
+        }
 
         res.json({
             ...counts,
             total,
             isPublishTrueCount,
-            pendingApplyCount: pendingApplyTuitions.length
+            pendingApplyCount: pendingApplyCount
         });
 
     } catch (err) {
