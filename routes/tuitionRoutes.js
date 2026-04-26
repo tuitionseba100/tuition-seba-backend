@@ -310,10 +310,18 @@ router.get('/summary', async (req, res) => {
         const total = await Tuition.countDocuments(filter);
         const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true });
 
+        // Count tuitions with pending applications within the filtered set
+        const matchingTuitionCodes = await Tuition.find(filter).distinct('tuitionCode');
+        const pendingApplyTuitions = await TuitionApply.find({
+            tuitionCode: { $in: matchingTuitionCodes },
+            status: 'pending'
+        }).distinct('tuitionCode');
+
         res.json({
             ...counts,
             total,
-            isPublishTrueCount
+            isPublishTrueCount,
+            pendingApplyCount: pendingApplyTuitions.length
         });
 
     } catch (err) {
