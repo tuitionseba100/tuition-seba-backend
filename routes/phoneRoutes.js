@@ -84,6 +84,21 @@ router.post('/add', async (req, res) => {
     const { phone, note, isActive, isBest, isSpam, isExpress, isSpamGuardian } = req.body;
 
     try {
+        if (phone) {
+            const inputNumbers = phone.split('/').map(n => n.trim()).filter(n => n);
+            if (inputNumbers.length > 0) {
+                const duplicateQuery = {
+                    $or: inputNumbers.map(num => ({
+                        phone: { $regex: `(^|/)${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|/)` }
+                    }))
+                };
+                const existingPhone = await Phone.findOne(duplicateQuery);
+                if (existingPhone) {
+                    return res.status(400).json({ message: `Phone number ${existingPhone.phone} already exists (or contains a duplicate number)` });
+                }
+            }
+        }
+
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
         const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isSpamGuardian, createdAt: localTime });
         await newPhone.save();
@@ -96,6 +111,22 @@ router.post('/add', async (req, res) => {
 //for edit
 router.put('/edit/:id', async (req, res) => {
     try {
+        if (req.body.phone) {
+            const inputNumbers = req.body.phone.split('/').map(n => n.trim()).filter(n => n);
+            if (inputNumbers.length > 0) {
+                const duplicateQuery = {
+                    _id: { $ne: req.params.id },
+                    $or: inputNumbers.map(num => ({
+                        phone: { $regex: `(^|/)${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|/)` }
+                    }))
+                };
+                const existingPhone = await Phone.findOne(duplicateQuery);
+                if (existingPhone) {
+                    return res.status(400).json({ message: `Phone number ${existingPhone.phone} already exists (or contains a duplicate number)` });
+                }
+            }
+        }
+
         const updatedData = await Phone.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedData);
     } catch (err) {
