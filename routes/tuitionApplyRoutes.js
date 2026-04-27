@@ -37,7 +37,7 @@ router.get('/getTableData', async (req, res) => {
     try {
         const paymentsWithDue = await Payment.find({
             duePayment: { $nin: [null, undefined, '', '0'] }
-        }).select('tutorNumber paymentNumber');
+        }).select('tutorNumber paymentNumber').lean();
 
         const dueTutorSet = new Set(
             paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
@@ -50,13 +50,14 @@ router.get('/getTableData', async (req, res) => {
         const applyList = await TuitionApply.find(filter)
             .sort({ appliedAt: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         const data = applyList.map(apply => {
             const escapedPhone = escapeRegex(apply.phone);
             const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
             return {
-                ...apply.toObject(),
+                ...apply,
                 hasDue
             };
         });
@@ -430,7 +431,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const paymentsWithDue = await Payment.find({
             duePayment: { $nin: [null, undefined, '', '0'] }
-        }).select('tutorNumber paymentNumber');
+        }).select('tutorNumber paymentNumber').lean();
 
         const dueTutorSet = new Set(
             paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
@@ -442,13 +443,13 @@ router.get('/appliedListByTuitionId', async (req, res) => {
         const appliedList = await TuitionApply.find(
             { tuitionId },
             'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher'
-        ).sort({ appliedAt: -1 });
+        ).sort({ appliedAt: -1 }).lean();
 
         const data = appliedList.map(apply => {
             const escapedPhone = escapeRegex(apply.phone);
             const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
             return {
-                ...apply.toObject(),
+                ...apply,
                 hasDue
             };
         });
@@ -463,7 +464,8 @@ router.get('/getTuitionStatuses', async (req, res) => {
     try {
         const summary = await TuitionApply.find({}, 'tuitionCode appliedAt status commentForTeacher phone')
             .sort({ appliedAt: -1 })
-            .limit(500); // Limit added to prevent OOM
+            .limit(500)
+            .lean(); // Limit added to prevent OOM
         res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -481,7 +483,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
         const matchedTuitions = await TuitionApply.find(
             { phone: normalizedPhone },
             'tuitionCode appliedAt status commentForTeacher phone'
-        );
+        ).lean();
 
         if (matchedTuitions.length === 0) {
             return res.status(404).json({ message: 'No applications found for this phone number' });
@@ -505,7 +507,7 @@ router.get('/byPremiumCode', async (req, res) => {
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
             'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply'
-        ).sort({ appliedAt: -1 });
+        ).sort({ appliedAt: -1 }).lean();
 
         if (tuitionApplies.length === 0) {
             return res.status(404).json({ message: 'No applications found for this premium code' });

@@ -22,7 +22,8 @@ router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true })
             .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt')
-            .limit(400);
+            .limit(400)
+            .lean();
 
         res.json(tuitions);
     } catch (err) {
@@ -35,7 +36,7 @@ router.get('/published-summary', async (req, res) => {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const publishedTuitions = await Tuition.find({ isPublish: true });
+        const publishedTuitions = await Tuition.find({ isPublish: true }).select('createdAt area').lean();
 
         const total = publishedTuitions.length;
 
@@ -68,7 +69,8 @@ router.get('/all', authMiddleware, async (req, res) => {
     try {
         const tuitions = await Tuition.find()
             .sort({ _id: -1 })
-            .limit(100); // Limit to prevents OOM crashes
+            .limit(100)
+            .lean(); // Limit to prevents OOM crashes
         res.json(tuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -133,21 +135,21 @@ router.get('/getTableData', async (req, res) => {
         const tuitions = await Tuition.find(filter)
             .sort({ _id: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         // Optimized way to check for pending applications
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
-        const pendingApplies = await TuitionApply.find({
+        const pendingApplies = await TuitionApply.distinct('tuitionCode', {
             tuitionCode: { $in: tuitionCodes },
             status: 'pending'
-        }).distinct('tuitionCode');
+        });
         
         const pendingSet = new Set(pendingApplies);
 
         const dataWithPendingFlag = tuitions.map(t => {
-            const obj = t.toObject();
-            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
-            return obj;
+            t.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return t;
         });
 
         res.json({
@@ -184,19 +186,18 @@ router.get('/alert-today', async (req, res) => {
             filter.assignedTo = assignedTo;
         }
 
-        const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 });
+        const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 }).lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
-        const pendingApplies = await TuitionApply.find({
+        const pendingApplies = await TuitionApply.distinct('tuitionCode', {
             tuitionCode: { $in: tuitionCodes },
             status: 'pending'
-        }).distinct('tuitionCode');
+        });
         const pendingSet = new Set(pendingApplies);
 
         const dataWithPendingFlag = tuitions.map(t => {
-            const obj = t.toObject();
-            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
-            return obj;
+            t.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return t;
         });
 
         res.json(dataWithPendingFlag);
@@ -210,19 +211,18 @@ router.get('/pending-payment-creation', async (req, res) => {
         const tuitions = await Tuition.find({
             status: 'confirm',
             isPaymentCreated: false
-        });
+        }).lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
-        const pendingApplies = await TuitionApply.find({
+        const pendingApplies = await TuitionApply.distinct('tuitionCode', {
             tuitionCode: { $in: tuitionCodes },
             status: 'pending'
-        }).distinct('tuitionCode');
+        });
         const pendingSet = new Set(pendingApplies);
 
         const dataWithPendingFlag = tuitions.map(t => {
-            const obj = t.toObject();
-            obj.hasPendingApply = pendingSet.has(t.tuitionCode);
-            return obj;
+            t.hasPendingApply = pendingSet.has(t.tuitionCode);
+            return t;
         });
 
         res.json(dataWithPendingFlag);
@@ -317,11 +317,21 @@ router.get('/summary', async (req, res) => {
             pendingApplyCount = await TuitionApply.countDocuments({ status: 'pending' });
         } else {
             // If filters are applied, count applications for the filtered tuitions
-            const matchingTuitionCodes = await Tuition.find(filter).distinct('tuitionCode');
-            pendingApplyCount = await TuitionApply.countDocuments({
-                tuitionCode: { $in: matchingTuitionCodes },
-                status: 'pending'
-            });
+            const pendingApplyResult = await Tuition.aggregate([
+                { $match: filter },
+                {
+                    $lookup: {
+                        from: 'tuitionapplies',
+                        localField: 'tuitionCode',
+                        foreignField: 'tuitionCode',
+                        as: 'applies'
+                    }
+                },
+                { $unwind: '$applies' },
+                { $match: { 'applies.status': 'pending' } },
+                { $count: 'pendingCount' }
+            ]);
+            pendingApplyCount = pendingApplyResult.length > 0 ? pendingApplyResult[0].pendingCount : 0;
         }
 
         res.json({
