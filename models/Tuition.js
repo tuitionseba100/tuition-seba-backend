@@ -34,6 +34,9 @@ const tuitionSchema = new mongoose.Schema({
     isUrgent: { type: Boolean, default: false },
     isPaymentCreated: { type: Boolean, default: false },
     assignedTo: { type: String, default: '' },
+    isSpamGuardian: { type: Boolean, default: false },
+    isBestGuardian: { type: Boolean, default: false },
+    isReviewDone: { type: Boolean, default: false },
 }, {
     timestamps: true
 });

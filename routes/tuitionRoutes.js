@@ -1,6 +1,7 @@
 const express = require('express');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
+const Phone = require('../models/Phone');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -93,21 +94,37 @@ router.get('/getTableData', async (req, res) => {
         isUrgent,
         status,
         area,
-        assignedTo
+        assignedTo,
+        type,
+        isReviewDone
     } = req.query;
 
     const filter = {};
+
+    if (type === 'spam') {
+        filter.isSpamGuardian = true;
+    } else if (type === 'bestGuardian') {
+        filter.isBestGuardian = true;
+    }
+
+    if (isReviewDone === 'true' || isReviewDone === 'false') {
+        filter.isReviewDone = isReviewDone === 'true';
+    }
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (guardianNumber) {
-        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
+        const cleanG = guardianNumber.replace(/\D/g, '');
+        const searchG = cleanG.length >= 11 ? cleanG.slice(-11) : cleanG;
+        filter.guardianNumber = new RegExp(escapeRegex(searchG), 'i');
     }
 
     if (tutorNumber) {
-        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+        const cleanT = tutorNumber.replace(/\D/g, '');
+        const searchT = cleanT.length >= 11 ? cleanT.slice(-11) : cleanT;
+        filter.tutorNumber = new RegExp(escapeRegex(searchT), 'i');
     }
 
     if (isPublish === 'true' || isPublish === 'false') {
@@ -240,21 +257,37 @@ router.get('/summary', async (req, res) => {
         isUrgent,
         status,
         area,
-        assignedTo
+        assignedTo,
+        type,
+        isReviewDone
     } = req.query;
 
     const filter = {};
+
+    if (type === 'spam') {
+        filter.isSpamGuardian = true;
+    } else if (type === 'bestGuardian') {
+        filter.isBestGuardian = true;
+    }
+
+    if (isReviewDone === 'true' || isReviewDone === 'false') {
+        filter.isReviewDone = isReviewDone === 'true';
+    }
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
     }
 
     if (guardianNumber) {
-        filter.guardianNumber = new RegExp(escapeRegex(guardianNumber), 'i');
+        const cleanG = guardianNumber.replace(/\D/g, '');
+        const searchG = cleanG.length >= 11 ? cleanG.slice(-11) : cleanG;
+        filter.guardianNumber = new RegExp(escapeRegex(searchG), 'i');
     }
 
     if (tutorNumber) {
-        filter.tutorNumber = new RegExp(escapeRegex(tutorNumber), 'i');
+        const cleanT = tutorNumber.replace(/\D/g, '');
+        const searchT = cleanT.length >= 11 ? cleanT.slice(-11) : cleanT;
+        filter.tutorNumber = new RegExp(escapeRegex(searchT), 'i');
     }
 
     if (isPublish === 'true' || isPublish === 'false') {
@@ -381,13 +414,38 @@ router.post('/add', async (req, res) => {
         comment1,
         comment2,
         isPaymentCreated,
-        assignedTo
+        assignedTo,
+        isReviewDone
     } = req.body;
 
     try {
         const existingTuition = await Tuition.findOne({ tuitionCode });
         if (existingTuition) {
             return res.status(400).json({ message: 'Tuition code already exists' });
+        }
+
+        let isSpamGuardian = false;
+        let isBestGuardian = false;
+
+        if (guardianNumber) {
+            const inputNumbers = guardianNumber.split('/').map(n => n.trim()).filter(n => n);
+            if (inputNumbers.length > 0) {
+                const cleanedNumbers = inputNumbers.map(num => {
+                    const digits = num.replace(/\D/g, '');
+                    return digits.length >= 11 ? digits.slice(-11) : digits;
+                });
+
+                const duplicateQuery = {
+                    $or: cleanedNumbers.map(num => ({
+                        phone: { $regex: num }
+                    }))
+                };
+                const phoneDoc = await Phone.findOne(duplicateQuery);
+                if (phoneDoc) {
+                    if (phoneDoc.isSpam) isSpamGuardian = true;
+                    if (phoneDoc.isBestGuardian) isBestGuardian = true;
+                }
+            }
         }
 
         const newTuition = new Tuition({
@@ -423,7 +481,10 @@ router.post('/add', async (req, res) => {
             comment1,
             comment2,
             isPaymentCreated,
-            assignedTo
+            assignedTo,
+            isSpamGuardian,
+            isBestGuardian,
+            isReviewDone
         });
 
         await newTuition.save();
@@ -442,6 +503,30 @@ router.put('/edit/:id', async (req, res) => {
             });
             if (duplicateTuition) {
                 return res.status(400).json({ message: 'Tuition code already exists' });
+            }
+        }
+
+        if (req.body.guardianNumber) {
+            const inputNumbers = req.body.guardianNumber.split('/').map(n => n.trim()).filter(n => n);
+            if (inputNumbers.length > 0) {
+                const cleanedNumbers = inputNumbers.map(num => {
+                    const digits = num.replace(/\D/g, '');
+                    return digits.length >= 11 ? digits.slice(-11) : digits;
+                });
+
+                const duplicateQuery = {
+                    $or: cleanedNumbers.map(num => ({
+                        phone: { $regex: num }
+                    }))
+                };
+                const phoneDoc = await Phone.findOne(duplicateQuery);
+                if (phoneDoc) {
+                    req.body.isSpamGuardian = !!phoneDoc.isSpam;
+                    req.body.isBestGuardian = !!phoneDoc.isBestGuardian;
+                } else {
+                    req.body.isSpamGuardian = false;
+                    req.body.isBestGuardian = false;
+                }
             }
         }
 
