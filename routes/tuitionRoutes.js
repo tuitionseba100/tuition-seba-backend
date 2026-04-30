@@ -35,7 +35,7 @@ router.get('/available', async (req, res) => {
 router.get('/post-data', authMiddleware, async (req, res) => {
     try {
         const { count, area, startCode, endCode } = req.query;
-        const filter = {};
+        const filter = { isPublish: true };
 
         if (area) {
             filter.area = new RegExp(area, 'i');
