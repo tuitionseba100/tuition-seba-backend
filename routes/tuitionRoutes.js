@@ -34,11 +34,21 @@ router.get('/available', async (req, res) => {
 
 router.get('/post-data', authMiddleware, async (req, res) => {
     try {
-        const { count, area, startCode, endCode } = req.query;
+        const { count, area, status, startCode, endCode } = req.query;
         const filter = { isPublish: true };
 
         if (area) {
-            filter.area = new RegExp(area, 'i');
+            const areaArray = area.split(',').filter(a => a.trim());
+            if (areaArray.length > 0) {
+                filter.area = { $in: areaArray.map(a => new RegExp(`^${a}$`, 'i')) };
+            }
+        }
+
+        if (status) {
+            const statusArray = status.split(',').filter(s => s.trim());
+            if (statusArray.length > 0) {
+                filter.status = { $in: statusArray };
+            }
         }
 
         if (startCode && endCode) {
