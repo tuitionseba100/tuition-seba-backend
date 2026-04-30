@@ -32,6 +32,36 @@ router.get('/available', async (req, res) => {
     }
 });
 
+router.get('/post-data', authMiddleware, async (req, res) => {
+    try {
+        const { count, area, startCode, endCode } = req.query;
+        const filter = {};
+
+        if (area) {
+            filter.area = new RegExp(area, 'i');
+        }
+
+        if (startCode && endCode) {
+            filter.tuitionCode = { $gte: startCode, $lte: endCode };
+        } else if (startCode) {
+            filter.tuitionCode = { $gte: startCode };
+        } else if (endCode) {
+            filter.tuitionCode = { $lte: endCode };
+        }
+
+        const limit = parseInt(count) || 20;
+
+        const tuitions = await Tuition.find(filter)
+            .sort({ createdAt: -1 }) // Sort by creation date descending for latest
+            .limit(limit)
+            .lean();
+
+        res.json(tuitions);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/published-summary', async (req, res) => {
     try {
         const threeDaysAgo = new Date();
@@ -161,7 +191,7 @@ router.get('/getTableData', async (req, res) => {
             tuitionCode: { $in: tuitionCodes },
             status: 'pending'
         });
-        
+
         const pendingSet = new Set(pendingApplies);
 
         const dataWithPendingFlag = tuitions.map(t => {
