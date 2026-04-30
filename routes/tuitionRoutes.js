@@ -184,7 +184,13 @@ router.get('/getTableData', async (req, res) => {
     }
 
     if (assignedTo) {
-        filter.assignedTo = assignedTo;
+        if (assignedTo === 'unassigned') {
+            filter.assignedTo = { $in: ['', null] };
+        } else if (assignedTo === 'assigned') {
+            filter.assignedTo = { $nin: ['', null] };
+        } else {
+            filter.assignedTo = assignedTo;
+        }
     }
 
     try {
@@ -240,7 +246,13 @@ router.get('/alert-today', async (req, res) => {
         };
 
         if (assignedTo) {
-            filter.assignedTo = assignedTo;
+            if (assignedTo === 'unassigned') {
+                filter.assignedTo = { $in: ['', null] };
+            } else if (assignedTo === 'assigned') {
+                filter.assignedTo = { $nin: ['', null] };
+            } else {
+                filter.assignedTo = assignedTo;
+            }
         }
 
         const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 }).lean();
@@ -347,7 +359,13 @@ router.get('/summary', async (req, res) => {
     }
 
     if (assignedTo) {
-        filter.assignedTo = assignedTo;
+        if (assignedTo === 'unassigned') {
+            filter.assignedTo = { $in: ['', null] };
+        } else if (assignedTo === 'assigned') {
+            filter.assignedTo = { $nin: ['', null] };
+        } else {
+            filter.assignedTo = assignedTo;
+        }
     }
 
     try {
