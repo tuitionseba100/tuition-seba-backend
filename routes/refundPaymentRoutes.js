@@ -5,13 +5,13 @@ const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const { 
-            page = 1, 
-            limit = 20, 
-            tuitionCode, 
-            paymentNumber, 
-            personalPhone, 
-            status 
+        const {
+            page = 1,
+            limit = 20,
+            tuitionCode,
+            paymentNumber,
+            personalPhone,
+            status
         } = req.query;
 
         const query = {};

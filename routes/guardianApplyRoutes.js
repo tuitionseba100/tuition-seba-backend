@@ -1,7 +1,6 @@
 const express = require('express');
 const GuardianApply = require('../models/GuardianApply');
 const router = express.Router();
-const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
@@ -131,8 +130,6 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
-        const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-
         const newData = new GuardianApply({
             name,
             createdBy,
@@ -144,7 +141,6 @@ router.post('/add', async (req, res) => {
             teacherGender,
             characteristics,
             comment,
-            appliedAt: localTime,
             status: "pending"
         });
 
