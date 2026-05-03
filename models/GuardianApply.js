@@ -13,6 +13,8 @@ const guardianApplySchema = new mongoose.Schema({
     characteristics: { type: String },
     status: { type: String },
     comment: { type: String, default: "" },
+    isSpam: { type: Boolean, default: false },
+    isBestGuardian: { type: Boolean, default: false },
     appliedAt: { type: Date, default: Date.now }
 });
 

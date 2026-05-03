@@ -1,6 +1,33 @@
 const express = require('express');
 const GuardianApply = require('../models/GuardianApply');
+const Phone = require('../models/Phone');
 const router = express.Router();
+
+const normalizePhone = (num) => {
+    if (!num) return '';
+    let digits = num.replace(/\D/g, '');
+    if (digits.startsWith('880')) digits = digits.slice(3);
+    while (digits.startsWith('0')) digits = digits.slice(1);
+    return digits;
+};
+
+function normalizePhoneForSave(phone) {
+    let digits = phone.replace(/\D/g, '');
+
+    if (digits.startsWith('880')) {
+        digits = digits.slice(3);
+    } else if (digits.startsWith('0')) {
+        // do nothing
+    } else if (digits.startsWith('8')) {
+        digits = '0' + digits;
+    }
+
+    if (digits.length === 10 && !digits.startsWith('0')) {
+        digits = '0' + digits;
+    }
+
+    return digits;
+}
 
 router.get('/all', async (req, res) => {
     try {
@@ -130,18 +157,41 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        const normalizedInputPhone = normalizePhone(phone);
+        const phoneList = await Phone.find({ isActive: true });
+
+        let isSpam = false;
+        let isBestGuardian = false;
+
+        for (const entry of phoneList) {
+            const normalizedDbPhone = normalizePhone(entry.phone);
+
+            if (normalizedDbPhone === normalizedInputPhone) {
+                if (entry.isSpam) {
+                    isSpam = true;
+                } else if (entry.isBestGuardian) {
+                    isBestGuardian = true;
+                }
+                break;
+            }
+        }
+
+        const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
+
         const newData = new GuardianApply({
             name,
             createdBy,
             teacherId,
             teacherCode,
-            phone,
+            phone: normalizedInputPhoneForSave,
             address,
             studentClass,
             teacherGender,
             characteristics,
             comment,
-            status: "pending"
+            status: "pending",
+            isSpam,
+            isBestGuardian
         });
 
         await newData.save();
@@ -154,7 +204,34 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const updatedData = await GuardianApply.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        let updatePayload = { ...req.body };
+
+        if (req.body.phone) {
+            const normalizedInputPhone = normalizePhone(req.body.phone);
+            const phoneList = await Phone.find({ isActive: true });
+
+            let isSpam = false;
+            let isBestGuardian = false;
+
+            for (const entry of phoneList) {
+                const normalizedDbPhone = normalizePhone(entry.phone);
+
+                if (normalizedDbPhone === normalizedInputPhone) {
+                    if (entry.isSpam) {
+                        isSpam = true;
+                    } else if (entry.isBestGuardian) {
+                        isBestGuardian = true;
+                    }
+                    break;
+                }
+            }
+
+            updatePayload.isSpam = isSpam;
+            updatePayload.isBestGuardian = isBestGuardian;
+            updatePayload.phone = normalizePhoneForSave(req.body.phone);
+        }
+
+        const updatedData = await GuardianApply.findByIdAndUpdate(req.params.id, updatePayload, { new: true });
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
