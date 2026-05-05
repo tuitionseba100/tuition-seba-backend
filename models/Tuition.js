@@ -37,6 +37,7 @@ const tuitionSchema = new mongoose.Schema({
     isSpamGuardian: { type: Boolean, default: false },
     isBestGuardian: { type: Boolean, default: false },
     isReviewDone: { type: Boolean, default: false },
+    isSoftDelete: { type: Boolean, default: false },
 }, {
     timestamps: true
 });
