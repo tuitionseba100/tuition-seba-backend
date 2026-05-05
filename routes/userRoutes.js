@@ -133,7 +133,6 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         }
 
         // Update user details
-        if (username) user.username = username;
         if (password) user.password = password;
         if (role) user.role = role;
         if (name) user.name = name;
