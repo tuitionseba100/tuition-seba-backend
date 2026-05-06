@@ -21,7 +21,7 @@ router.get('/all', async (req, res) => {
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
         } else if (type === 'noZeroPrefix') {
-            query.phone = { $regex: '(^|/)[^0]', $options: 'i' };
+            query.phone = { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' };
         }
 
         const totalRecords = await Phone.countDocuments(query);
@@ -79,7 +79,7 @@ router.get('/export', async (req, res) => {
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
         } else if (type === 'noZeroPrefix') {
-            query.phone = { $regex: '(^|/)[^0]', $options: 'i' };
+            query.phone = { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' };
         }
 
         const data = await Phone.find(query).sort({ createdAt: -1 });
