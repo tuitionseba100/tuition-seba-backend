@@ -144,6 +144,40 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
+router.post('/fix-prefix', async (req, res) => {
+    try {
+        const query = { phone: { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' } };
+        const records = await Phone.find(query);
+        let updatedCount = 0;
+
+        for (const record of records) {
+            const originalPhone = record.phone;
+            if (!originalPhone) continue;
+
+            const segments = originalPhone.split('/');
+            const updatedSegments = segments.map(segment => {
+                const trimmed = segment.trim();
+                if (trimmed && !trimmed.startsWith('0')) {
+                    return `0${trimmed}`;
+                }
+                return trimmed;
+            });
+
+            const newPhone = updatedSegments.join(' / ');
+
+            if (newPhone !== originalPhone) {
+                record.phone = newPhone;
+                await record.save();
+                updatedCount++;
+            }
+        }
+
+        res.json({ message: `Successfully updated ${updatedCount} records.`, updatedCount });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.delete('/delete/:id', async (req, res) => {
     try {
         await Phone.findByIdAndDelete(req.params.id);
