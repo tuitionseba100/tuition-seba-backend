@@ -20,8 +20,6 @@ router.get('/all', async (req, res) => {
             query.isExpress = true;
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
-        } else if (type === 'noZeroPrefix') {
-            query.phone = { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' };
         }
 
         const totalRecords = await Phone.countDocuments(query);
@@ -78,8 +76,6 @@ router.get('/export', async (req, res) => {
             query.isExpress = true;
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
-        } else if (type === 'noZeroPrefix') {
-            query.phone = { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' };
         }
 
         const data = await Phone.find(query).sort({ createdAt: -1 });
@@ -139,40 +135,6 @@ router.put('/edit/:id', async (req, res) => {
 
         const updatedData = await Phone.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedData);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.post('/fix-prefix', async (req, res) => {
-    try {
-        const query = { phone: { $regex: '(^|/)\\s*[^0\\s]', $options: 'i' } };
-        const records = await Phone.find(query);
-        let updatedCount = 0;
-
-        for (const record of records) {
-            const originalPhone = record.phone;
-            if (!originalPhone) continue;
-
-            const segments = originalPhone.split('/');
-            const updatedSegments = segments.map(segment => {
-                const trimmed = segment.trim();
-                if (trimmed && !trimmed.startsWith('0')) {
-                    return `0${trimmed}`;
-                }
-                return trimmed;
-            });
-
-            const newPhone = updatedSegments.join(' / ');
-
-            if (newPhone !== originalPhone) {
-                record.phone = newPhone;
-                await record.save();
-                updatedCount++;
-            }
-        }
-
-        res.json({ message: `Successfully updated ${updatedCount} records.`, updatedCount });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
