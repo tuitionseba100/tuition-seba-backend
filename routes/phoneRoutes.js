@@ -91,7 +91,20 @@ router.post('/add', async (req, res) => {
 
     try {
         if (phone) {
+            // Validation: Only digits and / are allowed
+            if (!/^[0-9/]+$/.test(phone)) {
+                return res.status(400).json({ message: "Only numbers (0-9) and '/' are allowed in phone field." });
+            }
+
             const inputNumbers = phone.split('/').map(n => n.trim()).filter(n => n);
+            
+            // Validation: Each number must start with 0
+            for (const num of inputNumbers) {
+                if (!num.startsWith('0')) {
+                    return res.status(400).json({ message: `Each phone number must start with '0'. Invalid number: ${num}` });
+                }
+            }
+
             if (inputNumbers.length > 0) {
                 const duplicateQuery = {
                     $or: inputNumbers.map(num => ({
@@ -117,8 +130,22 @@ router.post('/add', async (req, res) => {
 //for edit
 router.put('/edit/:id', async (req, res) => {
     try {
-        if (req.body.phone) {
-            const inputNumbers = req.body.phone.split('/').map(n => n.trim()).filter(n => n);
+        const { phone } = req.body;
+        if (phone) {
+            // Validation: Only digits and / are allowed
+            if (!/^[0-9/]+$/.test(phone)) {
+                return res.status(400).json({ message: "Only numbers (0-9) and '/' are allowed in phone field." });
+            }
+
+            const inputNumbers = phone.split('/').map(n => n.trim()).filter(n => n);
+
+            // Validation: Each number must start with 0
+            for (const num of inputNumbers) {
+                if (!num.startsWith('0')) {
+                    return res.status(400).json({ message: `Each phone number must start with '0'. Invalid number: ${num}` });
+                }
+            }
+
             if (inputNumbers.length > 0) {
                 const duplicateQuery = {
                     _id: { $ne: req.params.id },
