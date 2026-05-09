@@ -128,6 +128,7 @@ router.post('/add', async (req, res) => {
         task,
         status,
         comment,
+        deadline,
     } = req.body;
 
     try {
@@ -142,6 +143,7 @@ router.post('/add', async (req, res) => {
             createdAt: localTime,
             status,
             comment,
+            deadline,
         });
 
         await newTask.save();

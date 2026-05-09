@@ -8,7 +8,8 @@ const taskDataSchema = new mongoose.Schema({
     task: { type: String },
     createdAt: { type: Date, default: Date.now },
     status: { type: String },
-    comment: { type: String }
+    comment: { type: String },
+    deadline: { type: Date }
 });
 
 const TaskData = mongoose.model('TaskData', taskDataSchema);
