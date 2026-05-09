@@ -92,9 +92,11 @@ router.get('/summary', authMiddleware, async (req, res) => {
             total: tasks.length,
             todayAssigned: 0,
             todayPending: 0,
+            todayOngoing: 0,
             todayCompleted: 0,
             totalCompleted: 0,
-            totalPending: 0
+            totalPending: 0,
+            totalOngoing: 0
         };
 
         tasks.forEach(task => {
@@ -103,9 +105,11 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
             if (isToday) counts.todayAssigned++;
             if (isToday && task.status === 'pending') counts.todayPending++;
+            if (isToday && task.status === 'ongoing') counts.todayOngoing++;
             if (isToday && task.status === 'completed') counts.todayCompleted++;
             if (task.status === 'completed') counts.totalCompleted++;
             if (task.status === 'pending') counts.totalPending++;
+            if (task.status === 'ongoing') counts.totalOngoing++;
         });
 
         res.json(counts);
