@@ -34,7 +34,14 @@ router.get('/all', authMiddleware, async (req, res) => {
 
         const filter = {};
         if (role !== 'superadmin') {
-            filter.employeeId = userId;
+            if (role === 'admin') {
+                filter.$or = [
+                    { employeeId: userId },
+                    { createdBy: userId }
+                ];
+            } else {
+                filter.employeeId = userId;
+            }
         }
 
         if (tuitionCode) {
@@ -73,7 +80,14 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         const filter = {};
         if (role !== 'superadmin') {
-            filter.employeeId = userId;
+            if (role === 'admin') {
+                filter.$or = [
+                    { employeeId: userId },
+                    { createdBy: userId }
+                ];
+            } else {
+                filter.employeeId = userId;
+            }
         }
 
         if (tuitionCode) {
@@ -119,7 +133,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
 });
 
 
-router.post('/add', async (req, res) => {
+router.post('/add', authMiddleware, async (req, res) => {
+    const { userId, role: creatorRole } = req.user;
     const {
         tuitionCode,
         employeeName,
@@ -144,6 +159,8 @@ router.post('/add', async (req, res) => {
             status,
             comment,
             deadline,
+            createdBy: userId,
+            creatorRole: creatorRole
         });
 
         await newTask.save();
@@ -153,8 +170,11 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
+        const { userId } = req.user;
+        req.body.updatedBy = userId;
+        req.body.updatedAt = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
         const updatedTask = await TaskData.findByIdAndUpdate(req.params.id, req.body, { new: true });
         res.json(updatedTask);
     } catch (err) {
@@ -162,8 +182,16 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
+        const { userId, role } = req.user;
+        const task = await TaskData.findById(req.params.id);
+        if (!task) return res.status(404).json({ message: 'Task not found' });
+        
+        if (role !== 'superadmin' && task.createdBy !== userId) {
+            return res.status(403).json({ message: 'Forbidden: You can only delete tasks you created' });
+        }
+        
         await TaskData.findByIdAndDelete(req.params.id);
         res.status(204).send();
     } catch (err) {
