@@ -18,18 +18,97 @@ const authMiddleware = (req, res, next) => {
 };
 
 
+function escapeRegex(str) {
+    if (typeof str !== 'string') {
+        str = String(str ?? '');
+    }
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 router.get('/all', authMiddleware, async (req, res) => {
     try {
         const { userId, role } = req.user;
-        let tasks;
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const { tuitionCode, employeeName, status } = req.query;
 
-        if (role === 'superadmin') {
-            tasks = await TaskData.find();
-        } else {
-            tasks = await TaskData.find({ employeeId: userId });
+        const filter = {};
+        if (role !== 'superadmin') {
+            filter.employeeId = userId;
         }
 
-        res.json(tasks);
+        if (tuitionCode) {
+            filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+        }
+
+        if (employeeName) {
+            filter.employeeName = new RegExp(escapeRegex(employeeName), 'i');
+        }
+
+        if (status) {
+            filter.status = status;
+        }
+
+        const total = await TaskData.countDocuments(filter);
+        const tasks = await TaskData.find(filter)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(limit);
+
+        res.json({
+            data: tasks,
+            currentPage: page,
+            totalPages: Math.ceil(total / limit),
+            totalRecords: total
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', authMiddleware, async (req, res) => {
+    try {
+        const { userId, role } = req.user;
+        const { tuitionCode, employeeName } = req.query;
+
+        const filter = {};
+        if (role !== 'superadmin') {
+            filter.employeeId = userId;
+        }
+
+        if (tuitionCode) {
+            filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+        }
+
+        if (employeeName) {
+            filter.employeeName = new RegExp(escapeRegex(employeeName), 'i');
+        }
+
+        const tasks = await TaskData.find(filter);
+
+        const todayDate = moment().tz('Asia/Dhaka').format('YYYY-MM-DD');
+
+        const counts = {
+            total: tasks.length,
+            todayAssigned: 0,
+            todayPending: 0,
+            todayCompleted: 0,
+            totalCompleted: 0,
+            totalPending: 0
+        };
+
+        tasks.forEach(task => {
+            const taskDate = moment(task.createdAt).tz('Asia/Dhaka').format('YYYY-MM-DD');
+            const isToday = taskDate === todayDate;
+
+            if (isToday) counts.todayAssigned++;
+            if (isToday && task.status === 'pending') counts.todayPending++;
+            if (isToday && task.status === 'completed') counts.todayCompleted++;
+            if (task.status === 'completed') counts.totalCompleted++;
+            if (task.status === 'pending') counts.totalPending++;
+        });
+
+        res.json(counts);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

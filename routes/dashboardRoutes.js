@@ -8,6 +8,7 @@ const RefundPayment = require('../models/RefundPayment');
 const Payment = require('../models/Payment');
 const RegTeacher = require('../models/RegTeacher');
 const Phone = require('../models/Phone');
+const TaskData = require('../models/TaskData');
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -20,6 +21,7 @@ router.get('/all', async (req, res) => {
             totalBest,
             totalTeachers,
             totalSpam,
+            totalTasks,
             recentTuitionApplications,
             recentTeacherApplications,
             recentTeacherPayments,
@@ -35,6 +37,7 @@ router.get('/all', async (req, res) => {
             Phone.countDocuments({ isSpam: false }),
             RegTeacher.countDocuments({ status: 'verified' }),
             Phone.countDocuments({ isSpam: true }),
+            TaskData.countDocuments(),
 
             TuitionApply.find()
                 .sort({ _id: -1 })
@@ -129,6 +132,7 @@ router.get('/all', async (req, res) => {
                 totalBest,
                 totalTeachers,
                 totalSpam,
+                totalTasks,
             },
             recentTuitionApplications,
             recentTeacherApplications,
