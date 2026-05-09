@@ -122,7 +122,6 @@ router.get('/summary', authMiddleware, async (req, res) => {
 router.post('/add', async (req, res) => {
     const {
         tuitionCode,
-        tuitionId,
         employeeName,
         employeeId,
         employeeRole,
@@ -136,7 +135,6 @@ router.post('/add', async (req, res) => {
 
         const newTask = new TaskData({
             tuitionCode,
-            tuitionId,
             employeeName,
             employeeId,
             employeeRole,
