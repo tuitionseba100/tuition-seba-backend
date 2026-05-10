@@ -59,6 +59,11 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
+// Render Load Balancer connection timeout fix
+// This prevents the "2 requests work, 1 fails" random drop issue
+server.keepAliveTimeout = 120 * 1000;
+server.headersTimeout = 120 * 1000;
