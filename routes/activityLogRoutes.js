@@ -150,20 +150,22 @@ router.delete('/clear', superadminOnly, async (req, res) => {
 
 router.get('/export', superadminOnly, async (req, res) => {
     try {
-        const { user, module, action, startDate, endDate, tuitionCode } = req.query;
+        const { user, module, action, startDate, endDate, tuitionCode, exportAll } = req.query;
         const filter = {};
 
-        if (user) filter.user = new RegExp(user, 'i');
-        if (module) filter.module = module;
-        if (action) filter.action = action;
-        if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode, 'i');
-        if (startDate || endDate) {
-            filter.timestamp = {};
-            if (startDate) filter.timestamp.$gte = new Date(startDate);
-            if (endDate) {
-                const end = new Date(endDate);
-                end.setHours(23, 59, 59, 999);
-                filter.timestamp.$lte = end;
+        if (exportAll !== 'true') {
+            if (user) filter.user = new RegExp(user, 'i');
+            if (module) filter.module = module;
+            if (action) filter.action = action;
+            if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode, 'i');
+            if (startDate || endDate) {
+                filter.timestamp = {};
+                if (startDate) filter.timestamp.$gte = new Date(startDate);
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    filter.timestamp.$lte = end;
+                }
             }
         }
 
