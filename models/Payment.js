@@ -41,7 +41,9 @@ const paymentSchema = new mongoose.Schema({
     followUpDate: { type: Date },
     followUpComment: { type: String },
     duePayDateComment: { type: String },
-    isSoftDelete: { type: Boolean, default: false }
+    isSoftDelete: { type: Boolean, default: false },
+    isVerified: { type: Boolean, default: false },
+    verifiedBy: { type: String }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

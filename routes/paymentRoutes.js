@@ -28,6 +28,29 @@ router.get('/all', authMiddleware, async (req, res) => {
     }
 });
 
+router.put('/verify-all', authMiddleware, async (req, res) => {
+    if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Forbidden' });
+    try {
+        await Payment.updateMany({ isVerified: { $ne: true } }, { isVerified: true, verifiedBy: 'System (Initial)' });
+        res.json({ message: 'All existing records verified successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.put('/verify/:id', authMiddleware, async (req, res) => {
+    try {
+        const payment = await Payment.findByIdAndUpdate(
+            req.params.id,
+            { isVerified: true, verifiedBy: req.user.username },
+            { new: true }
+        );
+        res.json(payment);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 router.post('/add', async (req, res) => {
     const {
