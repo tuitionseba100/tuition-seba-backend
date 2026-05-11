@@ -36,7 +36,8 @@ const paymentSchema = new mongoose.Schema({
     discount: { type: String },
     comment1: { type: String },
     comment2: { type: String },
-    comment3: { type: String }
+    comment3: { type: String },
+    assignedTo: { type: String, default: '' }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

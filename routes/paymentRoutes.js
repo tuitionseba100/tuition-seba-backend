@@ -1,6 +1,7 @@
 const express = require('express');
 const Payment = require('../models/Payment');
 const router = express.Router();
+const moment = require('moment-timezone');
 const jwt = require('jsonwebtoken');
 
 
@@ -63,7 +64,8 @@ router.post('/add', async (req, res) => {
         discount,
         comment1,
         comment2,
-        comment3
+        comment3,
+        assignedTo
     } = req.body;
 
     try {
@@ -99,10 +101,11 @@ router.post('/add', async (req, res) => {
             tuitionSalary,
             totalPaymentTk,
             discount,
-            createdAt: new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' }),
+            createdAt: moment().tz("Asia/Dhaka").format('M/D/YYYY, h:mm:ss A'),
             comment1,
             comment2,
-            comment3
+            comment3,
+            assignedTo
         });
 
         await newPayment.save();
@@ -133,21 +136,32 @@ router.delete('/delete/:id', async (req, res) => {
 
 router.get('/alert-today', async (req, res) => {
     try {
-        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
-        const todayBD = new Date(nowBD);
+        const { assignedTo } = req.query;
+        
+        // Use moment-timezone to get start and end of day in Bangladesh
+        const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
 
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
+        // Note: The database currently stores "Local Time as UTC" (e.g., 10 AM BD is stored as 10:00:00.000Z)
+        // To match this, we need to query based on the "Wall Clock" time numbers.
+        const startSearch = startOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+        const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
 
-        const endOfDayBD = new Date(todayBD);
-        endOfDayBD.setHours(23, 59, 59, 999);
+        const filter = {
+            duePayDate: { $gte: new Date(startSearch), $lte: new Date(endSearch) }
+        };
 
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        if (assignedTo) {
+            if (assignedTo === 'unassigned') {
+                filter.assignedTo = { $in: ['', null] };
+            } else if (assignedTo === 'assigned') {
+                filter.assignedTo = { $nin: ['', null] };
+            } else {
+                filter.assignedTo = assignedTo;
+            }
+        }
 
-        const payments = await Payment.find({
-            duePayDate: { $gte: startUTC, $lte: endUTC }
-        }).sort({ duePayDate: 1 });
+        const payments = await Payment.find(filter).sort({ duePayDate: 1 });
 
         res.json(payments);
     } catch (err) {
@@ -176,7 +190,7 @@ router.get('/exportData', async (req, res) => {
         );
 
         const header =
-            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type 1,Payment Type 2,Payment Type 3,Payment Type 4,Tutor Name,Tutor Number,Payment Number 1,Payment Number 2,Payment Number 3,Payment Number 4,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Created By,Updated By,Created At\n';
+            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type 1,Payment Type 2,Payment Type 3,Payment Type 4,Tutor Name,Tutor Number,Payment Number 1,Payment Number 2,Payment Number 3,Payment Number 4,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Assigned To,Created By,Updated By,Created At\n';
 
         res.write(header);
 
@@ -244,6 +258,7 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.comment2),
                     escapeCsvField(doc.comment3),
                     escapeCsvField(doc.reference),
+                    escapeCsvField(doc.assignedTo),
                     escapeCsvField(doc.createdBy),
                     escapeCsvField(doc.updatedBy),
                     escapeCsvField(doc.createdAt)
@@ -276,7 +291,8 @@ router.get('/getTableData', async (req, res) => {
         tutorNumber = '',
         paymentNumber = '',
         paymentStatus = '',
-        paymentType = ''
+        paymentType = '',
+        assignedTo = ''
     } = req.query;
 
     const filter = {};
@@ -299,6 +315,15 @@ router.get('/getTableData', async (req, res) => {
 
     if (paymentType) {
         filter.paymentType = paymentType;
+    }
+    if (assignedTo) {
+        if (assignedTo === 'unassigned') {
+            filter.assignedTo = { $in: ['', null] };
+        } else if (assignedTo === 'assigned') {
+            filter.assignedTo = { $nin: ['', null] };
+        } else {
+            filter.assignedTo = assignedTo;
+        }
     }
 
     try {
@@ -325,7 +350,8 @@ router.get('/summary', async (req, res) => {
         tutorNumber = '',
         paymentNumber = '',
         paymentStatus = '',
-        paymentType = ''
+        paymentType = '',
+        assignedTo = ''
     } = req.query;
 
     const filter = {};
@@ -348,6 +374,15 @@ router.get('/summary', async (req, res) => {
 
     if (paymentType) {
         filter.paymentType = paymentType;
+    }
+    if (assignedTo) {
+        if (assignedTo === 'unassigned') {
+            filter.assignedTo = { $in: ['', null] };
+        } else if (assignedTo === 'assigned') {
+            filter.assignedTo = { $nin: ['', null] };
+        } else {
+            filter.assignedTo = assignedTo;
+        }
     }
 
     try {
