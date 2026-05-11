@@ -37,7 +37,7 @@ const transactionRoutes = require('./routes/transactionRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
-app.use('/api/activityLog', activityLogRoutes);
+app.use('/api/activity-log', activityLogRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/guardianApply', guardianApplyRoutes);
