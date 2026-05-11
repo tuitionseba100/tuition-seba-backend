@@ -37,7 +37,10 @@ const paymentSchema = new mongoose.Schema({
     comment1: { type: String },
     comment2: { type: String },
     comment3: { type: String },
-    assignedTo: { type: String, default: '' }
+    assignedTo: { type: String, default: '' },
+    followUpDate: { type: Date },
+    followUpComment: { type: String },
+    duePayDateComment: { type: String }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

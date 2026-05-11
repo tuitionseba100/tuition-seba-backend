@@ -65,7 +65,10 @@ router.post('/add', async (req, res) => {
         comment1,
         comment2,
         comment3,
-        assignedTo
+        assignedTo,
+        followUpDate,
+        followUpComment,
+        duePayDateComment
     } = req.body;
 
     try {
@@ -105,7 +108,10 @@ router.post('/add', async (req, res) => {
             comment1,
             comment2,
             comment3,
-            assignedTo
+            assignedTo,
+            followUpDate,
+            followUpComment,
+            duePayDateComment
         });
 
         await newPayment.save();
