@@ -68,7 +68,7 @@ router.get('/', superadminOnly, async (req, res) => {
             logs,
             total,
             currentPage: parseInt(page),
-            totalPages: Math.ceil(total / limit)
+            totalPages: Math.ceil(total / parseInt(limit))
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
