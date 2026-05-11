@@ -30,7 +30,7 @@ const superadminOnly = (req, res, next) => {
 
 router.get('/', superadminOnly, async (req, res) => {
     try {
-        const { user, module, startDate, endDate, tuitionCode, page = 1, limit = 50 } = req.query;
+        const { user, module, action, startDate, endDate, tuitionCode, page = 1, limit = 50 } = req.query;
         const filter = {};
 
         if (user) {
@@ -39,6 +39,10 @@ router.get('/', superadminOnly, async (req, res) => {
 
         if (module) {
             filter.module = module;
+        }
+        
+        if (action) {
+            filter.action = action;
         }
 
         if (tuitionCode) {
@@ -78,10 +82,11 @@ router.get('/', superadminOnly, async (req, res) => {
 
 router.get('/summary', superadminOnly, async (req, res) => {
     try {
-        const { user, module, startDate, endDate, tuitionCode } = req.query;
+        const { user, module, action, startDate, endDate, tuitionCode } = req.query;
         const filter = {};
         if (user) filter.user = new RegExp(user, 'i');
         if (module) filter.module = module;
+        if (action) filter.action = action;
         if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode, 'i');
         if (startDate || endDate) {
             filter.timestamp = {};
@@ -113,11 +118,12 @@ router.get('/summary', superadminOnly, async (req, res) => {
 
 router.get('/export', superadminOnly, async (req, res) => {
     try {
-        const { user, module, startDate, endDate, tuitionCode } = req.query;
+        const { user, module, action, startDate, endDate, tuitionCode } = req.query;
         const filter = {};
 
         if (user) filter.user = new RegExp(user, 'i');
         if (module) filter.module = module;
+        if (action) filter.action = action;
         if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode, 'i');
         if (startDate || endDate) {
             filter.timestamp = {};
