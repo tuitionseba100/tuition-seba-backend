@@ -644,6 +644,47 @@ router.put('/edit/:id', async (req, res) => {
             }
         }
 
+        // Handle progressive status triggers: given number / guardian meet / demo class running
+        const progressiveStatusMessages = {
+            'given number': 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            'guardian meet': 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            'demo class running': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+        };
+
+        if (triggerStatus && progressiveStatusMessages[triggerStatus]) {
+            const msg = progressiveStatusMessages[triggerStatus];
+            try {
+                // 1. Pending → Shortlisted + set message
+                await TuitionApply.updateMany(
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: 'pending'
+                    },
+                    {
+                        status: 'shortlisted',
+                        commentForTeacher: msg,
+                        comment: 'auto updated',
+                        updatedBy: 'System'
+                    }
+                );
+
+                // 2. Already Shortlisted → only update message, keep status
+                await TuitionApply.updateMany(
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: 'shortlisted'
+                    },
+                    {
+                        commentForTeacher: msg,
+                        comment: 'auto updated',
+                        updatedBy: 'System'
+                    }
+                );
+            } catch (applyErr) {
+                console.error('Error updating tuition applications for progressive status:', applyErr);
+            }
+        }
+
         res.json(updatedTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
