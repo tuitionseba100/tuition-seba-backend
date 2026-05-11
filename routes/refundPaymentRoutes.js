@@ -142,10 +142,11 @@ router.post('/add', async (req, res) => {
         });
 
         await newApply.save();
+        const activeUser = req.headers['x-user-name'] || 'Teacher';
         await logActivity(req, 'Create', 'RefundPayment', newApply._id, { 
             after: newApply,
             importantFields: { tuitionCode: newApply.tuitionCode }
-        });
+        }, activeUser);
         res.status(201).json(newApply);
     } catch (err) {
         res.status(500).json({ message: err.message });
