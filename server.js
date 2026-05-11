@@ -34,9 +34,10 @@ const leadRoutes = require('./routes/leadRoutes');
 const smsRoutes = require('./routes/smsRoutes');
 const generalSearchRoutes = require('./routes/generalSearchRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
-
+const activityLogRoutes = require('./routes/activityLogRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
+app.use('/api/activityLog', activityLogRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/guardianApply', guardianApplyRoutes);

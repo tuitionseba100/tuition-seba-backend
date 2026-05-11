@@ -187,11 +187,11 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
         const { userId, role } = req.user;
         const task = await TaskData.findById(req.params.id);
         if (!task) return res.status(404).json({ message: 'Task not found' });
-        
+
         if (role !== 'superadmin' && task.createdBy !== userId) {
             return res.status(403).json({ message: 'Forbidden: You can only delete tasks you created' });
         }
-        
+
         await TaskData.findByIdAndDelete(req.params.id);
         res.status(204).send();
     } catch (err) {

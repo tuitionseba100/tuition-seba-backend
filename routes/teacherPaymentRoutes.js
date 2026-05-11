@@ -1,5 +1,6 @@
 const express = require('express');
 const TeacherPayment = require('../models/TeacherPayment');
+const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 
@@ -269,6 +270,8 @@ router.post('/add', async (req, res) => {
         });
 
         await newApply.save();
+        const activeUser = req.headers['x-user-name'] || 'Teacher';
+        await logActivity(req, 'Create', 'TeacherPayment', newApply._id, { after: newApply }, activeUser);
         res.status(201).json(newApply);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -286,7 +289,16 @@ router.get('/getPaymentRequestStatuses', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        const oldData = await TeacherPayment.findById(req.params.id).lean();
+        if (!oldData) {
+            return res.status(404).json({ message: 'Teacher payment not found' });
+        }
+
         const updatedData = await TeacherPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        const diff = getDifferences(oldData, updatedData.toObject());
+        await logActivity(req, 'Edit', 'TeacherPayment', updatedData._id, diff);
+
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -295,7 +307,21 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
+        const dataToDelete = await TeacherPayment.findById(req.params.id).lean();
+        if (!dataToDelete) {
+            return res.status(404).json({ message: 'Teacher payment not found' });
+        }
+
         await TeacherPayment.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
+        
+        await logActivity(req, 'Delete', 'TeacherPayment', req.params.id, {
+            importantFields: {
+                tuitionCode: dataToDelete.tuitionCode,
+                name: dataToDelete.name,
+                amount: dataToDelete.amount
+            }
+        });
+
         res.status(200).json({ message: 'Teacher payment soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });

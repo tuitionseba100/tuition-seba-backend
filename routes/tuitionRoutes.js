@@ -2,6 +2,7 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
+const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -548,6 +549,7 @@ router.post('/add', async (req, res) => {
         });
 
         await newTuition.save();
+        await logActivity(req, 'Create', 'Tuition', newTuition._id, { after: newTuition });
         res.status(201).json(newTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -590,7 +592,15 @@ router.put('/edit/:id', async (req, res) => {
             }
         }
 
+        const oldTuition = await Tuition.findById(req.params.id).lean();
+        if (!oldTuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        const diff = getDifferences(oldTuition, updatedTuition.toObject());
+        await logActivity(req, 'Edit', 'Tuition', updatedTuition._id, diff);
 
         const triggerStatus = req.body.status ? req.body.status.toLowerCase() : null;
         if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {
@@ -859,7 +869,21 @@ router.get('/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
+        const tuitionToDelete = await Tuition.findById(req.params.id).lean();
+        if (!tuitionToDelete) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+
         await Tuition.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
+        
+        await logActivity(req, 'Delete', 'Tuition', req.params.id, {
+            importantFields: {
+                tuitionCode: tuitionToDelete.tuitionCode,
+                student: tuitionToDelete.student,
+                guardianNumber: tuitionToDelete.guardianNumber
+            }
+        });
+
         res.status(200).json({ message: 'Tuition soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });

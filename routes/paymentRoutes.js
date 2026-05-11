@@ -1,5 +1,6 @@
 const express = require('express');
 const Payment = require('../models/Payment');
+const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 const jwt = require('jsonwebtoken');
@@ -139,6 +140,7 @@ router.post('/add', async (req, res) => {
         });
 
         await newPayment.save();
+        await logActivity(req, 'Create', 'Payment', newPayment._id, { after: newPayment });
         res.status(201).json(newPayment);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -147,7 +149,16 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        const oldPayment = await Payment.findById(req.params.id).lean();
+        if (!oldPayment) {
+            return res.status(404).json({ message: 'Payment not found' });
+        }
+
         const updatedPayment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        const diff = getDifferences(oldPayment, updatedPayment.toObject());
+        await logActivity(req, 'Edit', 'Payment', updatedPayment._id, diff);
+
         res.json(updatedPayment);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -157,7 +168,21 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
+        const paymentToDelete = await Payment.findById(req.params.id).lean();
+        if (!paymentToDelete) {
+            return res.status(404).json({ message: 'Payment not found' });
+        }
+
         await Payment.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
+        
+        await logActivity(req, 'Delete', 'Payment', req.params.id, {
+            importantFields: {
+                tuitionCode: paymentToDelete.tuitionCode,
+                tutorName: paymentToDelete.tutorName,
+                totalReceivedTk: paymentToDelete.totalReceivedTk
+            }
+        });
+
         res.status(200).json({ message: 'Payment soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
