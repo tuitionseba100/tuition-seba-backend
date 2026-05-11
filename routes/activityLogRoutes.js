@@ -116,6 +116,38 @@ router.get('/summary', superadminOnly, async (req, res) => {
     }
 });
 
+router.delete('/clear', superadminOnly, async (req, res) => {
+    try {
+        const { user, module, action, startDate, endDate, tuitionCode, clearAll } = req.query;
+        const filter = {};
+
+        if (clearAll !== 'true') {
+            if (user) filter.user = new RegExp(user, 'i');
+            if (module) filter.module = module;
+            if (action) filter.action = action;
+            if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode, 'i');
+            if (startDate || endDate) {
+                filter.timestamp = {};
+                if (startDate) filter.timestamp.$gte = new Date(startDate);
+                if (endDate) {
+                    const end = new Date(endDate);
+                    end.setHours(23, 59, 59, 999);
+                    filter.timestamp.$lte = end;
+                }
+            }
+
+            if (Object.keys(filter).length === 0) {
+                return res.status(400).json({ message: 'At least one filter is required for clearing logs safely, or use Select All.' });
+            }
+        }
+
+        const result = await ActivityLog.deleteMany(filter);
+        res.json({ message: `Successfully cleared ${result.deletedCount} logs.`, deletedCount: result.deletedCount });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/export', superadminOnly, async (req, res) => {
     try {
         const { user, module, action, startDate, endDate, tuitionCode } = req.query;
