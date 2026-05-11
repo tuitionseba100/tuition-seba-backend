@@ -7,6 +7,7 @@ const moment = require('moment-timezone');
 // Auth middleware (ensure superadmin)
 const superadminOnly = (req, res, next) => {
     let token = req.header('Authorization');
+    console.log('Activity Log Request Header:', token ? 'Token exists' : 'Token missing');
     
     // Fallback to query param for file downloads (window.open)
     if (!token && req.query.token) {
