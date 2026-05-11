@@ -549,7 +549,10 @@ router.post('/add', async (req, res) => {
         });
 
         await newTuition.save();
-        await logActivity(req, 'Create', 'Tuition', newTuition._id, { after: newTuition });
+        await logActivity(req, 'Create', 'Tuition', newTuition._id, { 
+            after: newTuition,
+            importantFields: { tuitionCode: newTuition.tuitionCode }
+        });
         res.status(201).json(newTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -600,7 +603,10 @@ router.put('/edit/:id', async (req, res) => {
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
         
         const diff = getDifferences(oldTuition, updatedTuition.toObject());
-        await logActivity(req, 'Edit', 'Tuition', updatedTuition._id, diff);
+        await logActivity(req, 'Edit', 'Tuition', updatedTuition._id, {
+            ...diff,
+            importantFields: { tuitionCode: updatedTuition.tuitionCode }
+        });
 
         const triggerStatus = req.body.status ? req.body.status.toLowerCase() : null;
         if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {
@@ -879,7 +885,6 @@ router.delete('/delete/:id', async (req, res) => {
         await logActivity(req, 'Delete', 'Tuition', req.params.id, {
             importantFields: {
                 tuitionCode: tuitionToDelete.tuitionCode,
-                student: tuitionToDelete.student,
                 guardianNumber: tuitionToDelete.guardianNumber
             }
         });

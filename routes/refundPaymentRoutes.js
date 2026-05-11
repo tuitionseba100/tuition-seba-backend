@@ -1,5 +1,6 @@
 const express = require('express');
 const RefundPayment = require('../models/RefundPayment');
+const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 
@@ -141,6 +142,10 @@ router.post('/add', async (req, res) => {
         });
 
         await newApply.save();
+        await logActivity(req, 'Create', 'RefundPayment', newApply._id, { 
+            after: newApply,
+            importantFields: { tuitionCode: newApply.tuitionCode }
+        });
         res.status(201).json(newApply);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -162,7 +167,17 @@ router.put('/edit/:id', async (req, res) => {
         if (updateData.returnDate === "") {
             updateData.returnDate = null;
         }
+        
+        const oldData = await RefundPayment.findById(req.params.id).lean();
         const updatedData = await RefundPayment.findByIdAndUpdate(req.params.id, updateData, { new: true });
+        
+        if (oldData) {
+            const diff = getDifferences(oldData, updatedData.toObject());
+            await logActivity(req, 'Edit', 'RefundPayment', updatedData._id, {
+                ...diff,
+                importantFields: { tuitionCode: updatedData.tuitionCode }
+            });
+        }
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -171,7 +186,17 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
+        const dataToDelete = await RefundPayment.findById(req.params.id).lean();
         await RefundPayment.findByIdAndDelete(req.params.id);
+        
+        if (dataToDelete) {
+            await logActivity(req, 'Delete', 'RefundPayment', req.params.id, {
+                importantFields: {
+                    tuitionCode: dataToDelete.tuitionCode,
+                    personalPhone: dataToDelete.personalPhone
+                }
+            });
+        }
         res.status(204).send();
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -179,5 +204,3 @@ router.delete('/delete/:id', async (req, res) => {
 });
 
 module.exports = router;
-
-

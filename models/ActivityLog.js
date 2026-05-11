@@ -5,6 +5,7 @@ const activityLogSchema = new mongoose.Schema({
     action: { type: String, enum: ['Create', 'Edit', 'Delete'], required: true },
     module: { type: String, required: true },
     resourceId: { type: String, required: true },
+    tuitionCode: { type: String },
     details: {
         before: { type: mongoose.Schema.Types.Mixed },
         after: { type: mongoose.Schema.Types.Mixed },

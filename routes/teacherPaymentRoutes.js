@@ -271,7 +271,10 @@ router.post('/add', async (req, res) => {
 
         await newApply.save();
         const activeUser = req.headers['x-user-name'] || 'Teacher';
-        await logActivity(req, 'Create', 'TeacherPayment', newApply._id, { after: newApply }, activeUser);
+        await logActivity(req, 'Create', 'TeacherPayment', newApply._id, { 
+            after: newApply,
+            importantFields: { tuitionCode: newApply.tuitionCode }
+        }, activeUser);
         res.status(201).json(newApply);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -297,7 +300,10 @@ router.put('/edit/:id', async (req, res) => {
         const updatedData = await TeacherPayment.findByIdAndUpdate(req.params.id, req.body, { new: true });
         
         const diff = getDifferences(oldData, updatedData.toObject());
-        await logActivity(req, 'Edit', 'TeacherPayment', updatedData._id, diff);
+        await logActivity(req, 'Edit', 'TeacherPayment', updatedData._id, {
+            ...diff,
+            importantFields: { tuitionCode: updatedData.tuitionCode }
+        });
 
         res.json(updatedData);
     } catch (err) {
@@ -317,8 +323,7 @@ router.delete('/delete/:id', async (req, res) => {
         await logActivity(req, 'Delete', 'TeacherPayment', req.params.id, {
             importantFields: {
                 tuitionCode: dataToDelete.tuitionCode,
-                name: dataToDelete.name,
-                amount: dataToDelete.amount
+                personalPhone: dataToDelete.personalPhone
             }
         });
 

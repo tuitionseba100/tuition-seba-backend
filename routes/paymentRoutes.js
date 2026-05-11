@@ -140,7 +140,10 @@ router.post('/add', async (req, res) => {
         });
 
         await newPayment.save();
-        await logActivity(req, 'Create', 'Payment', newPayment._id, { after: newPayment });
+        await logActivity(req, 'Create', 'Payment', newPayment._id, { 
+            after: newPayment,
+            importantFields: { tuitionCode: newPayment.tuitionCode }
+        });
         res.status(201).json(newPayment);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -157,7 +160,10 @@ router.put('/edit/:id', async (req, res) => {
         const updatedPayment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
         
         const diff = getDifferences(oldPayment, updatedPayment.toObject());
-        await logActivity(req, 'Edit', 'Payment', updatedPayment._id, diff);
+        await logActivity(req, 'Edit', 'Payment', updatedPayment._id, {
+            ...diff,
+            importantFields: { tuitionCode: updatedPayment.tuitionCode }
+        });
 
         res.json(updatedPayment);
     } catch (err) {
@@ -178,8 +184,7 @@ router.delete('/delete/:id', async (req, res) => {
         await logActivity(req, 'Delete', 'Payment', req.params.id, {
             importantFields: {
                 tuitionCode: paymentToDelete.tuitionCode,
-                tutorName: paymentToDelete.tutorName,
-                totalReceivedTk: paymentToDelete.totalReceivedTk
+                tutorNumber: paymentToDelete.tutorNumber
             }
         });
 

@@ -11,11 +11,19 @@ const ActivityLog = require('../models/ActivityLog');
 const logActivity = async (req, action, module, resourceId, details, overrideUser = null) => {
     try {
         const user = overrideUser || req.headers['x-user-name'] || 'System';
+        
+        // Extract tuitionCode if present in importantFields or explicitly passed in details
+        let tuitionCode = details.tuitionCode;
+        if (!tuitionCode && details.importantFields && details.importantFields.tuitionCode) {
+            tuitionCode = details.importantFields.tuitionCode;
+        }
+
         const log = new ActivityLog({
             user,
             action,
             module,
             resourceId,
+            tuitionCode,
             details
         });
         await log.save();
