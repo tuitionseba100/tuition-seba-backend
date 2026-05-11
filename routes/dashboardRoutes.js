@@ -31,8 +31,8 @@ router.get('/all', async (req, res) => {
             monthlyPayments,
             monthlyRefunds
         ] = await Promise.all([
-            Tuition.countDocuments(),
-            Tuition.countDocuments({ isPublish: true }),
+            Tuition.countDocuments({ isSoftDelete: { $ne: true } }),
+            Tuition.countDocuments({ isPublish: true, isSoftDelete: { $ne: true } }),
             TuitionApply.countDocuments({ status: 'pending' }),
             Phone.countDocuments({ isSpam: false }),
             RegTeacher.countDocuments({ status: 'verified' }),
@@ -49,7 +49,7 @@ router.get('/all', async (req, res) => {
                 .limit(3)
                 .select('name phone status'),
 
-            TeacherPayment.find()
+            TeacherPayment.find({ isSoftDelete: { $ne: true } })
                 .sort({ _id: -1 })
                 .limit(3)
                 .select('tuitionCode paymentNumber personalPhone amount status'),
@@ -79,7 +79,7 @@ router.get('/all', async (req, res) => {
 
             TeacherPayment.aggregate([
                 {
-                    $match: { status: "received" }
+                    $match: { status: "received", isSoftDelete: { $ne: true } }
                 },
                 {
                     $group: {

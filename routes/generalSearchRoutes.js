@@ -55,20 +55,23 @@ router.get('/phone/:phoneNumber', async (req, res) => {
                 $or: [
                     { guardianNumber: phoneRegex },
                     { tutorNumber: phoneRegex }
-                ]
+                ],
+                isSoftDelete: { $ne: true }
             }),
             TuitionApply.find({ phone: phoneRegex }),
             TeacherPayment.find({
                 $or: [
                     { paymentNumber: phoneRegex },
                     { personalPhone: phoneRegex }
-                ]
+                ],
+                isSoftDelete: { $ne: true }
             }),
             Payment.find({
                 $or: [
                     { tutorNumber: phoneRegex },
                     { paymentNumber: phoneRegex }
-                ]
+                ],
+                isSoftDelete: { $ne: true }
             }),
             RefundPayment.find({
                 $or: [
@@ -112,11 +115,11 @@ router.get('/tuition/:tuitionCode', async (req, res) => {
             leads
         ] = await Promise.all([
             TuitionApply.find({ tuitionCode }),
-            Tuition.find({ tuitionCode }),
-            TeacherPayment.find({ tuitionCode }),
+            Tuition.find({ tuitionCode, isSoftDelete: { $ne: true } }),
+            TeacherPayment.find({ tuitionCode, isSoftDelete: { $ne: true } }),
             TaskData.find({ tuitionCode }),
             RefundPayment.find({ tuitionCode }),
-            Payment.find({ tuitionCode }),
+            Payment.find({ tuitionCode, isSoftDelete: { $ne: true } }),
             Lead.find({ tuitionCode })
         ]);
 

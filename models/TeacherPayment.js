@@ -18,6 +18,7 @@ const teacherPaymentSchema = new mongoose.Schema({
     status: { type: String },
     requestedAt: { type: Date, default: Date.now },
     commentFromAgent: { type: String },
+    isSoftDelete: { type: Boolean, default: false }
 });
 
 const TeacherPayment = mongoose.model('TeacherPayment', teacherPaymentSchema);

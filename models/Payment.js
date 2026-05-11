@@ -40,7 +40,8 @@ const paymentSchema = new mongoose.Schema({
     assignedTo: { type: String, default: '' },
     followUpDate: { type: Date },
     followUpComment: { type: String },
-    duePayDateComment: { type: String }
+    duePayDateComment: { type: String },
+    isSoftDelete: { type: Boolean, default: false }
 });
 
 const Payment = mongoose.model('Payment', paymentSchema);

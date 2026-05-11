@@ -21,7 +21,7 @@ const authMiddleware = (req, res, next) => {
 
 router.get('/all', authMiddleware, async (req, res) => {
     try {
-        const payments = await Payment.find();
+        const payments = await Payment.find({ isSoftDelete: { $ne: true } });
         res.json(payments);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -133,8 +133,8 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
-        await Payment.findByIdAndDelete(req.params.id);
-        res.status(204).send();
+        await Payment.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
+        res.status(200).json({ message: 'Payment soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -179,7 +179,7 @@ router.get('/exportData', async (req, res) => {
     try {
         const { paymentStatus } = req.query;
 
-        const filter = {};
+        const filter = { isSoftDelete: { $ne: true } };
         if (paymentStatus && paymentStatus !== 'all') {
             filter.paymentStatus = paymentStatus;
         }
@@ -301,7 +301,7 @@ router.get('/getTableData', async (req, res) => {
         assignedTo = ''
     } = req.query;
 
-    const filter = {};
+    const filter = { isSoftDelete: { $ne: true } };
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -360,7 +360,7 @@ router.get('/summary', async (req, res) => {
         assignedTo = ''
     } = req.query;
 
-    const filter = {};
+    const filter = { isSoftDelete: { $ne: true } };
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');

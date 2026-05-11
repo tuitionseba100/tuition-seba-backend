@@ -5,7 +5,7 @@ const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const all = await TeacherPayment.find();
+        const all = await TeacherPayment.find({ isSoftDelete: { $ne: true } });
         res.json(all);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -31,7 +31,7 @@ router.get('/getTableData', async (req, res) => {
         paymentType = ''
     } = req.query;
 
-    const filter = {};
+    const filter = { isSoftDelete: { $ne: true } };
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -80,7 +80,7 @@ router.get('/summary', async (req, res) => {
         paymentType = ''
     } = req.query;
 
-    const filter = {};
+    const filter = { isSoftDelete: { $ne: true } };
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -152,7 +152,7 @@ router.get('/exportData', async (req, res) => {
     try {
         const { status } = req.query;
 
-        const filter = {};
+        const filter = { isSoftDelete: { $ne: true } };
         if (status && status !== 'all') {
             filter.status = status;
         }
@@ -277,7 +277,7 @@ router.post('/add', async (req, res) => {
 
 router.get('/getPaymentRequestStatuses', async (req, res) => {
     try {
-        const summary = await TeacherPayment.find({}, 'tuitionCode paymentType paymentNumber status phone');
+        const summary = await TeacherPayment.find({ isSoftDelete: { $ne: true } }, 'tuitionCode paymentType paymentNumber status phone');
         res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -295,8 +295,8 @@ router.put('/edit/:id', async (req, res) => {
 
 router.delete('/delete/:id', async (req, res) => {
     try {
-        await TeacherPayment.findByIdAndDelete(req.params.id);
-        res.status(204).send();
+        await TeacherPayment.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
+        res.status(200).json({ message: 'Teacher payment soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
