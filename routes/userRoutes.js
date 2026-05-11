@@ -33,11 +33,11 @@ router.post('/register', authMiddleware, async (req, res) => {
     const { username, password, role, name, permissions, autoLock } = req.body;
 
     try {
-        const newUser = new User({ 
-            username, 
-            password, 
-            role, 
-            name, 
+        const newUser = new User({
+            username,
+            password,
+            role,
+            name,
             permissions: permissions || [],
             autoLock: autoLock || false
         });
@@ -68,10 +68,10 @@ router.post('/login', async (req, res) => {
                 hour: 'numeric',
                 hour12: false
             }).format(new Date()));
-            
+
             if (bdHour >= 0 && bdHour < 7) {
-                return res.status(403).json({ 
-                    message: 'Night Lock Active: Access restricted between 12:00 AM and 07:00 AM (Bangladesh Time).' 
+                return res.status(403).json({
+                    message: 'Night Lock Active: Access restricted between 12:00 AM and 07:00 AM (Bangladesh Time).'
                 });
             }
         }

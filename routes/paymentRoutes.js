@@ -40,9 +40,10 @@ router.put('/verify-all', authMiddleware, async (req, res) => {
 
 router.put('/verify/:id', authMiddleware, async (req, res) => {
     try {
+        const { verifiedBy } = req.body;
         const payment = await Payment.findByIdAndUpdate(
             req.params.id,
-            { isVerified: true, verifiedBy: req.user.username },
+            { isVerified: true, verifiedBy: verifiedBy || 'Unknown' },
             { new: true }
         );
         res.json(payment);
@@ -166,7 +167,7 @@ router.delete('/delete/:id', async (req, res) => {
 router.get('/alert-today', async (req, res) => {
     try {
         const { assignedTo } = req.query;
-        
+
         // Use moment-timezone to get start and end of day in Bangladesh
         const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
