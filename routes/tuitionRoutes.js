@@ -549,7 +549,7 @@ router.post('/add', async (req, res) => {
         });
 
         await newTuition.save();
-        await logActivity(req, 'Create', 'Tuition', newTuition._id, { 
+        await logActivity(req, 'Create', 'Tuition', newTuition._id, {
             after: newTuition,
             importantFields: { tuitionCode: newTuition.tuitionCode }
         });
@@ -601,7 +601,7 @@ router.put('/edit/:id', async (req, res) => {
         }
 
         const updatedTuition = await Tuition.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        
+
         const diff = getDifferences(oldTuition, updatedTuition.toObject());
         await logActivity(req, 'Edit', 'Tuition', updatedTuition._id, {
             ...diff,
@@ -635,7 +635,6 @@ router.put('/edit/:id', async (req, res) => {
                     {
                         status: 'cancelled',
                         commentForTeacher: commentForTeacher,
-                        comment: 'auto updated',
                         updatedBy: 'System'
                     }
                 );
@@ -663,7 +662,6 @@ router.put('/edit/:id', async (req, res) => {
                     {
                         status: 'shortlisted',
                         commentForTeacher: msg,
-                        comment: 'auto updated',
                         updatedBy: 'System'
                     }
                 );
@@ -676,7 +674,6 @@ router.put('/edit/:id', async (req, res) => {
                     },
                     {
                         commentForTeacher: msg,
-                        comment: 'auto updated',
                         updatedBy: 'System'
                     }
                 );
@@ -922,7 +919,7 @@ router.delete('/delete/:id', async (req, res) => {
         }
 
         await Tuition.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
-        
+
         await logActivity(req, 'Delete', 'Tuition', req.params.id, {
             importantFields: {
                 tuitionCode: tuitionToDelete.tuitionCode,
