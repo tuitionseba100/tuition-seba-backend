@@ -279,6 +279,8 @@ router.get('/alert-today', async (req, res) => {
 
 router.post('/auto-migrate', authMiddleware, async (req, res) => {
     try {
+        const { tuitionIds } = req.body;
+
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
 
@@ -295,6 +297,11 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
             nextUpdateDate: { $gte: startUTC, $lte: endUTC },
             isSoftDelete: { $ne: true }
         };
+
+        // If specific IDs are provided, limit to those
+        if (tuitionIds && Array.isArray(tuitionIds)) {
+            filter._id = { $in: tuitionIds };
+        }
 
         const tuitionsToUpdate = await Tuition.find(filter);
 
