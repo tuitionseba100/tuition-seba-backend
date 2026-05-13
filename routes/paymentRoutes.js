@@ -521,6 +521,50 @@ router.get('/summary', async (req, res) => {
 });
 
 
+router.post('/auto-migrate', authMiddleware, async (req, res) => {
+    try {
+        const { paymentIds } = req.body;
+        const username = req.user.username;
+
+        if (!paymentIds || !Array.isArray(paymentIds) || paymentIds.length === 0) {
+            return res.status(400).json({ message: 'No payment IDs provided' });
+        }
+
+        const results = [];
+        for (const id of paymentIds) {
+            const payment = await Payment.findById(id);
+            if (!payment) continue;
+
+            const oldPayment = payment.toObject();
+            
+            // Calculate next day
+            const currentDue = moment(payment.duePayDate);
+            const nextDay = currentDue.clone().add(1, 'day');
+            
+            payment.duePayDate = nextDay.toDate();
+            payment.updatedBy = 'auto migration';
+            
+            await payment.save();
+
+            const diff = getDifferences(oldPayment, payment.toObject());
+            await logActivity(req, 'Edit', 'Payment', payment._id, {
+                ...diff,
+                importantFields: { tuitionCode: payment.tuitionCode }
+            });
+
+            results.push(payment._id);
+        }
+
+        res.json({ 
+            message: `Successfully migrated ${results.length} payment(s).`,
+            migratedIds: results
+        });
+    } catch (err) {
+        console.error('Auto migration error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
 
 
