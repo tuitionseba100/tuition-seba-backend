@@ -277,6 +277,56 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
+router.post('/auto-migrate', authMiddleware, async (req, res) => {
+    try {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const filter = {
+            nextUpdateDate: { $gte: startUTC, $lte: endUTC },
+            isSoftDelete: { $ne: true }
+        };
+
+        const tuitionsToUpdate = await Tuition.find(filter);
+
+        let updatedCount = 0;
+        for (const tuition of tuitionsToUpdate) {
+            const oldTuition = tuition.toObject();
+            
+            // Increment nextUpdateDate by 1 day
+            const currentNextDate = new Date(tuition.nextUpdateDate);
+            currentNextDate.setDate(currentNextDate.getDate() + 1);
+            
+            tuition.nextUpdateDate = currentNextDate;
+            tuition.updatedBy = 'auto migration';
+            
+            await tuition.save();
+
+            const diff = getDifferences(oldTuition, tuition.toObject());
+            await logActivity(req, 'Edit', 'Tuition', tuition._id, {
+                ...diff,
+                importantFields: { tuitionCode: tuition.tuitionCode }
+            }, 'auto migration');
+
+            updatedCount++;
+        }
+
+        res.json({ message: `Successfully updated ${updatedCount} tuition(s).`, count: updatedCount });
+    } catch (err) {
+        console.error('Auto migration failed:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/pending-payment-creation', async (req, res) => {
     try {
         const tuitions = await Tuition.find({
