@@ -49,18 +49,19 @@ router.post('/', authMiddleware, superadminMiddleware, async (req, res) => {
     try {
         let updateData = { value, submodule };
 
-        if (mode === 'append' && Array.isArray(value)) {
+        if (mode === 'append') {
             const existing = await Settings.findOne({ key });
-            if (existing && Array.isArray(existing.value)) {
-                // Merge and ensure unique values
-                const merged = [...existing.value];
-                value.forEach(val => {
-                    if (!merged.includes(val)) {
-                        merged.push(val);
-                    }
-                });
-                updateData.value = merged;
-            }
+            const existingValue = existing ? (Array.isArray(existing.value) ? existing.value : (existing.value ? [existing.value] : [])) : [];
+            const newValue = Array.isArray(value) ? value : (value ? [value] : []);
+            
+            // Merge and ensure unique values
+            const merged = [...existingValue];
+            newValue.forEach(val => {
+                if (!merged.includes(val)) {
+                    merged.push(val);
+                }
+            });
+            updateData.value = merged;
         }
 
         const setting = await Settings.findOneAndUpdate(
