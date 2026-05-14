@@ -45,11 +45,27 @@ router.get('/:key', authMiddleware, async (req, res) => {
 
 // Update or create a setting
 router.post('/', authMiddleware, superadminMiddleware, async (req, res) => {
-    const { key, value } = req.body;
+    const { key, value, submodule, mode } = req.body;
     try {
+        let updateData = { value, submodule };
+
+        if (mode === 'append' && Array.isArray(value)) {
+            const existing = await Settings.findOne({ key });
+            if (existing && Array.isArray(existing.value)) {
+                // Merge and ensure unique values
+                const merged = [...existing.value];
+                value.forEach(val => {
+                    if (!merged.includes(val)) {
+                        merged.push(val);
+                    }
+                });
+                updateData.value = merged;
+            }
+        }
+
         const setting = await Settings.findOneAndUpdate(
             { key },
-            { value },
+            updateData,
             { upsert: true, new: true }
         );
         res.json(setting);
