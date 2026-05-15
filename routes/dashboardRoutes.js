@@ -9,6 +9,7 @@ const Payment = require('../models/Payment');
 const RegTeacher = require('../models/RegTeacher');
 const Phone = require('../models/Phone');
 const TaskData = require('../models/TaskData');
+const jwt = require('jsonwebtoken');
 
 const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -29,7 +30,9 @@ router.get('/all', async (req, res) => {
             monthlyTuitions,
             statusBreakdown,
             monthlyPayments,
-            monthlyRefunds
+            monthlyRefunds,
+            tuitionAssignments,
+            paymentAssignments
         ] = await Promise.all([
             Tuition.countDocuments({ isSoftDelete: { $ne: true } }),
             Tuition.countDocuments({ isPublish: true, isSoftDelete: { $ne: true } }),
@@ -96,6 +99,16 @@ router.get('/all', async (req, res) => {
                         refunds: { $sum: "$amount" }
                     }
                 }
+            ]),
+
+            Tuition.aggregate([
+                { $match: { assignedTo: { $exists: true, $ne: "" }, isSoftDelete: { $ne: true } } },
+                { $group: { _id: "$assignedTo", count: { $sum: 1 } } }
+            ]),
+
+            Payment.aggregate([
+                { $match: { assignedTo: { $exists: true, $ne: "" }, isSoftDelete: { $ne: true } } },
+                { $group: { _id: "$assignedTo", count: { $sum: 1 } } }
             ])
         ]);
 
@@ -124,6 +137,40 @@ router.get('/all', async (req, res) => {
             return { month, refunds: found ? found.refunds : 0 };
         });
 
+        let userRole = '';
+        let username = req.headers['x-user-name'] || '';
+        const token = req.headers.authorization || req.headers.Authorization;
+        if (token) {
+            try {
+                const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+                userRole = verified.role;
+            } catch (err) {
+                console.error("Token verification failed in dashboard route:", err);
+            }
+        }
+
+        const assignmentMap = {};
+        
+        tuitionAssignments.forEach(t => {
+            assignmentMap[t._id] = { username: t._id, tuitionCount: t.count, paymentCount: 0 };
+        });
+        
+        paymentAssignments.forEach(p => {
+            if (!assignmentMap[p._id]) {
+                assignmentMap[p._id] = { username: p._id, tuitionCount: 0, paymentCount: 0 };
+            }
+            assignmentMap[p._id].paymentCount = p.count;
+        });
+
+        let assignmentSummary = Object.values(assignmentMap);
+
+        if (userRole !== 'superadmin' && username) {
+            assignmentSummary = assignmentSummary.filter(a => a.username === username);
+            if (assignmentSummary.length === 0) {
+                assignmentSummary.push({ username: username, tuitionCount: 0, paymentCount: 0 });
+            }
+        }
+
         const dashboardData = {
             summaryData: {
                 totalTuitions,
@@ -141,7 +188,8 @@ router.get('/all', async (req, res) => {
             monthlyTuitionApplications,
             applicationStatusBreakdown,
             monthlyPaymentInflow,
-            refundTrends
+            refundTrends,
+            assignmentSummary
         };
 
         res.json(dashboardData);
