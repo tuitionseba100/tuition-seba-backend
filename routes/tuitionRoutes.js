@@ -2,6 +2,7 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
+const Settings = require('../models/Settings');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -17,6 +18,24 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(400).json({ message: 'Invalid Token' });
     }
+};
+
+const getLeastAssignedUser = async (userList) => {
+    if (!userList || userList.length === 0) return null;
+    if (userList.length === 1) return userList[0];
+
+    const counts = await Promise.all(userList.map(async (user) => {
+        // Count active tuitions (excluding cancel/confirm) for this user
+        const count = await Tuition.countDocuments({ 
+            assignedTo: user, 
+            isSoftDelete: { $ne: true },
+            status: { $nin: ['cancel', 'confirm'] }
+        });
+        return { user, count };
+    }));
+
+    counts.sort((a, b) => a.count - b.count);
+    return counts[0].user;
 };
 
 //available tuition
@@ -657,6 +676,41 @@ router.put('/edit/:id', async (req, res) => {
         const oldTuition = await Tuition.findById(req.params.id).lean();
         if (!oldTuition) {
             return res.status(404).json({ message: 'Tuition not found' });
+        }
+
+        // Auto-assignment logic based on status change
+        const newStatus = req.body.status ? req.body.status.toLowerCase() : null;
+        const oldStatus = oldTuition.status ? oldTuition.status.toLowerCase() : null;
+
+        if (newStatus && newStatus !== oldStatus) {
+            // 1. Confirm -> TSF
+            if (newStatus === 'confirm') {
+                req.body.assignedTo = 'TSF';
+            }
+            // 2. Cancel -> Cancel Setting
+            else if (newStatus === 'cancel') {
+                const setting = await Settings.findOne({ key: 'cancel_status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) req.body.assignedTo = nextUser;
+                }
+            }
+            // 3. Progressive statuses -> Status Change Setting
+            else if (['given number', 'guardian meet', 'demo class running'].includes(newStatus)) {
+                const setting = await Settings.findOne({ key: 'status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) req.body.assignedTo = nextUser;
+                }
+            }
+            // 4. Back to Available -> Restore previous assigned user
+            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running'].includes(oldStatus)) {
+                if (oldTuition.previousAssignedTo) {
+                    req.body.assignedTo = oldTuition.previousAssignedTo;
+                }
+            }
         }
 
         if (req.body.assignedTo !== undefined && req.body.assignedTo !== oldTuition.assignedTo) {
