@@ -3,6 +3,8 @@ const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
 const Settings = require('../models/Settings');
+const Attendance = require('../models/Attendance');
+const Attendance = require('../models/Attendance');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -35,6 +37,16 @@ const getLeastAssignedUser = async (userList) => {
     }));
 
     counts.sort((a, b) => a.count - b.count);
+    
+    // Tie-breaking: pick randomly among users with the same minimum count
+    const minCount = counts[0].count;
+    const candidates = counts.filter(c => c.count === minCount);
+    
+    if (candidates.length > 1) {
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex].user;
+    }
+    
     return counts[0].user;
 };
 
@@ -586,6 +598,36 @@ router.post('/add', async (req, res) => {
             }
         }
 
+        // Auto-assign logic for new tuition
+        let finalAssignedTo = assignedTo || '';
+        if (!finalAssignedTo) {
+            const setting = await Settings.findOne({ key: 'tuition_auto_assign_user' });
+            if (setting && setting.value && setting.value.length > 0) {
+                const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                
+                // Filter users who have started their day (active attendance today)
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                
+                const activeUsers = [];
+                for (const username of userList) {
+                    const attendance = await Attendance.findOne({
+                        userName: username,
+                        startTime: { $gte: todayStart },
+                        endTime: null
+                    });
+                    if (attendance) {
+                        activeUsers.push(username);
+                    }
+                }
+
+                if (activeUsers.length > 0) {
+                    const nextUser = await getLeastAssignedUser(activeUsers);
+                    if (nextUser) finalAssignedTo = nextUser;
+                }
+            }
+        }
+
         const newTuition = new Tuition({
             tuitionCode,
             isPublish,
@@ -619,7 +661,7 @@ router.post('/add', async (req, res) => {
             comment1,
             comment2,
             isPaymentCreated,
-            assignedTo,
+            assignedTo: finalAssignedTo,
             previousAssignedTo,
             isSpamGuardian,
             isBestGuardian,
