@@ -4,6 +4,8 @@ const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 const jwt = require('jsonwebtoken');
+const Settings = require('../models/Settings');
+const Attendance = require('../models/Attendance');
 
 
 const authMiddleware = (req, res, next) => {
@@ -17,6 +19,28 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(400).json({ message: 'Invalid Token' });
     }
+};
+
+const getLeastAssignedPaymentUser = async (userList) => {
+    if (!userList || userList.length === 0) return null;
+    if (userList.length === 1) return userList[0];
+
+    const counts = await Promise.all(userList.map(async (user) => {
+        const count = await Payment.countDocuments({ 
+            assignedTo: user, 
+            isSoftDelete: { $ne: true },
+            paymentStatus: { $ne: 'Paid' } 
+        });
+        return { user, count };
+    }));
+
+    counts.sort((a, b) => a.count - b.count);
+    const minCount = counts[0].count;
+    const candidates = counts.filter(c => c.count === minCount);
+    if (candidates.length > 1) {
+        return candidates[Math.floor(Math.random() * candidates.length)].user;
+    }
+    return counts[0].user;
 };
 
 
@@ -95,8 +119,38 @@ router.post('/add', async (req, res) => {
         followUpComment,
         duePayDateComment
     } = req.body;
-
+    
     try {
+        // Auto-assign logic for new payment
+        let finalAssignedTo = assignedTo || '';
+        if (!finalAssignedTo) {
+            const setting = await Settings.findOne({ key: 'payment_auto_assign_user' });
+            if (setting && setting.value && setting.value.length > 0) {
+                const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                
+                // Filter users who have started their day (active attendance today)
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                
+                const activeUsers = [];
+                for (const username of userList) {
+                    const attendance = await Attendance.findOne({
+                        userName: username,
+                        startTime: { $gte: todayStart },
+                        endTime: null
+                    });
+                    if (attendance) {
+                        activeUsers.push(username);
+                    }
+                }
+
+                if (activeUsers.length > 0) {
+                    const nextUser = await getLeastAssignedPaymentUser(activeUsers);
+                    if (nextUser) finalAssignedTo = nextUser;
+                }
+            }
+        }
+
         const newPayment = new Payment({
             tuitionCode,
             tuitionId,
@@ -133,7 +187,7 @@ router.post('/add', async (req, res) => {
             comment1,
             comment2,
             comment3,
-            assignedTo,
+            assignedTo: finalAssignedTo,
             followUpDate,
             followUpComment,
             duePayDateComment
