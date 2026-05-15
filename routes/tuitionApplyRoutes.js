@@ -250,6 +250,18 @@ router.post('/add', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
+        // Check for duplicate application
+        const existingApply = await TuitionApply.findOne({ 
+            tuitionId, 
+            $or: [ { phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode } ] 
+        });
+
+        if (existingApply) {
+            return res.status(400).json({ 
+                message: 'আপনি এই টিউশনটিতে ইতিমধ্যে আবেদন করেছেন। অনুগ্রহ করে অন্য টিউশনগুলো দেখুন।' 
+            });
+        }
+
         // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
@@ -291,7 +303,7 @@ router.post('/add', async (req, res) => {
             tuitionCode,
             tuitionId,
             name,
-            phone: normalizedInputPhoneForSave,
+            $or: [ { phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode } ],
             institute,
             department,
             academicYear,
@@ -358,6 +370,18 @@ router.post('/add-web', async (req, res) => {
         const normalizedInputPhoneForSave = normalizePhoneForSave(phone);
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
+        // Check for duplicate application
+        const existingApply = await TuitionApply.findOne({ 
+            tuitionId, 
+            $or: [ { phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode } ] 
+        });
+
+        if (existingApply) {
+            return res.status(400).json({ 
+                message: 'আপনি এই টিউশনটিতে ইতিমধ্যে আবেদন করেছেন। অনুগ্রহ করে অন্য টিউশনগুলো দেখুন।' 
+            });
+        }
+
         // Fetch tuition status for automated feedback
         let autoStatus = status || 'pending';
         let autoCommentForTeacher = commentForTeacher;
@@ -399,7 +423,7 @@ router.post('/add-web', async (req, res) => {
             tuitionCode,
             tuitionId,
             name,
-            phone: normalizedInputPhoneForSave,
+            $or: [ { phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode } ],
             institute,
             department,
             academicYear,
