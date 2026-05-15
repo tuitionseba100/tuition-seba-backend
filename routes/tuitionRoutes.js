@@ -4,7 +4,6 @@ const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
-const Attendance = require('../models/Attendance');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
@@ -28,8 +27,8 @@ const getLeastAssignedUser = async (userList) => {
 
     const counts = await Promise.all(userList.map(async (user) => {
         // Count active tuitions (excluding cancel/confirm) for this user
-        const count = await Tuition.countDocuments({ 
-            assignedTo: user, 
+        const count = await Tuition.countDocuments({
+            assignedTo: user,
             isSoftDelete: { $ne: true },
             status: { $nin: ['cancel', 'confirm'] }
         });
@@ -339,14 +338,14 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
         let updatedCount = 0;
         for (const tuition of tuitionsToUpdate) {
             const oldTuition = tuition.toObject();
-            
+
             // Increment nextUpdateDate by 1 day
             const currentNextDate = new Date(tuition.nextUpdateDate);
             currentNextDate.setDate(currentNextDate.getDate() + 1);
-            
+
             tuition.nextUpdateDate = currentNextDate;
             tuition.updatedBy = 'auto migration';
-            
+
             await tuition.save();
 
             const diff = getDifferences(oldTuition, tuition.toObject());
@@ -743,7 +742,7 @@ router.put('/edit/:id', async (req, res) => {
                 const sevenDaysLater = new Date();
                 sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
                 req.body.nextUpdateDate = sevenDaysLater;
-                req.body.nextUpdateComment = "teacher lagbe kina dekhen";
+                req.body.nextUpdateComment = "teacher lagbe kina dekhen - system generated";
             }
             // 3. Progressive statuses -> Status Change Setting
             else if (['given number', 'guardian meet', 'demo class running'].includes(newStatus)) {
