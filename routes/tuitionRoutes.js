@@ -688,6 +688,7 @@ router.put('/edit/:id', async (req, res) => {
                 req.body.assignedTo = 'TSF';
             }
             // 2. Cancel -> Cancel Setting
+            // 2. Cancel -> Cancel Setting + Scheduling
             else if (newStatus === 'cancel') {
                 const setting = await Settings.findOne({ key: 'cancel_status_change_auto_assign_user' });
                 if (setting && setting.value && setting.value.length > 0) {
@@ -695,6 +696,12 @@ router.put('/edit/:id', async (req, res) => {
                     const nextUser = await getLeastAssignedUser(userList);
                     if (nextUser) req.body.assignedTo = nextUser;
                 }
+
+                // Follow-up scheduling
+                const sevenDaysLater = new Date();
+                sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+                req.body.nextUpdateDate = sevenDaysLater;
+                req.body.nextUpdateComment = "teacher lagbe kina dekhen";
             }
             // 3. Progressive statuses -> Status Change Setting
             else if (['given number', 'guardian meet', 'demo class running'].includes(newStatus)) {
