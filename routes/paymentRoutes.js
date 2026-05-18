@@ -26,10 +26,9 @@ const getLeastAssignedPaymentUser = async (userList) => {
     if (userList.length === 1) return userList[0];
 
     const counts = await Promise.all(userList.map(async (user) => {
-        const count = await Payment.countDocuments({ 
-            assignedTo: user, 
-            isSoftDelete: { $ne: true },
-            paymentStatus: { $ne: 'Paid' } 
+        const count = await Payment.countDocuments({
+            assignedTo: user,
+            paymentStatus: { $ne: 'Paid' }
         });
         return { user, count };
     }));
@@ -46,7 +45,7 @@ const getLeastAssignedPaymentUser = async (userList) => {
 
 router.get('/all', authMiddleware, async (req, res) => {
     try {
-        const payments = await Payment.find({ isSoftDelete: { $ne: true } });
+        const payments = await Payment.find();
         res.json(payments);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -119,7 +118,7 @@ router.post('/add', async (req, res) => {
         followUpComment,
         duePayDateComment
     } = req.body;
-    
+
     try {
         // Auto-assign logic for new payment
         let finalAssignedTo = assignedTo || '';
@@ -127,11 +126,11 @@ router.post('/add', async (req, res) => {
             const setting = await Settings.findOne({ key: 'payment_auto_assign_user' });
             if (setting && setting.value && setting.value.length > 0) {
                 const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
-                
+
                 // Filter users who have started their day (active attendance today)
                 const todayStart = new Date();
                 todayStart.setHours(0, 0, 0, 0);
-                
+
                 const activeUsers = [];
                 for (const username of userList) {
                     const attendance = await Attendance.findOne({
@@ -194,7 +193,7 @@ router.post('/add', async (req, res) => {
         });
 
         await newPayment.save();
-        await logActivity(req, 'Create', 'Payment', newPayment._id, { 
+        await logActivity(req, 'Create', 'Payment', newPayment._id, {
             after: newPayment,
             importantFields: { tuitionCode: newPayment.tuitionCode }
         });
@@ -212,7 +211,7 @@ router.put('/edit/:id', async (req, res) => {
         }
 
         const updatedPayment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        
+
         const diff = getDifferences(oldPayment, updatedPayment.toObject());
         await logActivity(req, 'Edit', 'Payment', updatedPayment._id, {
             ...diff,
@@ -233,8 +232,8 @@ router.delete('/delete/:id', async (req, res) => {
             return res.status(404).json({ message: 'Payment not found' });
         }
 
-        await Payment.findByIdAndUpdate(req.params.id, { isSoftDelete: true });
-        
+        await Payment.findByIdAndDelete(req.params.id);
+
         await logActivity(req, 'Delete', 'Payment', req.params.id, {
             importantFields: {
                 tuitionCode: paymentToDelete.tuitionCode,
@@ -242,7 +241,7 @@ router.delete('/delete/:id', async (req, res) => {
             }
         });
 
-        res.status(200).json({ message: 'Payment soft deleted successfully' });
+        res.status(200).json({ message: 'Payment deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -287,7 +286,7 @@ router.get('/exportData', async (req, res) => {
     try {
         const { paymentStatus } = req.query;
 
-        const filter = { isSoftDelete: { $ne: true } };
+        const filter = {};
         if (paymentStatus && paymentStatus !== 'all') {
             filter.paymentStatus = paymentStatus;
         }
@@ -409,7 +408,7 @@ router.get('/getTableData', async (req, res) => {
         assignedTo = ''
     } = req.query;
 
-    const filter = { isSoftDelete: { $ne: true } };
+    const filter = {};
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -468,7 +467,7 @@ router.get('/summary', async (req, res) => {
         assignedTo = ''
     } = req.query;
 
-    const filter = { isSoftDelete: { $ne: true } };
+    const filter = {};
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -590,14 +589,14 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
             if (!payment) continue;
 
             const oldPayment = payment.toObject();
-            
+
             // Calculate next day
             const currentDue = moment(payment.duePayDate);
             const nextDay = currentDue.clone().add(1, 'day');
-            
+
             payment.duePayDate = nextDay.toDate();
             payment.updatedBy = 'auto migration';
-            
+
             await payment.save();
 
             const diff = getDifferences(oldPayment, payment.toObject());
@@ -609,7 +608,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
             results.push(payment._id);
         }
 
-        res.json({ 
+        res.json({
             message: `Successfully migrated ${results.length} payment(s).`,
             migratedIds: results
         });

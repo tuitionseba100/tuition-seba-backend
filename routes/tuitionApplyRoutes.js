@@ -360,14 +360,14 @@ router.post('/add-web', async (req, res) => {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         // Check for duplicate application
-        const existingApply = await TuitionApply.findOne({ 
-            tuitionId, 
-            $or: [ { phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode } ] 
+        const existingApply = await TuitionApply.findOne({
+            tuitionId,
+            $or: [{ phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode }]
         });
 
         if (existingApply) {
-            return res.status(400).json({ 
-                message: 'আপনি এই টিউশনটিতে ইতিমধ্যে আবেদন করেছেন। অনুগ্রহ করে অন্য টিউশনগুলো দেখুন।' 
+            return res.status(400).json({
+                message: 'আপনি এই টিউশনটিতে ইতিমধ্যে আবেদন করেছেন। অনুগ্রহ করে অন্য টিউশনগুলো দেখুন।'
             });
         }
 

@@ -107,7 +107,7 @@ router.get('/all', async (req, res) => {
             ]),
 
             Payment.aggregate([
-                { $match: { assignedTo: { $exists: true, $ne: "" }, isSoftDelete: { $ne: true } } },
+                { $match: { assignedTo: { $exists: true, $ne: "" } } },
                 { $group: { _id: "$assignedTo", count: { $sum: 1 } } }
             ])
         ]);
@@ -150,11 +150,11 @@ router.get('/all', async (req, res) => {
         }
 
         const assignmentMap = {};
-        
+
         tuitionAssignments.forEach(t => {
             assignmentMap[t._id] = { username: t._id, tuitionCount: t.count, paymentCount: 0 };
         });
-        
+
         paymentAssignments.forEach(p => {
             if (!assignmentMap[p._id]) {
                 assignmentMap[p._id] = { username: p._id, tuitionCount: 0, paymentCount: 0 };
