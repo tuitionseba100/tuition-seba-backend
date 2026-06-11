@@ -97,8 +97,7 @@ router.get('/alert-today', async (req, res) => {
             returnDate: {
                 $gte: startOfToday,
                 $lte: endOfToday
-            },
-            status: 'approved'
+            }
         }).sort({ requestedAt: -1 });
 
         res.json(data);
@@ -143,7 +142,7 @@ router.post('/add', async (req, res) => {
 
         await newApply.save();
         const activeUser = req.headers['x-user-name'] || 'Teacher';
-        await logActivity(req, 'Create', 'RefundPayment', newApply._id, { 
+        await logActivity(req, 'Create', 'RefundPayment', newApply._id, {
             after: newApply,
             importantFields: { tuitionCode: newApply.tuitionCode }
         }, activeUser);
@@ -168,10 +167,10 @@ router.put('/edit/:id', async (req, res) => {
         if (updateData.returnDate === "") {
             updateData.returnDate = null;
         }
-        
+
         const oldData = await RefundPayment.findById(req.params.id).lean();
         const updatedData = await RefundPayment.findByIdAndUpdate(req.params.id, updateData, { new: true });
-        
+
         if (oldData) {
             const diff = getDifferences(oldData, updatedData.toObject());
             await logActivity(req, 'Edit', 'RefundPayment', updatedData._id, {
@@ -189,7 +188,7 @@ router.delete('/delete/:id', async (req, res) => {
     try {
         const dataToDelete = await RefundPayment.findById(req.params.id).lean();
         await RefundPayment.findByIdAndDelete(req.params.id);
-        
+
         if (dataToDelete) {
             await logActivity(req, 'Delete', 'RefundPayment', req.params.id, {
                 importantFields: {
