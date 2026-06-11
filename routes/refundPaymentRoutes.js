@@ -90,13 +90,16 @@ router.get('/summary', async (req, res) => {
 
 router.get('/alert-today', async (req, res) => {
     try {
-        const startOfToday = moment().startOf('day').toDate();
-        const endOfToday = moment().endOf('day').toDate();
+        const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
+
+        const startSearch = startOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+        const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
 
         const data = await RefundPayment.find({
             returnDate: {
-                $gte: startOfToday,
-                $lte: endOfToday
+                $gte: new Date(startSearch),
+                $lte: new Date(endSearch)
             }
         }).sort({ requestedAt: -1 });
 
