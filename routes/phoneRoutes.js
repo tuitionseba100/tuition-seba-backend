@@ -87,7 +87,7 @@ router.get('/export', async (req, res) => {
 
 //add
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian } = req.body;
+    const { phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, createdBy } = req.body;
 
     try {
         if (phone) {
@@ -119,7 +119,7 @@ router.post('/add', async (req, res) => {
         }
 
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, createdAt: localTime });
+        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, createdBy, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {
