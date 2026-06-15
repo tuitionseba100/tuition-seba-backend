@@ -126,6 +126,38 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        // Duplicate check: multiple conditions scoped to the same tuitionCode
+        if (tuitionCode) {
+            const tc = tuitionCode.trim();
+            const pp = personalPhone?.trim();
+            const pn = paymentNumber?.trim();
+
+            const orConditions = [];
+            if (pp) orConditions.push({ personalPhone: pp });           // personalPhone + tuitionCode
+            if (pn) orConditions.push({ paymentNumber: pn });           // paymentNumber + tuitionCode
+            if (pn) orConditions.push({ personalPhone: pn });           // paymentNumber used as personalPhone
+            if (pp) orConditions.push({ paymentNumber: pp });           // personalPhone used as paymentNumber
+
+            if (orConditions.length > 0) {
+                const existing = await RefundPayment.findOne({ tuitionCode: tc, $or: orConditions });
+                if (existing) {
+                    let reason = '';
+                    if (pp && existing.personalPhone === pp)
+                        reason = `ফোন নম্বর (${pp}) ও টিউশন কোড ${tc} দিয়ে`;
+                    else if (pn && existing.paymentNumber === pn)
+                        reason = `পেমেন্ট নম্বর (${pn}) ও টিউশন কোড ${tc} দিয়ে`;
+                    else if (pn && existing.personalPhone === pn)
+                        reason = `পেমেন্ট নম্বর (${pn}) অন্য আবেদনে ফোন নম্বর হিসেবে ব্যবহৃত হয়েছে (টিউশন কোড ${tc})।`;
+                    else if (pp && existing.paymentNumber === pp)
+                        reason = `ফোন নম্বর (${pp}) অন্য আবেদনে পেমেন্ট নম্বর হিসেবে ব্যবহৃত হয়েছে (টিউশন কোড ${tc})।`;
+
+                    return res.status(409).json({
+                        message: `${reason} আগেই রিফান্ড আবেদন করা হয়েছে। একই তথ্য দিয়ে দুইবার আবেদন করা যাবে না।`
+                    });
+                }
+            }
+        }
+
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
 
         const newApply = new RefundPayment({
