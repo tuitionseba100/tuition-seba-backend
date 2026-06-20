@@ -25,7 +25,7 @@ router.get('/phone/:phoneNumber', async (req, res) => {
         const last10Digits = cleanNumber.slice(-10);
 
         // Regex to match the end of the phone fields
-        const phoneRegex = new RegExp(last10Digits + '$');
+        const phoneRegex = new RegExp(last10Digits);
 
         // Search across models
         const [
