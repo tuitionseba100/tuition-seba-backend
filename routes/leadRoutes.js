@@ -79,20 +79,11 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
 
 router.get('/today-followups', authMiddleware, async (req, res) => {
     try {
-        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
-        const today = new Date(nowBD);
-
-        const start = new Date(today);
-        start.setHours(0, 0, 0, 0);
-
-        const end = new Date(today);
-        end.setHours(23, 59, 59, 999);
-
-        const startUTC = new Date(start.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const endUTC = new Date(end.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const startBD = moment.tz('Asia/Dhaka').startOf('day').toDate();
+        const endBD = moment.tz('Asia/Dhaka').endOf('day').toDate();
 
         const leads = await Lead.find({
-            followUpDate: { $gte: startUTC, $lte: endUTC }
+            followUpDate: { $gte: startBD, $lte: endBD }
         }).sort({ followUpDate: 1 });
 
         res.json(leads);
