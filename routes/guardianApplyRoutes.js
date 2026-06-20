@@ -1,6 +1,7 @@
 const express = require('express');
 const GuardianApply = require('../models/GuardianApply');
 const Phone = require('../models/Phone');
+const moment = require('moment-timezone');
 const router = express.Router();
 
 const normalizePhone = (num) => {
@@ -33,6 +34,21 @@ router.get('/all', async (req, res) => {
     try {
         const allApply = await GuardianApply.find();
         res.json(allApply);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/today-followups', async (req, res) => {
+    try {
+        const startBD = moment.tz('Asia/Dhaka').startOf('day').toDate();
+        const endBD = moment.tz('Asia/Dhaka').endOf('day').toDate();
+
+        const applies = await GuardianApply.find({
+            nextUpdateDate: { $gte: startBD, $lte: endBD }
+        }).sort({ nextUpdateDate: 1 });
+
+        res.json(applies);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -153,7 +169,8 @@ router.post('/add', async (req, res) => {
         studentClass,
         teacherGender,
         characteristics,
-        comment
+        comment,
+        nextUpdateDate
     } = req.body;
 
     try {
@@ -191,7 +208,8 @@ router.post('/add', async (req, res) => {
             comment,
             status: "pending",
             isSpam,
-            isBestGuardian
+            isBestGuardian,
+            nextUpdateDate
         });
 
         await newData.save();
@@ -239,7 +257,7 @@ router.put('/edit/:id', async (req, res) => {
 });
 
 router.put('/update-status/:id', async (req, res) => {
-    const { status, comment, updatedBy } = req.body;
+    const { status, comment, nextUpdateDate, updatedBy } = req.body;
 
     if (!status) {
         return res.status(400).json({ message: "Status is required" });
@@ -247,6 +265,10 @@ router.put('/update-status/:id', async (req, res) => {
 
     try {
         const updateFields = { status, comment };
+
+        if (nextUpdateDate !== undefined) {
+            updateFields.nextUpdateDate = nextUpdateDate;
+        }
 
         if (updatedBy !== undefined && updatedBy !== null) {
             updateFields.updatedBy = updatedBy;

@@ -15,6 +15,7 @@ const guardianApplySchema = new mongoose.Schema({
     comment: { type: String, default: "" },
     isSpam: { type: Boolean, default: false },
     isBestGuardian: { type: Boolean, default: false },
+    nextUpdateDate: { type: Date },
     appliedAt: { type: Date, default: Date.now }
 });
 
