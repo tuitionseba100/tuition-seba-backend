@@ -287,6 +287,18 @@ router.post('/add', async (req, res) => {
             console.error('Error fetching tuition for auto feedback:', tErr);
         }
 
+        // Check for duplicate application
+        const existingApply = await TuitionApply.findOne({
+            tuitionId,
+            $or: [{ phone: normalizedInputPhoneForSave }, { premiumCode: premiumCode }]
+        });
+
+        if (existingApply) {
+            return res.status(400).json({
+                message: 'আপনি এই টিউশনটিতে ইতিমধ্যে আবেদন করেছেন। অনুগ্রহ করে অন্য টিউশনগুলো দেখুন।'
+            });
+        }
+
         const newApply = new TuitionApply({
             premiumCode,
             tuitionCode,
