@@ -304,11 +304,14 @@ router.post('/add', async (req, res) => {
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
         const createdBy = req.body.createdBy ? req.body.createdBy : 'teacher';
 
+        const referStatus = req.body.referPersonPhone ? 'pending' : undefined;
+
         const newTeacher = new RegTeacher({
             ...req.body,
             createdBy,
             createdAt: localTime,
-            status: 'pending'
+            status: 'pending',
+            referStatus
         });
 
         await newTeacher.save();
