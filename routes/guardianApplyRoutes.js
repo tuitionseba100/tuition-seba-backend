@@ -170,7 +170,9 @@ router.post('/add', async (req, res) => {
         teacherGender,
         characteristics,
         comment,
-        nextUpdateDate
+        nextUpdateDate,
+        referPersonPhone,
+        referComment
     } = req.body;
 
     try {
@@ -209,7 +211,10 @@ router.post('/add', async (req, res) => {
             status: "pending",
             isSpam,
             isBestGuardian,
-            nextUpdateDate
+            nextUpdateDate,
+            referPersonPhone,
+            referComment,
+            referStatus: referPersonPhone ? 'pending' : undefined
         });
 
         await newData.save();
@@ -247,6 +252,10 @@ router.put('/edit/:id', async (req, res) => {
             updatePayload.isSpam = isSpam;
             updatePayload.isBestGuardian = isBestGuardian;
             updatePayload.phone = normalizePhoneForSave(req.body.phone);
+        }
+
+        if (req.body.referPersonPhone && !req.body.referStatus) {
+            updatePayload.referStatus = 'pending';
         }
 
         const updatedData = await GuardianApply.findByIdAndUpdate(req.params.id, updatePayload, { new: true });

@@ -16,6 +16,9 @@ const guardianApplySchema = new mongoose.Schema({
     isSpam: { type: Boolean, default: false },
     isBestGuardian: { type: Boolean, default: false },
     nextUpdateDate: { type: Date },
+    referPersonPhone: { type: String },
+    referStatus: { type: String },
+    referComment: { type: String },
     appliedAt: { type: Date, default: Date.now }
 });
 
