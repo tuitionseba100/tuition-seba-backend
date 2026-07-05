@@ -53,12 +53,26 @@ router.get('/getTableData', async (req, res) => {
             .limit(limit)
             .lean();
 
+        // Efficiently fetch parent tuition statuses in a single query
+        const tuitionCodes = [...new Set(applyList.map(a => a.tuitionCode).filter(Boolean))];
+        const tuitions = await Tuition.find({ tuitionCode: { $in: tuitionCodes } })
+            .select('tuitionCode status')
+            .lean();
+
+        const tuitionStatusMap = new Map();
+        tuitions.forEach(t => {
+            if (t.tuitionCode) {
+                tuitionStatusMap.set(t.tuitionCode.toString(), t.status);
+            }
+        });
+
         const data = applyList.map(apply => {
             const escapedPhone = escapeRegex(apply.phone);
             const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
             return {
                 ...apply,
-                hasDue
+                hasDue,
+                tuitionStatus: apply.tuitionCode ? (tuitionStatusMap.get(apply.tuitionCode.toString()) || '') : ''
             };
         });
 
