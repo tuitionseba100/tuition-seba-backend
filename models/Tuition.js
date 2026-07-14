@@ -29,6 +29,8 @@ const tuitionSchema = new mongoose.Schema({
     nextUpdateComment: { type: String },
     comment1: { type: String },
     comment2: { type: String },
+    tuitionCancelReason: { type: String },
+    guardianBehavior: { type: String },
     isWhatsappApply: { type: Boolean, default: false },
     joining: { type: String, default: '' },
     isUrgent: { type: Boolean, default: false },
