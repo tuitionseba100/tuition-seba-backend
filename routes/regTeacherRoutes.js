@@ -58,7 +58,8 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         name,
         currentArea,
         uniCode,
-        department
+        department,
+        referStatus
     } = req.query;
 
     const filter = {};
@@ -110,6 +111,10 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
 
     if (uniCode) {
         filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+    }
+
+    if (referStatus) {
+        filter.referStatus = referStatus;
     }
 
     try {
@@ -139,7 +144,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
         name,
         currentArea,
         uniCode,
-        department
+        department,
+        referStatus
     } = req.query;
 
     const filter = {};
@@ -191,6 +197,10 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
     if (uniCode) {
         filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+    }
+
+    if (referStatus) {
+        filter.referStatus = referStatus;
     }
 
     try {
