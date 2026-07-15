@@ -53,7 +53,7 @@ const getLeastAssignedUser = async (userList) => {
 router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: { $ne: true } })
-            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt')
+            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
             .limit(400)
             .lean();
 
@@ -566,7 +566,8 @@ router.post('/add', async (req, res) => {
         isPaymentCreated,
         assignedTo,
         previousAssignedTo,
-        isReviewDone
+        isReviewDone,
+        agentComment
     } = req.body;
 
     try {
@@ -668,7 +669,8 @@ router.post('/add', async (req, res) => {
             previousAssignedTo,
             isSpamGuardian,
             isBestGuardian,
-            isReviewDone
+            isReviewDone,
+            agentComment
         });
 
         await newTuition.save();
@@ -884,7 +886,7 @@ router.get('/export', async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To\n';
+        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -952,7 +954,8 @@ router.get('/export', async (req, res) => {
                     escapeCsvField(doc.guardianBehavior || ''),
                     escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No'),
                     escapeCsvField(doc.assignedTo || ''),
-                    escapeCsvField(doc.previousAssignedTo || '')
+                    escapeCsvField(doc.previousAssignedTo || ''),
+                    escapeCsvField(doc.agentComment || '')
                 ].join(',') + '\n';
 
                 res.write(row);
@@ -989,7 +992,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To\n';
+            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
 
         res.write(header);
 
@@ -1056,7 +1059,8 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.guardianBehavior || ''),
                     escapeCsvField(doc.isPaymentCreated ? 'Yes' : 'No'),
                     escapeCsvField(doc.assignedTo),
-                    escapeCsvField(doc.previousAssignedTo)
+                    escapeCsvField(doc.previousAssignedTo),
+                    escapeCsvField(doc.agentComment || '')
                 ].join(',') + '\n';
 
                 res.write(row);

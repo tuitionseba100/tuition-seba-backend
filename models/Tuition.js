@@ -40,6 +40,7 @@ const tuitionSchema = new mongoose.Schema({
     isSpamGuardian: { type: Boolean, default: false },
     isBestGuardian: { type: Boolean, default: false },
     isReviewDone: { type: Boolean, default: false },
+    agentComment: { type: String },
     isSoftDelete: { type: Boolean, default: false },
 }, {
     timestamps: true
