@@ -1,5 +1,6 @@
 const express = require('express');
 const StatusHistory = require('../models/StatusHistory');
+const ActivityLog = require('../models/ActivityLog');
 const router = express.Router();
 const moment = require('moment-timezone');
 
@@ -14,7 +15,8 @@ router.get('/today-report', async (req, res) => {
         const [
             verifiedTeachersCount,
             confirmedTuitionsCount,
-            confirmedApplicationsCount
+            confirmedApplicationsCount,
+            tuitionsCreatedTodayCount
         ] = await Promise.all([
             // Verified teachers count today
             StatusHistory.countDocuments({
@@ -33,6 +35,12 @@ router.get('/today-report', async (req, res) => {
                 module: 'TuitionApply',
                 newStatus: 'confirmed',
                 timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // Tuitions created today from activity log
+            ActivityLog.countDocuments({
+                module: 'Tuition',
+                action: 'Create',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
             })
         ]);
 
@@ -40,7 +48,8 @@ router.get('/today-report', async (req, res) => {
             date: nowBD.format("YYYY-MM-DD"),
             verifiedTeachersCount,
             confirmedTuitionsCount,
-            confirmedApplicationsCount
+            confirmedApplicationsCount,
+            tuitionsCreatedTodayCount
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
