@@ -13,15 +13,37 @@ router.get('/today-report', async (req, res) => {
         const endOfDay = nowBD.clone().endOf('day').toDate();
 
         const [
-            verifiedTeachersCount,
+            verifiedOnlyCount,
+            afterConfirmationCount,
+            afterSalaryCount,
+            advance30Count,
             confirmedTuitionsCount,
-            confirmedApplicationsCount,
+            applySelectedCount,
+            applyConfirmedCount,
             tuitionsCreatedTodayCount
         ] = await Promise.all([
-            // Verified teachers count today
+            // Verified only
             StatusHistory.countDocuments({
                 module: 'RegTeacher',
                 newStatus: 'verified',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // After confirmation
+            StatusHistory.countDocuments({
+                module: 'RegTeacher',
+                newStatus: 'after confirmation',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // After salary
+            StatusHistory.countDocuments({
+                module: 'RegTeacher',
+                newStatus: 'after salary',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // 30% advance
+            StatusHistory.countDocuments({
+                module: 'RegTeacher',
+                newStatus: '30% advance',
                 timestamp: { $gte: startOfDay, $lte: endOfDay }
             }),
             // Tuition status changes to 'confirm' today
@@ -30,7 +52,13 @@ router.get('/today-report', async (req, res) => {
                 newStatus: 'confirm',
                 timestamp: { $gte: startOfDay, $lte: endOfDay }
             }),
-            // Confirmed tuition applies today
+            // TuitionApply status changed to 'selected' today
+            StatusHistory.countDocuments({
+                module: 'TuitionApply',
+                newStatus: 'selected',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // TuitionApply status changed to 'confirmed' today
             StatusHistory.countDocuments({
                 module: 'TuitionApply',
                 newStatus: 'confirmed',
@@ -46,9 +74,19 @@ router.get('/today-report', async (req, res) => {
 
         res.json({
             date: nowBD.format("YYYY-MM-DD"),
-            verifiedTeachersCount,
+            verifiedTeachersCount: verifiedOnlyCount + afterConfirmationCount + afterSalaryCount + advance30Count,
+            verifiedBreakdown: {
+                verified: verifiedOnlyCount,
+                afterConfirmation: afterConfirmationCount,
+                afterSalary: afterSalaryCount,
+                advance30: advance30Count
+            },
             confirmedTuitionsCount,
-            confirmedApplicationsCount,
+            confirmedApplicationsCount: applySelectedCount + applyConfirmedCount,
+            applyBreakdown: {
+                selected: applySelectedCount,
+                confirmed: applyConfirmedCount
+            },
             tuitionsCreatedTodayCount
         });
     } catch (err) {
