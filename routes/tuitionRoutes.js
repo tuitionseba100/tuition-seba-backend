@@ -568,7 +568,8 @@ router.post('/add', async (req, res) => {
         assignedTo,
         previousAssignedTo,
         isReviewDone,
-        agentComment
+        agentComment,
+        mediaFee
     } = req.body;
 
     try {
@@ -671,7 +672,8 @@ router.post('/add', async (req, res) => {
             isSpamGuardian,
             isBestGuardian,
             isReviewDone,
-            agentComment
+            agentComment,
+            mediaFee
         });
 
         await newTuition.save();
