@@ -20,7 +20,8 @@ router.get('/today-report', async (req, res) => {
             confirmedTuitionsCount,
             applySelectedCount,
             applyConfirmedCount,
-            tuitionsCreatedTodayCount
+            tuitionsCreatedTodayCount,
+            tuitionsDeletedTodayCount
         ] = await Promise.all([
             // Verified only
             StatusHistory.countDocuments({
@@ -69,6 +70,12 @@ router.get('/today-report', async (req, res) => {
                 module: 'Tuition',
                 action: 'Create',
                 timestamp: { $gte: startOfDay, $lte: endOfDay }
+            }),
+            // Tuitions deleted today from activity log
+            ActivityLog.countDocuments({
+                module: 'Tuition',
+                action: 'Delete',
+                timestamp: { $gte: startOfDay, $lte: endOfDay }
             })
         ]);
 
@@ -87,7 +94,8 @@ router.get('/today-report', async (req, res) => {
                 selected: applySelectedCount,
                 confirmed: applyConfirmedCount
             },
-            tuitionsCreatedTodayCount
+            tuitionsCreatedTodayCount,
+            tuitionsDeletedTodayCount
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
