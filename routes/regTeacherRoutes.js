@@ -1,6 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const RegTeacher = require('../models/RegTeacher');
+const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 const path = require('path');
@@ -333,11 +334,21 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
+        const oldTeacher = await RegTeacher.findById(req.params.id);
+        if (!oldTeacher) {
+            return res.status(404).json({ message: 'Record not found' });
+        }
+
         const updatedTeacher = await RegTeacher.findByIdAndUpdate(
             req.params.id,
             req.body,
             { new: true }
         );
+
+        if (updatedTeacher && req.body.status && oldTeacher.status !== req.body.status) {
+            await logStatusChange(req, 'RegTeacher', updatedTeacher._id, oldTeacher.status, req.body.status, updatedTeacher.premiumCode || null);
+        }
+
         res.json(updatedTeacher);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -352,14 +363,19 @@ router.put('/update-status/:id', async (req, res) => {
     }
 
     try {
+        const oldTeacher = await RegTeacher.findById(req.params.id);
+        if (!oldTeacher) {
+            return res.status(404).json({ message: "Record not found" });
+        }
+
         const updatedTeacher = await RegTeacher.findByIdAndUpdate(
             req.params.id,
             { status, comment },
             { new: true }
         );
 
-        if (!updatedTeacher) {
-            return res.status(404).json({ message: "Record not found" });
+        if (updatedTeacher && oldTeacher.status !== status) {
+            await logStatusChange(req, 'RegTeacher', updatedTeacher._id, oldTeacher.status, status, updatedTeacher.premiumCode || null);
         }
 
         res.json(updatedTeacher);

@@ -1,0 +1,33 @@
+const mongoose = require('mongoose');
+
+const statusHistorySchema = new mongoose.Schema({
+    module: { 
+        type: String, 
+        enum: ['RegTeacher', 'TuitionApply', 'Tuition'], 
+        required: true 
+    },
+    resourceId: { 
+        type: String, 
+        required: true 
+    },
+    tuitionCode: { 
+        type: String 
+    },
+    oldStatus: { 
+        type: String 
+    },
+    newStatus: { 
+        type: String, 
+        required: true 
+    },
+    changedBy: { 
+        type: String, 
+        required: true 
+    },
+    timestamp: { 
+        type: Date, 
+        default: Date.now 
+    }
+});
+
+module.exports = mongoose.model('StatusHistory', statusHistorySchema);

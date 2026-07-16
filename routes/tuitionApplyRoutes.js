@@ -2,6 +2,7 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
+const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 const RegTeacher = require('../models/RegTeacher');
@@ -562,6 +563,11 @@ router.get('/byPremiumCode', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        const oldApply = await TuitionApply.findById(req.params.id);
+        if (!oldApply) {
+            return res.status(404).json({ message: 'Record not found' });
+        }
+
         let updatePayload = { ...req.body };
 
         if (req.body.phone) {
@@ -597,6 +603,10 @@ router.put('/edit/:id', async (req, res) => {
             updatePayload,
             { new: true }
         );
+
+        if (updatedData && req.body.status && oldApply.status !== req.body.status) {
+            await logStatusChange(req, 'TuitionApply', updatedData._id, oldApply.status, req.body.status, updatedData.tuitionCode || null);
+        }
 
         res.json(updatedData);
     } catch (err) {

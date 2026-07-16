@@ -5,6 +5,7 @@ const Phone = require('../models/Phone');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
+const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 
@@ -778,6 +779,10 @@ router.put('/edit/:id', async (req, res) => {
             ...diff,
             importantFields: { tuitionCode: updatedTuition.tuitionCode }
         });
+
+        if (updatedTuition && req.body.status && oldTuition.status !== req.body.status) {
+            await logStatusChange(req, 'Tuition', updatedTuition._id, oldTuition.status, req.body.status, updatedTuition.tuitionCode || null);
+        }
 
         const triggerStatus = req.body.status ? req.body.status.toLowerCase() : null;
         if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {

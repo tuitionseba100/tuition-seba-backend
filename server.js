@@ -36,6 +36,7 @@ const generalSearchRoutes = require('./routes/generalSearchRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const activityLogRoutes = require('./routes/activityLogRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
+const statusHistoryRoutes = require('./routes/statusHistoryRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/activity-log', activityLogRoutes);
@@ -55,6 +56,7 @@ app.use('/api/sms', smsRoutes);
 app.use('/api/generalSearch', generalSearchRoutes);
 app.use('/api/transaction', transactionRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/statusHistory', statusHistoryRoutes);
 
 
 app.get('/', (req, res) => {
