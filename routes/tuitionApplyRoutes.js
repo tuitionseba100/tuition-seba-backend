@@ -533,9 +533,9 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
             const allApplies = await TuitionApply.find({ tuitionCode: apply.tuitionCode }, '_id phone')
                 .sort({ _id: 1 })
                 .lean();
-            
+
             const tuition = await Tuition.findOne({ tuitionCode: apply.tuitionCode }, 'note').lean();
-            
+
             const serialNumber = allApplies.findIndex(a => a._id.toString() === apply._id.toString()) + 1;
             return {
                 ...apply,
@@ -551,7 +551,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
     }
 });
 
-
+//get by code
 router.get('/byPremiumCode', async (req, res) => {
     try {
         const { premiumCode } = req.query;
