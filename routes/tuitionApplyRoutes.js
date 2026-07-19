@@ -534,14 +534,14 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
                 .sort({ _id: 1 })
                 .lean();
 
-            const tuition = await Tuition.findOne({ tuitionCode: apply.tuitionCode }, 'note').lean();
+            const tuition = await Tuition.findOne({ tuitionCode: apply.tuitionCode }, 'guardianDemandForPublic').lean();
 
             const serialNumber = allApplies.findIndex(a => a._id.toString() === apply._id.toString()) + 1;
             return {
                 ...apply,
                 serialNumber: serialNumber > 0 ? serialNumber : 1,
                 totalApplies: allApplies.length,
-                note: tuition ? tuition.note : ''
+                guardianDemandForPublic: tuition ? (tuition.guardianDemandForPublic || '') : ''
             };
         }));
 
