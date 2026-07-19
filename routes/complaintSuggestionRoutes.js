@@ -143,10 +143,20 @@ router.get('/list', authMiddleware, async (req, res) => {
         const data = await ComplaintSuggestion.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
+
+        // Calculate spam count for each phone number
+        const dataWithSpamCount = await Promise.all(data.map(async (doc) => {
+            const spamCount = await ComplaintSuggestion.countDocuments({
+                phone: doc.phone,
+                status: 'Spam (Dismissed)'
+            });
+            return { ...doc, spamCount };
+        }));
 
         res.json({
-            data,
+            data: dataWithSpamCount,
             currentPage: page,
             totalPages: Math.ceil(total / limit),
             totalRecords: total

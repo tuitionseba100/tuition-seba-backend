@@ -9,7 +9,7 @@ const complaintSuggestionSchema = new mongoose.Schema({
     description: { type: String, required: true },
     isSpam: { type: Boolean, default: false },
     isBest: { type: Boolean, default: false },
-    status: { type: String, enum: ['Pending', 'In Progress', 'Resolved', 'Dismissed'], default: 'Pending' },
+    status: { type: String, enum: ['Pending', 'In Progress', 'Resolved', 'Dismissed', 'Spam (Dismissed)'], default: 'Pending' },
     adminComment: { type: String },
     createdAt: { type: Date, default: Date.now }
 });
