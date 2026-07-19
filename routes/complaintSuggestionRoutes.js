@@ -176,9 +176,29 @@ router.put('/:id/status', authMiddleware, async (req, res) => {
             return res.status(400).json({ message: 'Status is required' });
         }
 
+        const existingRecord = await ComplaintSuggestion.findById(id);
+        if (!existingRecord) {
+            return res.status(404).json({ message: 'Record not found' });
+        }
+
+        const normalizedInputPhone = normalizePhone(existingRecord.phone);
+        const phoneList = await Phone.find({ isActive: true });
+        
+        let isSpam = false;
+        let isBest = false;
+
+        for (const entry of phoneList) {
+            const normalizedDbPhone = normalizePhone(entry.phone);
+            if (normalizedDbPhone === normalizedInputPhone) {
+                if (entry.isSpam) isSpam = true;
+                if (entry.isBest) isBest = true;
+                break;
+            }
+        }
+
         const record = await ComplaintSuggestion.findByIdAndUpdate(
             id,
-            { status, adminComment },
+            { status, adminComment, isSpam, isBest },
             { new: true }
         );
 
