@@ -146,29 +146,13 @@ router.get('/list', authMiddleware, async (req, res) => {
             .limit(limit)
             .lean();
 
-        const phoneList = await Phone.find({ isActive: true });
-
-        // Calculate spam count and dynamically determine isSpam/isBest
+        // Calculate spam count for each phone number
         const dataWithSpamCount = await Promise.all(data.map(async (doc) => {
             const spamCount = await ComplaintSuggestion.countDocuments({
                 phone: doc.phone,
                 status: 'Spam (Dismissed)'
             });
-            
-            const normalizedInputPhone = normalizePhone(doc.phone);
-            let dynamicIsSpam = doc.isSpam;
-            let dynamicIsBest = doc.isBest;
-
-            for (const entry of phoneList) {
-                const normalizedDbPhone = normalizePhone(entry.phone);
-                if (normalizedDbPhone === normalizedInputPhone) {
-                    if (entry.isSpam) dynamicIsSpam = true;
-                    if (entry.isBest) dynamicIsBest = true;
-                    break;
-                }
-            }
-
-            return { ...doc, spamCount, isSpam: dynamicIsSpam, isBest: dynamicIsBest };
+            return { ...doc, spamCount };
         }));
 
         res.json({
