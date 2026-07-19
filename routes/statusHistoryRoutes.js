@@ -7,10 +7,52 @@ const moment = require('moment-timezone');
 // Get summary/report of status changes for today (Asia/Dhaka timezone)
 router.get('/today-report', async (req, res) => {
     try {
+        const { changedBy, tuitionCode, startDate, endDate } = req.query;
+
         // Calculate start and end of today in Bangladesh Time (UTC+6)
         const nowBD = moment().tz("Asia/Dhaka");
         const startOfDay = nowBD.clone().startOf('day').toDate();
         const endOfDay = nowBD.clone().endOf('day').toDate();
+
+        const buildFilter = (baseFilter) => {
+            const filter = { ...baseFilter };
+            if (changedBy) {
+                filter.changedBy = new RegExp(changedBy.trim(), 'i');
+            }
+            if (tuitionCode) {
+                filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            }
+            let start = startOfDay;
+            let end = endOfDay;
+            if (startDate) {
+                start = moment.tz(startDate, "Asia/Dhaka").startOf('day').toDate();
+            }
+            if (endDate) {
+                end = moment.tz(endDate, "Asia/Dhaka").endOf('day').toDate();
+            }
+            filter.timestamp = { $gte: start, $lte: end };
+            return filter;
+        };
+
+        const buildActivityFilter = (baseFilter) => {
+            const filter = { ...baseFilter };
+            if (changedBy) {
+                filter.user = new RegExp(changedBy.trim(), 'i');
+            }
+            if (tuitionCode) {
+                filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            }
+            let start = startOfDay;
+            let end = endOfDay;
+            if (startDate) {
+                start = moment.tz(startDate, "Asia/Dhaka").startOf('day').toDate();
+            }
+            if (endDate) {
+                end = moment.tz(endDate, "Asia/Dhaka").endOf('day').toDate();
+            }
+            filter.timestamp = { $gte: start, $lte: end };
+            return filter;
+        };
 
         const [
             verifiedOnlyCount,
@@ -18,65 +60,68 @@ router.get('/today-report', async (req, res) => {
             afterSalaryCount,
             advance30Count,
             confirmedTuitionsCount,
+            cancelledTuitionsCount,
+            suspendedTuitionsCount,
             applySelectedCount,
             applyConfirmedCount,
             tuitionsCreatedTodayCount,
             tuitionsDeletedTodayCount
         ] = await Promise.all([
             // Verified only
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'verified',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'verified'
+            })),
             // After confirmation
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'after confirmation',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'after confirmation'
+            })),
             // After salary
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'after salary',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'after salary'
+            })),
             // 30% advance
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: '30% advance',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: '30% advance'
+            })),
             // Tuition status changes to 'confirm' today
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'Tuition',
-                newStatus: 'confirm',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'confirm'
+            })),
+            // Tuition status changes to 'cancel' today
+            StatusHistory.countDocuments(buildFilter({
+                module: 'Tuition',
+                newStatus: 'cancel'
+            })),
+            // Tuition status changes to 'suspended' or 'suspend' today
+            StatusHistory.countDocuments(buildFilter({
+                module: 'Tuition',
+                newStatus: { $in: ['suspended', 'suspend'] }
+            })),
             // TuitionApply status changed to 'selected' today
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'TuitionApply',
-                newStatus: 'selected',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'selected'
+            })),
             // TuitionApply status changed to 'confirmed' today
-            StatusHistory.countDocuments({
+            StatusHistory.countDocuments(buildFilter({
                 module: 'TuitionApply',
-                newStatus: 'confirmed',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                newStatus: 'confirmed'
+            })),
             // Tuitions created today from activity log
-            ActivityLog.countDocuments({
+            ActivityLog.countDocuments(buildActivityFilter({
                 module: 'Tuition',
-                action: 'Create',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            }),
+                action: 'Create'
+            })),
             // Tuitions deleted today from activity log
-            ActivityLog.countDocuments({
+            ActivityLog.countDocuments(buildActivityFilter({
                 module: 'Tuition',
-                action: 'Delete',
-                timestamp: { $gte: startOfDay, $lte: endOfDay }
-            })
+                action: 'Delete'
+            }))
         ]);
 
         res.json({
@@ -89,6 +134,8 @@ router.get('/today-report', async (req, res) => {
                 advance30: advance30Count
             },
             confirmedTuitionsCount,
+            cancelledTuitionsCount,
+            suspendedTuitionsCount,
             confirmedApplicationsCount: applySelectedCount + applyConfirmedCount,
             applyBreakdown: {
                 selected: applySelectedCount,
