@@ -522,7 +522,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
         const normalizedPhone = normalizePhoneForSave(phone);
         const matchedTuitions = await TuitionApply.find(
             { phone: normalizedPhone },
-            'tuitionCode appliedAt status commentForTeacher phone'
+            '_id tuitionCode appliedAt status commentForTeacher phone'
         ).lean();
 
         if (matchedTuitions.length === 0) {
@@ -530,11 +530,11 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
         }
 
         const enhancedTuitions = await Promise.all(matchedTuitions.map(async (apply) => {
-            const allApplies = await TuitionApply.find({ tuitionCode: apply.tuitionCode }, 'phone appliedAt')
-                .sort({ appliedAt: 1 })
+            const allApplies = await TuitionApply.find({ tuitionCode: apply.tuitionCode }, '_id phone')
+                .sort({ _id: 1 })
                 .lean();
             
-            const serialNumber = allApplies.findIndex(a => a.phone === apply.phone) + 1;
+            const serialNumber = allApplies.findIndex(a => a._id.toString() === apply._id.toString()) + 1;
             return {
                 ...apply,
                 serialNumber: serialNumber > 0 ? serialNumber : 1,
