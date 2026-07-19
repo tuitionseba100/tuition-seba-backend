@@ -529,7 +529,20 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
             return res.status(404).json({ message: 'No applications found for this phone number' });
         }
 
-        res.json(matchedTuitions);
+        const enhancedTuitions = await Promise.all(matchedTuitions.map(async (apply) => {
+            const allApplies = await TuitionApply.find({ tuitionCode: apply.tuitionCode }, 'phone appliedAt')
+                .sort({ appliedAt: 1 })
+                .lean();
+            
+            const serialNumber = allApplies.findIndex(a => a.phone === apply.phone) + 1;
+            return {
+                ...apply,
+                serialNumber: serialNumber > 0 ? serialNumber : 1,
+                totalApplies: allApplies.length
+            };
+        }));
+
+        res.json(enhancedTuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

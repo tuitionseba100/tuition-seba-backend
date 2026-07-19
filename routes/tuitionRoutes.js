@@ -64,6 +64,26 @@ router.get('/available', async (req, res) => {
     }
 });
 
+// Public route to get tuition details by code
+router.get('/byCodePublic', async (req, res) => {
+    try {
+        const { tuitionCode } = req.query;
+        if (!tuitionCode) {
+            return res.status(400).json({ message: 'Tuition code is required' });
+        }
+        const tuition = await Tuition.findOne({ tuitionCode: tuitionCode.trim(), isSoftDelete: { $ne: true } })
+            .select('-guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -agentComment -tuitionCancelReason -guardianBehavior')
+            .lean();
+        
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+        res.json(tuition);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/post-data', authMiddleware, async (req, res) => {
     try {
         const { count, area, status, startCode, endCode } = req.query;
