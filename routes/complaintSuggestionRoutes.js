@@ -167,7 +167,7 @@ router.get('/list', authMiddleware, async (req, res) => {
 });
 
 // PUT /:id/status (Authenticated admins)
-router.put('/:id/status', authMiddleware, async (req, res) => {
+router.put('/:id/status', authMiddleware, superadminMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
         const { status, adminComment } = req.body;
