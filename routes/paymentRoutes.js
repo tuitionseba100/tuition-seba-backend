@@ -618,6 +618,81 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/route-report', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        
+        let startUTC, endUTC;
+        if (startDate && endDate) {
+            const startBD = new Date(startDate);
+            startBD.setHours(0, 0, 0, 0);
+            const endBD = new Date(endDate);
+            endBD.setHours(23, 59, 59, 999);
+            
+            startUTC = new Date(startBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+            endUTC = new Date(endBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        }
+
+        const payments = await Payment.find().lean();
+        const routeData = {};
+        const dateDataMap = {};
+
+        payments.forEach(payment => {
+            const processPaymentSet = (pDate, pType, pTk) => {
+                if (pDate && pType) {
+                    const dateObj = new Date(pDate);
+                    if (startUTC && endUTC) {
+                        if (dateObj < startUTC || dateObj > endUTC) return;
+                    }
+                    
+                    const amount = parseFloat(pTk) || 0;
+                    if (amount >= 0) {
+                        let route = pType.trim();
+                        if (route) {
+                            route = route.charAt(0).toUpperCase() + route.slice(1).toLowerCase();
+                        } else {
+                            route = "Unknown";
+                        }
+                        
+                        if (!routeData[route]) {
+                            routeData[route] = { route, amount: 0, count: 0 };
+                        }
+                        routeData[route].amount += amount;
+                        routeData[route].count += 1;
+
+                        const dateString = dateObj.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+                        if (!dateDataMap[dateString]) {
+                            dateDataMap[dateString] = { date: dateString, amount: 0, count: 0 };
+                        }
+                        dateDataMap[dateString].amount += amount;
+                        dateDataMap[dateString].count += 1;
+                    }
+                }
+            };
+
+            processPaymentSet(payment.paymentReceivedDate, payment.paymentType, payment.receivedTk);
+            processPaymentSet(payment.paymentReceivedDate2, payment.paymentType2, payment.receivedTk2);
+            processPaymentSet(payment.paymentReceivedDate3, payment.paymentType3, payment.receivedTk3);
+            processPaymentSet(payment.paymentReceivedDate4, payment.paymentType4, payment.receivedTk4);
+        });
+
+        const reportArray = Object.values(routeData).sort((a, b) => b.amount - a.amount);
+        const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(a.date) - new Date(b.date));
+        
+        res.json({
+            data: reportArray,
+            routeData: reportArray,
+            dateData: dateArray,
+            totalAmount: reportArray.reduce((sum, item) => sum + item.amount, 0),
+            totalCount: reportArray.reduce((sum, item) => sum + item.count, 0)
+        });
+        
+    } catch (err) {
+        console.error('Route report error:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;
 
 
