@@ -44,6 +44,7 @@ const teacherSchema = new mongoose.Schema({
     review: { type: String },
     paymentType: { type: String },
     amount: { type: String },
+    paymentDate: { type: Date },
     commentFromTeacher: { type: String },
     comment: { type: String },
     createdBy: { type: String },
