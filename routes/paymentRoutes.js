@@ -828,6 +828,36 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                 totalRecords: totalRecords,
                 totalAmount: totalAmount
             });
+        } else if (type === 'expense') {
+            const query = {
+                date: { $gte: startUTC, $lte: endUTC }
+            };
+
+            const totalRecords = await Expense.countDocuments(query);
+            const expenses = await Expense.find(query)
+                .sort({ _id: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean();
+
+            const formattedExpenses = expenses.map(e => ({
+                _id: e._id,
+                tuitionCode: e.category,
+                route: '-',
+                amount: parseFloat(e.amount) || 0,
+                timestamp: e.date
+            }));
+
+            const allExpensesForDay = await Expense.find(query).lean();
+            const totalAmount = allExpensesForDay.reduce((sum, e) => sum + (parseFloat(e.amount) || 0), 0);
+
+            return res.json({
+                data: formattedExpenses,
+                currentPage: pageNum,
+                totalPages: Math.ceil(totalRecords / limitNum),
+                totalRecords: totalRecords,
+                totalAmount: totalAmount
+            });
         } else {
             return res.status(400).json({ message: 'Invalid type parameter' });
         }
