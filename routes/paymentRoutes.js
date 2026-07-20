@@ -6,6 +6,7 @@ const moment = require('moment-timezone');
 const jwt = require('jsonwebtoken');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
+const RefundPayment = require('../models/RefundPayment');
 
 
 const authMiddleware = (req, res, next) => {
@@ -714,5 +715,131 @@ router.get('/route-report', async (req, res) => {
 });
 
 module.exports = router;
+
+router.get('/overall-report', async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        let startUTC, endUTC;
+        let query = {};
+        let refundQuery = { status: 'completed' };
+
+        if (startDate && endDate) {
+            const startBD = new Date(startDate);
+            startBD.setHours(0, 0, 0, 0);
+            const endBD = new Date(endDate);
+            endBD.setHours(23, 59, 59, 999);
+            
+            startUTC = new Date(startBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+            endUTC = new Date(endBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+            
+            query = {
+                $or: [
+                    { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate2: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate3: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate4: { $gte: startUTC, $lte: endUTC } }
+                ]
+            };
+            
+            // Assuming refunds use returnDate or requestedAt when completed
+            // If returnDate exists, it's safer to use returnDate, otherwise requestedAt. We'll check requestedAt for filtering to be safe if returnDate isn't consistently used for queries.
+            // Actually refundPaymentRoutes.js searches by requestedAt or returnDate. I'll search returnDate for completed refunds.
+            refundQuery.returnDate = { $gte: startUTC, $lte: endUTC };
+        }
+
+        const dateDataMap = {};
+
+        // 1. Stream Payments
+        const paymentCursor = Payment.find(query).lean().cursor();
+        
+        const getOrCreateDateEntry = (dateString) => {
+            if (!dateDataMap[dateString]) {
+                dateDataMap[dateString] = { 
+                    date: dateString, 
+                    paymentAmount: 0, 
+                    paymentCount: 0, 
+                    refundAmount: 0, 
+                    refundCount: 0 
+                };
+            }
+            return dateDataMap[dateString];
+        };
+
+        paymentCursor.on('data', (payment) => {
+            const processPaymentSet = (pDate, pType, pTk) => {
+                if (pDate && pType) {
+                    const dateObj = new Date(pDate);
+                    if (startUTC && endUTC) {
+                        if (dateObj < startUTC || dateObj > endUTC) return;
+                    }
+                    
+                    const amount = parseFloat(pTk) || 0;
+                    if (amount >= 0) {
+                        const dateString = dateObj.toLocaleDateString('en-CA'); // YYYY-MM-DD
+                        const entry = getOrCreateDateEntry(dateString);
+                        entry.paymentAmount += amount;
+                        entry.paymentCount += 1;
+                    }
+                }
+            };
+
+            processPaymentSet(payment.paymentReceivedDate, payment.paymentType, payment.receivedTk);
+            processPaymentSet(payment.paymentReceivedDate2, payment.paymentType2, payment.receivedTk2);
+            processPaymentSet(payment.paymentReceivedDate3, payment.paymentType3, payment.receivedTk3);
+            processPaymentSet(payment.paymentReceivedDate4, payment.paymentType4, payment.receivedTk4);
+        });
+
+        await new Promise((resolve, reject) => {
+            paymentCursor.on('end', resolve);
+            paymentCursor.on('error', reject);
+        });
+
+        // 2. Stream Refunds
+        // We'll fall back to requestedAt if returnDate is missing just in case
+        const refundQueryFallback = { status: 'completed' };
+        if (startUTC && endUTC) {
+            refundQueryFallback.$or = [
+                { returnDate: { $gte: startUTC, $lte: endUTC } },
+                { requestedAt: { $gte: startUTC, $lte: endUTC }, returnDate: { $exists: false } }
+            ];
+        }
+
+        const refundCursor = RefundPayment.find(refundQueryFallback).lean().cursor();
+
+        refundCursor.on('data', (refund) => {
+            const dateObj = new Date(refund.returnDate || refund.requestedAt);
+            if (startUTC && endUTC) {
+                if (dateObj < startUTC || dateObj > endUTC) return;
+            }
+            const amount = parseFloat(refund.amount) || 0;
+            if (amount >= 0) {
+                const dateString = dateObj.toLocaleDateString('en-CA');
+                const entry = getOrCreateDateEntry(dateString);
+                entry.refundAmount += amount;
+                entry.refundCount += 1;
+            }
+        });
+
+        await new Promise((resolve, reject) => {
+            refundCursor.on('end', resolve);
+            refundCursor.on('error', reject);
+        });
+
+        // 3. Format Response
+        const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        res.json({
+            data: dateArray,
+            totalPaymentAmount: dateArray.reduce((sum, item) => sum + item.paymentAmount, 0),
+            totalPaymentCount: dateArray.reduce((sum, item) => sum + item.paymentCount, 0),
+            totalRefundAmount: dateArray.reduce((sum, item) => sum + item.refundAmount, 0),
+            totalRefundCount: dateArray.reduce((sum, item) => sum + item.refundCount, 0)
+        });
+
+    } catch (err) {
+        console.error('Overall Payment Report Error:', err);
+        res.status(500).json({ message: 'Error generating overall report' });
+    }
+});
 
 
