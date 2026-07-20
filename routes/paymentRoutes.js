@@ -8,6 +8,7 @@ const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const RefundPayment = require('../models/RefundPayment');
 const Expense = require('../models/Expense');
+const RegTeacher = require('../models/RegTeacher');
 
 
 const authMiddleware = (req, res, next) => {
@@ -924,6 +925,23 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                 timestamp: e.date
             }));
 
+            // Fetch Premium Teacher Fees for the date (ALL records for display, but only numeric for total)
+            const premiumQuery = {
+                paymentDate: { $gte: startUTC, $lte: endUTC },
+                amount: { $exists: true, $nin: ['', null] }
+            };
+            const premiumTeachers = await RegTeacher.find(premiumQuery).sort({ paymentDate: -1 }).lean();
+            const formattedPremium = premiumTeachers.map(t => ({
+                _id: t._id,
+                name: t.name || '-',
+                premiumCode: t.premiumCode || '-',
+                amountRaw: t.amount,
+                amount: /^\d+(\.\d+)?$/.test(String(t.amount || '').trim()) ? parseFloat(t.amount) : 0,
+                isNumeric: /^\d+(\.\d+)?$/.test(String(t.amount || '').trim()),
+                timestamp: t.paymentDate
+            }));
+            const premiumNumericTotal = formattedPremium.reduce((sum, item) => sum + item.amount, 0);
+
             return res.json({
                 payments: {
                     data: extractedPayments,
@@ -936,6 +954,10 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                 expenses: {
                     data: formattedExpenses,
                     totalAmount: formattedExpenses.reduce((sum, item) => sum + item.amount, 0)
+                },
+                premiumFees: {
+                    data: formattedPremium,
+                    totalAmount: premiumNumericTotal
                 }
             });
         } else {
@@ -988,7 +1010,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     refundAmount: 0, 
                     refundCount: 0,
                     expenseAmount: 0,
-                    expenseCount: 0
+                    expenseCount: 0,
+                    premiumFeeAmount: 0,
+                    premiumFeeCount: 0
                 };
             }
             return dateDataMap[dateString];
@@ -1080,7 +1104,35 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             expenseCursor.on('error', reject);
         });
 
-        // 4. Format Response
+        // 4. Stream Premium Teacher Fees (by paymentDate, only numeric amounts)
+        let premiumQuery = { paymentDate: { $exists: true, $ne: null }, amount: { $exists: true, $nin: ['', null] } };
+        if (startUTC && endUTC) {
+            premiumQuery.paymentDate = { $gte: startUTC, $lte: endUTC };
+        }
+        const premiumCursor = RegTeacher.find(premiumQuery).lean().cursor();
+
+        premiumCursor.on('data', (teacher) => {
+            const raw = String(teacher.amount || '').trim();
+            const numericAmount = parseFloat(raw);
+            if (isNaN(numericAmount) || !/^\d+(\.\d+)?$/.test(raw)) return; // skip non-numeric
+            const dateObj = new Date(teacher.paymentDate);
+            if (startUTC && endUTC) {
+                if (dateObj < startUTC || dateObj > endUTC) return;
+            }
+            if (numericAmount >= 0) {
+                const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
+                const entry = getOrCreateDateEntry(dateString);
+                entry.premiumFeeAmount += numericAmount;
+                entry.premiumFeeCount += 1;
+            }
+        });
+
+        await new Promise((resolve, reject) => {
+            premiumCursor.on('end', resolve);
+            premiumCursor.on('error', reject);
+        });
+
+        // 5. Format Response
         const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
         
         res.json({
@@ -1090,7 +1142,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             totalRefundAmount: dateArray.reduce((sum, item) => sum + item.refundAmount, 0),
             totalRefundCount: dateArray.reduce((sum, item) => sum + item.refundCount, 0),
             totalExpenseAmount: dateArray.reduce((sum, item) => sum + item.expenseAmount, 0),
-            totalExpenseCount: dateArray.reduce((sum, item) => sum + item.expenseCount, 0)
+            totalExpenseCount: dateArray.reduce((sum, item) => sum + item.expenseCount, 0),
+            totalPremiumFeeAmount: dateArray.reduce((sum, item) => sum + item.premiumFeeAmount, 0),
+            totalPremiumFeeCount: dateArray.reduce((sum, item) => sum + item.premiumFeeCount, 0)
         });
 
     } catch (err) {
