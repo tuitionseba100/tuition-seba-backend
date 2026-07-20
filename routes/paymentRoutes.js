@@ -7,6 +7,7 @@ const jwt = require('jsonwebtoken');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const RefundPayment = require('../models/RefundPayment');
+const Expense = require('../models/Expense');
 
 
 const authMiddleware = (req, res, next) => {
@@ -875,7 +876,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     paymentAmount: 0, 
                     paymentCount: 0, 
                     refundAmount: 0, 
-                    refundCount: 0 
+                    refundCount: 0,
+                    expenseAmount: 0,
+                    expenseCount: 0
                 };
             }
             return dateDataMap[dateString];
@@ -941,7 +944,33 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             refundCursor.on('error', reject);
         });
 
-        // 3. Format Response
+        // 3. Stream Expenses
+        let expenseQuery = {};
+        if (startUTC && endUTC) {
+            expenseQuery.date = { $gte: startUTC, $lte: endUTC };
+        }
+        const expenseCursor = Expense.find(expenseQuery).lean().cursor();
+
+        expenseCursor.on('data', (expense) => {
+            const dateObj = new Date(expense.date);
+            if (startUTC && endUTC) {
+                if (dateObj < startUTC || dateObj > endUTC) return;
+            }
+            const amount = parseFloat(expense.amount) || 0;
+            if (amount >= 0) {
+                const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
+                const entry = getOrCreateDateEntry(dateString);
+                entry.expenseAmount += amount;
+                entry.expenseCount += 1;
+            }
+        });
+
+        await new Promise((resolve, reject) => {
+            expenseCursor.on('end', resolve);
+            expenseCursor.on('error', reject);
+        });
+
+        // 4. Format Response
         const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
         
         res.json({
@@ -949,7 +978,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             totalPaymentAmount: dateArray.reduce((sum, item) => sum + item.paymentAmount, 0),
             totalPaymentCount: dateArray.reduce((sum, item) => sum + item.paymentCount, 0),
             totalRefundAmount: dateArray.reduce((sum, item) => sum + item.refundAmount, 0),
-            totalRefundCount: dateArray.reduce((sum, item) => sum + item.refundCount, 0)
+            totalRefundCount: dateArray.reduce((sum, item) => sum + item.refundCount, 0),
+            totalExpenseAmount: dateArray.reduce((sum, item) => sum + item.expenseAmount, 0),
+            totalExpenseCount: dateArray.reduce((sum, item) => sum + item.expenseCount, 0)
         });
 
     } catch (err) {
