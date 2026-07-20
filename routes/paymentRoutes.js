@@ -623,6 +623,7 @@ router.get('/route-report', async (req, res) => {
         const { startDate, endDate } = req.query;
         
         let startUTC, endUTC;
+        let query = {};
         if (startDate && endDate) {
             const startBD = new Date(startDate);
             startBD.setHours(0, 0, 0, 0);
@@ -631,13 +632,23 @@ router.get('/route-report', async (req, res) => {
             
             startUTC = new Date(startBD.toLocaleString('en-US', { timeZone: 'UTC' }));
             endUTC = new Date(endBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+            
+            query = {
+                $or: [
+                    { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate2: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate3: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate4: { $gte: startUTC, $lte: endUTC } }
+                ]
+            };
         }
 
-        const payments = await Payment.find().lean();
         const routeData = {};
         const dateDataMap = {};
 
-        payments.forEach(payment => {
+        const cursor = Payment.find(query).lean().cursor();
+
+        cursor.on('data', (payment) => {
             const processPaymentSet = (pDate, pType, pTk) => {
                 if (pDate && pType) {
                     const dateObj = new Date(pDate);
@@ -676,15 +687,24 @@ router.get('/route-report', async (req, res) => {
             processPaymentSet(payment.paymentReceivedDate4, payment.paymentType4, payment.receivedTk4);
         });
 
-        const reportArray = Object.values(routeData).sort((a, b) => b.amount - a.amount);
-        const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(a.date) - new Date(b.date));
-        
-        res.json({
-            data: reportArray,
-            routeData: reportArray,
-            dateData: dateArray,
-            totalAmount: reportArray.reduce((sum, item) => sum + item.amount, 0),
-            totalCount: reportArray.reduce((sum, item) => sum + item.count, 0)
+        cursor.on('end', () => {
+            const reportArray = Object.values(routeData).sort((a, b) => b.amount - a.amount);
+            const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            res.json({
+                data: reportArray,
+                routeData: reportArray,
+                dateData: dateArray,
+                totalAmount: reportArray.reduce((sum, item) => sum + item.amount, 0),
+                totalCount: reportArray.reduce((sum, item) => sum + item.count, 0)
+            });
+        });
+
+        cursor.on('error', (err) => {
+            console.error('Payment Report Stream Error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ message: 'Error streaming payment report data' });
+            }
         });
         
     } catch (err) {

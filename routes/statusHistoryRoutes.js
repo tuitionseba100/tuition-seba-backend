@@ -212,4 +212,76 @@ router.get('/list', async (req, res) => {
     }
 });
 
+// Export status history records to CSV (streaming directly from DB)
+router.get('/export-csv', async (req, res) => {
+    try {
+        const { moduleName, changedBy, newStatus, startDate, endDate, tuitionCode } = req.query;
+
+        const filter = {};
+
+        if (moduleName) filter.module = moduleName;
+        if (changedBy) filter.changedBy = new RegExp(changedBy.trim(), 'i');
+        if (newStatus) filter.newStatus = newStatus;
+        if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+
+        if (startDate || endDate) {
+            filter.timestamp = {};
+            if (startDate) {
+                filter.timestamp.$gte = moment(startDate).startOf('day').toDate();
+            }
+            if (endDate) {
+                filter.timestamp.$lte = moment(endDate).endOf('day').toDate();
+            }
+        }
+
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename=status_history_report_${moment().format('YYYY-MM-DD')}.csv`);
+
+        // Write CSV headers
+        res.write("Timestamp,Section,Tuition/Premium Code,Target ID,Old Status,New Status,Performed By\n");
+
+        const cursor = StatusHistory.find(filter).sort({ timestamp: -1 }).cursor();
+
+        cursor.on('data', (log) => {
+            const timestamp = moment(log.timestamp).format('DD MMM YYYY, hh:mm A');
+            const section = log.module === 'RegTeacher' ? 'Premium Teacher' :
+                            log.module === 'Tuition' ? 'Tuition' : 'Tuition Apply';
+                            
+            const code = log.tuitionCode || '-';
+            const targetId = log.resourceId || '';
+            const oldStatus = log.oldStatus || 'Created';
+            const newStatus = log.newStatus || '';
+            const performedBy = log.changedBy || '';
+
+            const row = [
+                `"${timestamp}"`,
+                `"${section}"`,
+                `"${code}"`,
+                `"${targetId}"`,
+                `"${oldStatus}"`,
+                `"${newStatus}"`,
+                `"${performedBy}"`
+            ].join(',');
+            
+            res.write(row + '\n');
+        });
+
+        cursor.on('end', () => {
+            res.end();
+        });
+
+        cursor.on('error', (err) => {
+            console.error('CSV Export Error:', err);
+            // If headers are already sent, we can't send a 500 status code cleanly, just end the stream
+            res.end();
+        });
+
+    } catch (err) {
+        console.error('Export exception:', err);
+        if (!res.headersSent) {
+            res.status(500).json({ message: err.message });
+        }
+    }
+});
+
 module.exports = router;
