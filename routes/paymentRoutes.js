@@ -729,9 +729,8 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
             return res.status(400).json({ message: 'Date parameter is required' });
         }
 
-        const targetDate = new Date(date);
-        const startUTC = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0));
-        const endUTC = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999));
+        const startUTC = moment.tz(date, "YYYY-MM-DD", "Asia/Dhaka").startOf('day').toDate();
+        const endUTC = moment.tz(date, "YYYY-MM-DD", "Asia/Dhaka").endOf('day').toDate();
 
         const pageNum = parseInt(page, 10);
         const limitNum = parseInt(limit, 10);
@@ -846,13 +845,8 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         let refundQuery = { status: 'completed' };
 
         if (startDate && endDate) {
-            const startBD = new Date(startDate);
-            startBD.setHours(0, 0, 0, 0);
-            const endBD = new Date(endDate);
-            endBD.setHours(23, 59, 59, 999);
-            
-            startUTC = new Date(startBD.toLocaleString('en-US', { timeZone: 'UTC' }));
-            endUTC = new Date(endBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+            startUTC = moment.tz(startDate, "YYYY-MM-DD", "Asia/Dhaka").startOf('day').toDate();
+            endUTC = moment.tz(endDate, "YYYY-MM-DD", "Asia/Dhaka").endOf('day').toDate();
             
             query = {
                 $or: [
@@ -897,7 +891,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     
                     const amount = parseFloat(pTk) || 0;
                     if (amount >= 0) {
-                        const dateString = dateObj.toLocaleDateString('en-CA'); // YYYY-MM-DD
+                        const dateString = moment(dateObj).tz("Asia/Dhaka").format('YYYY-MM-DD');
                         const entry = getOrCreateDateEntry(dateString);
                         entry.paymentAmount += amount;
                         entry.paymentCount += 1;
@@ -935,7 +929,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             }
             const amount = parseFloat(refund.amount) || 0;
             if (amount >= 0) {
-                const dateString = dateObj.toLocaleDateString('en-CA');
+                const dateString = moment(dateObj).tz("Asia/Dhaka").format('YYYY-MM-DD');
                 const entry = getOrCreateDateEntry(dateString);
                 entry.refundAmount += amount;
                 entry.refundCount += 1;
