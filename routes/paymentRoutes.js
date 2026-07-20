@@ -858,6 +858,86 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                 totalRecords: totalRecords,
                 totalAmount: totalAmount
             });
+        } else if (type === 'all') {
+            // Fetch Payments
+            const payQuery = {
+                $or: [
+                    { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate2: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate3: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate4: { $gte: startUTC, $lte: endUTC } }
+                ]
+            };
+            const payments = await Payment.find(payQuery).lean();
+            let extractedPayments = [];
+            payments.forEach(payment => {
+                const processPaymentSet = (pDate, pType, pTk) => {
+                    if (pDate && pType) {
+                        const dateObj = new Date(pDate);
+                        if (dateObj >= startUTC && dateObj <= endUTC) {
+                            const amount = parseFloat(pTk) || 0;
+                            if (amount >= 0) {
+                                extractedPayments.push({
+                                    _id: payment._id,
+                                    tuitionCode: payment.tuitionCode,
+                                    tutorNumber: payment.tutorNumber,
+                                    route: pType,
+                                    amount: amount,
+                                    timestamp: dateObj
+                                });
+                            }
+                        }
+                    }
+                };
+                processPaymentSet(payment.paymentReceivedDate, payment.paymentType, payment.receivedTk);
+                processPaymentSet(payment.paymentReceivedDate2, payment.paymentType2, payment.receivedTk2);
+                processPaymentSet(payment.paymentReceivedDate3, payment.paymentType3, payment.receivedTk3);
+                processPaymentSet(payment.paymentReceivedDate4, payment.paymentType4, payment.receivedTk4);
+            });
+            extractedPayments.sort((a, b) => b.timestamp - a.timestamp);
+
+            // Fetch Refunds
+            const refQuery = {
+                status: 'completed',
+                $or: [
+                    { returnDate: { $gte: startUTC, $lte: endUTC } },
+                    { requestedAt: { $gte: startUTC, $lte: endUTC }, returnDate: { $exists: false } }
+                ]
+            };
+            const refunds = await RefundPayment.find(refQuery).sort({ _id: -1 }).lean();
+            const formattedRefunds = refunds.map(r => ({
+                _id: r._id,
+                tuitionCode: r.tuitionCode,
+                route: r.returnRoute || r.requestRoute || 'Unknown',
+                amount: parseFloat(r.amount) || 0,
+                timestamp: r.returnDate || r.requestedAt
+            }));
+
+            // Fetch Expenses
+            const expQuery = { date: { $gte: startUTC, $lte: endUTC } };
+            const expenses = await Expense.find(expQuery).sort({ _id: -1 }).lean();
+            const formattedExpenses = expenses.map(e => ({
+                _id: e._id,
+                tuitionCode: e.category,
+                route: '-',
+                amount: parseFloat(e.amount) || 0,
+                timestamp: e.date
+            }));
+
+            return res.json({
+                payments: {
+                    data: extractedPayments,
+                    totalAmount: extractedPayments.reduce((sum, item) => sum + item.amount, 0)
+                },
+                refunds: {
+                    data: formattedRefunds,
+                    totalAmount: formattedRefunds.reduce((sum, item) => sum + item.amount, 0)
+                },
+                expenses: {
+                    data: formattedExpenses,
+                    totalAmount: formattedExpenses.reduce((sum, item) => sum + item.amount, 0)
+                }
+            });
         } else {
             return res.status(400).json({ message: 'Invalid type parameter' });
         }
