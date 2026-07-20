@@ -729,8 +729,8 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
             return res.status(400).json({ message: 'Date parameter is required' });
         }
 
-        const startUTC = moment.tz(date, "YYYY-MM-DD", "Asia/Dhaka").startOf('day').toDate();
-        const endUTC = moment.tz(date, "YYYY-MM-DD", "Asia/Dhaka").endOf('day').toDate();
+        const startUTC = moment.utc(date, "YYYY-MM-DD").startOf('day').toDate();
+        const endUTC = moment.utc(date, "YYYY-MM-DD").endOf('day').toDate();
 
         const pageNum = parseInt(page, 10);
         const limitNum = parseInt(limit, 10);
@@ -845,8 +845,8 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         let refundQuery = { status: 'completed' };
 
         if (startDate && endDate) {
-            startUTC = moment.tz(startDate, "YYYY-MM-DD", "Asia/Dhaka").startOf('day').toDate();
-            endUTC = moment.tz(endDate, "YYYY-MM-DD", "Asia/Dhaka").endOf('day').toDate();
+            startUTC = moment.utc(startDate, "YYYY-MM-DD").startOf('day').toDate();
+            endUTC = moment.utc(endDate, "YYYY-MM-DD").endOf('day').toDate();
             
             query = {
                 $or: [
@@ -891,7 +891,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     
                     const amount = parseFloat(pTk) || 0;
                     if (amount >= 0) {
-                        const dateString = moment(dateObj).tz("Asia/Dhaka").format('YYYY-MM-DD');
+                        const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
                         const entry = getOrCreateDateEntry(dateString);
                         entry.paymentAmount += amount;
                         entry.paymentCount += 1;
@@ -929,7 +929,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             }
             const amount = parseFloat(refund.amount) || 0;
             if (amount >= 0) {
-                const dateString = moment(dateObj).tz("Asia/Dhaka").format('YYYY-MM-DD');
+                const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
                 const entry = getOrCreateDateEntry(dateString);
                 entry.refundAmount += amount;
                 entry.refundCount += 1;
