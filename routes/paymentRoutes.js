@@ -22,6 +22,13 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
+const superadminOnly = (req, res, next) => {
+    if (req.user && req.user.role !== 'superadmin') {
+        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
+    }
+    next();
+};
+
 const getLeastAssignedPaymentUser = async (userList) => {
     if (!userList || userList.length === 0) return null;
     if (userList.length === 1) return userList[0];
@@ -715,7 +722,7 @@ router.get('/route-report', async (req, res) => {
 });
 
 
-router.get('/date-details', authMiddleware, async (req, res) => {
+router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { date, type = 'payment', page = 1, limit = 20 } = req.query;
         if (!date) {
@@ -776,11 +783,15 @@ router.get('/date-details', authMiddleware, async (req, res) => {
             const totalRecords = extractedPayments.length;
             const paginatedData = extractedPayments.slice(skip, skip + limitNum);
 
+            // Calculate total amount
+            const totalAmount = extractedPayments.reduce((sum, item) => sum + item.amount, 0);
+
             return res.json({
                 data: paginatedData,
                 currentPage: pageNum,
                 totalPages: Math.ceil(totalRecords / limitNum),
-                totalRecords: totalRecords
+                totalRecords: totalRecords,
+                totalAmount: totalAmount
             });
             
         } else if (type === 'refund') {
@@ -807,11 +818,15 @@ router.get('/date-details', authMiddleware, async (req, res) => {
                 timestamp: r.returnDate || r.requestedAt
             }));
 
+            const allRefundsForDay = await RefundPayment.find(query).lean();
+            const totalAmount = allRefundsForDay.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
             return res.json({
                 data: formattedRefunds,
                 currentPage: pageNum,
                 totalPages: Math.ceil(totalRecords / limitNum),
-                totalRecords: totalRecords
+                totalRecords: totalRecords,
+                totalAmount: totalAmount
             });
         } else {
             return res.status(400).json({ message: 'Invalid type parameter' });
@@ -823,7 +838,7 @@ router.get('/date-details', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/overall-report', async (req, res) => {
+router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
         let startUTC, endUTC;

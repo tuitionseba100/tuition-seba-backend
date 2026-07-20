@@ -3,9 +3,26 @@ const StatusHistory = require('../models/StatusHistory');
 const ActivityLog = require('../models/ActivityLog');
 const router = express.Router();
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
+
+const superadminOnly = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        if (verified.role !== 'superadmin') {
+            return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
+        }
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
 
 // Get summary/report of status changes for today (Asia/Dhaka timezone)
-router.get('/today-report', async (req, res) => {
+router.get('/today-report', superadminOnly, async (req, res) => {
     try {
         const { changedBy, tuitionCode, startDate, endDate } = req.query;
 
@@ -164,7 +181,7 @@ router.get('/history/:moduleName/:resourceId', async (req, res) => {
 });
 
 // Get all status history records with filtering and pagination
-router.get('/list', async (req, res) => {
+router.get('/list', superadminOnly, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
@@ -213,7 +230,7 @@ router.get('/list', async (req, res) => {
 });
 
 // Export status history records to CSV (streaming directly from DB)
-router.get('/export-csv', async (req, res) => {
+router.get('/export-csv', superadminOnly, async (req, res) => {
     try {
         const { moduleName, changedBy, newStatus, startDate, endDate, tuitionCode } = req.query;
 
