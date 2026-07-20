@@ -714,7 +714,114 @@ router.get('/route-report', async (req, res) => {
     }
 });
 
-module.exports = router;
+
+router.get('/date-details', authMiddleware, async (req, res) => {
+    try {
+        const { date, type = 'payment', page = 1, limit = 20 } = req.query;
+        if (!date) {
+            return res.status(400).json({ message: 'Date parameter is required' });
+        }
+
+        const targetDate = new Date(date);
+        const startUTC = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 0, 0, 0));
+        const endUTC = new Date(Date.UTC(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 23, 59, 59, 999));
+
+        const pageNum = parseInt(page, 10);
+        const limitNum = parseInt(limit, 10);
+        const skip = (pageNum - 1) * limitNum;
+
+        if (type === 'payment') {
+            const query = {
+                $or: [
+                    { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate2: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate3: { $gte: startUTC, $lte: endUTC } },
+                    { paymentReceivedDate4: { $gte: startUTC, $lte: endUTC } }
+                ]
+            };
+
+            const payments = await Payment.find(query).lean();
+            
+            let extractedPayments = [];
+            
+            payments.forEach(payment => {
+                const processPaymentSet = (pDate, pType, pTk) => {
+                    if (pDate && pType) {
+                        const dateObj = new Date(pDate);
+                        if (dateObj >= startUTC && dateObj <= endUTC) {
+                            const amount = parseFloat(pTk) || 0;
+                            if (amount >= 0) {
+                                extractedPayments.push({
+                                    _id: payment._id,
+                                    tuitionCode: payment.tuitionCode,
+                                    tutorNumber: payment.tutorNumber,
+                                    route: pType,
+                                    amount: amount,
+                                    timestamp: dateObj
+                                });
+                            }
+                        }
+                    }
+                };
+                
+                processPaymentSet(payment.paymentReceivedDate, payment.paymentType, payment.receivedTk);
+                processPaymentSet(payment.paymentReceivedDate2, payment.paymentType2, payment.receivedTk2);
+                processPaymentSet(payment.paymentReceivedDate3, payment.paymentType3, payment.receivedTk3);
+                processPaymentSet(payment.paymentReceivedDate4, payment.paymentType4, payment.receivedTk4);
+            });
+
+            // Sort by timestamp descending
+            extractedPayments.sort((a, b) => b.timestamp - a.timestamp);
+
+            const totalRecords = extractedPayments.length;
+            const paginatedData = extractedPayments.slice(skip, skip + limitNum);
+
+            return res.json({
+                data: paginatedData,
+                currentPage: pageNum,
+                totalPages: Math.ceil(totalRecords / limitNum),
+                totalRecords: totalRecords
+            });
+            
+        } else if (type === 'refund') {
+            const query = {
+                status: 'completed',
+                $or: [
+                    { returnDate: { $gte: startUTC, $lte: endUTC } },
+                    { requestedAt: { $gte: startUTC, $lte: endUTC }, returnDate: { $exists: false } }
+                ]
+            };
+
+            const totalRecords = await RefundPayment.countDocuments(query);
+            const refunds = await RefundPayment.find(query)
+                .sort({ _id: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean();
+
+            const formattedRefunds = refunds.map(r => ({
+                _id: r._id,
+                tuitionCode: r.tuitionCode,
+                route: r.returnRoute || r.requestRoute || 'Unknown',
+                amount: parseFloat(r.amount) || 0,
+                timestamp: r.returnDate || r.requestedAt
+            }));
+
+            return res.json({
+                data: formattedRefunds,
+                currentPage: pageNum,
+                totalPages: Math.ceil(totalRecords / limitNum),
+                totalRecords: totalRecords
+            });
+        } else {
+            return res.status(400).json({ message: 'Invalid type parameter' });
+        }
+
+    } catch (err) {
+        console.error('Error fetching date details:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.get('/overall-report', async (req, res) => {
     try {
@@ -841,5 +948,7 @@ router.get('/overall-report', async (req, res) => {
         res.status(500).json({ message: 'Error generating overall report' });
     }
 });
+
+module.exports = router;
 
 
