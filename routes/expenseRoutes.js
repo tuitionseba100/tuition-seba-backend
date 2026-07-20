@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const Transaction = require('../models/Transaction');
+const Expense = require('../models/Expense');
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
@@ -16,29 +16,28 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-// Add Transaction
+// Add Expense
 router.post('/add', authMiddleware, async (req, res) => {
     try {
-        const { type, amount, category, note, date, createdBy } = req.body;
-        const newTransaction = new Transaction({
-            type,
+        const { amount, category, note, date, createdBy } = req.body;
+        const newExpense = new Expense({
             amount,
             category,
             note,
             date: date || new Date(),
             createdBy
         });
-        const savedTransaction = await newTransaction.save();
-        res.status(201).json(savedTransaction);
+        const savedExpense = await newExpense.save();
+        res.status(201).json(savedExpense);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Get Transactions with Filters
+// Get Expenses with Filters (Paginated)
 router.get('/all', authMiddleware, async (req, res) => {
     try {
-        const { startDate, endDate, type, category } = req.query;
+        const { startDate, endDate, category, page = 1, limit = 20 } = req.query;
         let query = {};
 
         if (startDate || endDate) {
@@ -47,11 +46,26 @@ router.get('/all', authMiddleware, async (req, res) => {
             if (endDate) query.date.$lte = new Date(endDate);
         }
 
-        if (type) query.type = type;
         if (category) query.category = category;
 
-        const transactions = await Transaction.find(query).sort({ date: -1 });
-        res.json(transactions);
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        const expenses = await Expense.find(query)
+            .sort({ date: -1 })
+            .skip(skip)
+            .limit(limitNum);
+            
+        const totalCount = await Expense.countDocuments(query);
+        const totalPages = Math.ceil(totalCount / limitNum);
+
+        res.json({
+            data: expenses,
+            currentPage: pageNum,
+            totalPages,
+            totalCount
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -71,43 +85,35 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         if (category) query.category = category;
 
-        const transactions = await Transaction.find(query);
+        const expenses = await Expense.find(query);
 
-        const summary = transactions.reduce((acc, curr) => {
-            if (curr.type === 'income') {
-                acc.totalIncome += curr.amount;
-            } else {
-                acc.totalExpense += curr.amount;
-            }
-            return acc;
-        }, { totalIncome: 0, totalExpense: 0 });
+        const totalExpense = expenses.reduce((acc, curr) => acc + curr.amount, 0);
 
-        summary.profit = summary.totalIncome - summary.totalExpense;
-        res.json(summary);
+        res.json({ totalExpense });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Delete Transaction
+// Delete Expense
 router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
-        await Transaction.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Transaction deleted successfully' });
+        await Expense.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Expense deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// Update Transaction
+// Update Expense
 router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
-        const updatedTransaction = await Transaction.findByIdAndUpdate(
+        const updatedExpense = await Expense.findByIdAndUpdate(
             req.params.id,
             req.body,
             { new: true }
         );
-        res.json(updatedTransaction);
+        res.json(updatedExpense);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

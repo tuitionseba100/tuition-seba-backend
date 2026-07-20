@@ -1,11 +1,6 @@
 const mongoose = require('mongoose');
 
-const transactionSchema = new mongoose.Schema({
-    type: {
-        type: String,
-        required: true,
-        enum: ['income', 'expense']
-    },
+const expenseSchema = new mongoose.Schema({
     amount: {
         type: Number,
         required: true
@@ -30,4 +25,4 @@ const transactionSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-module.exports = mongoose.model('Transaction', transactionSchema);
+module.exports = mongoose.model('Expense', expenseSchema);
