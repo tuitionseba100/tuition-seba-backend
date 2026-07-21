@@ -42,8 +42,16 @@ router.get('/all', authMiddleware, async (req, res) => {
 
         if (startDate || endDate) {
             query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) query.date.$lte = new Date(endDate);
+            if (startDate) {
+                const s = new Date(startDate);
+                s.setHours(0, 0, 0, 0);
+                query.date.$gte = s;
+            }
+            if (endDate) {
+                const e = new Date(endDate);
+                e.setHours(23, 59, 59, 999);
+                query.date.$lte = e;
+            }
         }
 
         if (category) query.category = category;
@@ -79,8 +87,16 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         if (startDate || endDate) {
             query.date = {};
-            if (startDate) query.date.$gte = new Date(startDate);
-            if (endDate) query.date.$lte = new Date(endDate);
+            if (startDate) {
+                const s = new Date(startDate);
+                s.setHours(0, 0, 0, 0);
+                query.date.$gte = s;
+            }
+            if (endDate) {
+                const e = new Date(endDate);
+                e.setHours(23, 59, 59, 999);
+                query.date.$lte = e;
+            }
         }
 
         if (category) query.category = category;
