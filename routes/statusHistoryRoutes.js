@@ -187,39 +187,114 @@ router.get('/list', superadminOnly, async (req, res) => {
         const limit = parseInt(req.query.limit) || 50;
         const { moduleName, changedBy, newStatus, startDate, endDate, tuitionCode } = req.query;
 
-        const filter = {};
+        const shFilter = {};
+        const alFilter = {};
 
+        // Module
         if (moduleName) {
-            filter.module = moduleName;
-        }
-        if (changedBy) {
-            filter.changedBy = new RegExp(changedBy.trim(), 'i');
-        }
-        if (newStatus) {
-            filter.newStatus = newStatus;
-        }
-        if (tuitionCode) {
-            filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            shFilter.module = moduleName;
+            alFilter.module = moduleName;
+        } else {
+            alFilter.module = 'Tuition';
         }
 
+        // Performed By
+        if (changedBy) {
+            shFilter.changedBy = new RegExp(changedBy.trim(), 'i');
+            alFilter.user = new RegExp(changedBy.trim(), 'i');
+        }
+
+        // Tuition Code
+        if (tuitionCode) {
+            shFilter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            alFilter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+        }
+
+        // Dates
         if (startDate || endDate) {
-            filter.timestamp = {};
+            shFilter.timestamp = {};
+            alFilter.timestamp = {};
             if (startDate) {
-                filter.timestamp.$gte = moment(startDate).startOf('day').toDate();
+                const start = moment(startDate).startOf('day').toDate();
+                shFilter.timestamp.$gte = start;
+                alFilter.timestamp.$gte = start;
             }
             if (endDate) {
-                filter.timestamp.$lte = moment(endDate).endOf('day').toDate();
+                const end = moment(endDate).endOf('day').toDate();
+                shFilter.timestamp.$lte = end;
+                alFilter.timestamp.$lte = end;
             }
         }
 
-        const total = await StatusHistory.countDocuments(filter);
-        const data = await StatusHistory.find(filter)
-            .sort({ timestamp: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit);
+        if (newStatus) {
+            shFilter.newStatus = newStatus;
+        }
+
+        const isSHStatus = !newStatus || (newStatus !== 'created' && newStatus !== 'deleted');
+        const isALStatus = !newStatus || newStatus === 'created' || newStatus === 'deleted';
+        const isALModule = !moduleName || moduleName === 'Tuition';
+
+        if (isALStatus && isALModule) {
+            if (newStatus === 'created') {
+                alFilter.action = 'Create';
+            } else if (newStatus === 'deleted') {
+                alFilter.action = 'Delete';
+            } else {
+                alFilter.action = { $in: ['Create', 'Delete'] };
+            }
+        }
+
+        const shCount = isSHStatus ? await StatusHistory.countDocuments(shFilter) : 0;
+        const alCount = (isALStatus && isALModule) ? await ActivityLog.countDocuments(alFilter) : 0;
+        const total = shCount + alCount;
+
+        let combinedData = [];
+
+        if (shCount > 0 && alCount > 0) {
+            const [shDocs, alDocs] = await Promise.all([
+                StatusHistory.find(shFilter).sort({ timestamp: -1 }).limit(page * limit).lean(),
+                ActivityLog.find(alFilter).sort({ timestamp: -1 }).limit(page * limit).lean()
+            ]);
+
+            const mappedAlDocs = alDocs.map(log => ({
+                _id: log._id,
+                module: log.module,
+                resourceId: log.resourceId,
+                tuitionCode: log.tuitionCode,
+                oldStatus: log.action === 'Create' ? '' : 'Active',
+                newStatus: log.action === 'Create' ? 'created' : 'deleted',
+                changedBy: log.user,
+                timestamp: log.timestamp
+            }));
+
+            const merged = [...shDocs, ...mappedAlDocs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            combinedData = merged.slice((page - 1) * limit, page * limit);
+        } else if (shCount > 0) {
+            combinedData = await StatusHistory.find(shFilter)
+                .sort({ timestamp: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+        } else if (alCount > 0) {
+            const alDocs = await ActivityLog.find(alFilter)
+                .sort({ timestamp: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean();
+            combinedData = alDocs.map(log => ({
+                _id: log._id,
+                module: log.module,
+                resourceId: log.resourceId,
+                tuitionCode: log.tuitionCode,
+                oldStatus: log.action === 'Create' ? '' : 'Active',
+                newStatus: log.action === 'Create' ? 'created' : 'deleted',
+                changedBy: log.user,
+                timestamp: log.timestamp
+            }));
+        }
 
         res.json({
-            data,
+            data: combinedData,
             currentPage: page,
             totalPages: Math.ceil(total / limit),
             totalRecords: total
@@ -234,20 +309,60 @@ router.get('/export-csv', superadminOnly, async (req, res) => {
     try {
         const { moduleName, changedBy, newStatus, startDate, endDate, tuitionCode } = req.query;
 
-        const filter = {};
+        const shFilter = {};
+        const alFilter = {};
 
-        if (moduleName) filter.module = moduleName;
-        if (changedBy) filter.changedBy = new RegExp(changedBy.trim(), 'i');
-        if (newStatus) filter.newStatus = newStatus;
-        if (tuitionCode) filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+        // Module
+        if (moduleName) {
+            shFilter.module = moduleName;
+            alFilter.module = moduleName;
+        } else {
+            alFilter.module = 'Tuition';
+        }
 
+        // Performed By
+        if (changedBy) {
+            shFilter.changedBy = new RegExp(changedBy.trim(), 'i');
+            alFilter.user = new RegExp(changedBy.trim(), 'i');
+        }
+
+        // Tuition Code
+        if (tuitionCode) {
+            shFilter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            alFilter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+        }
+
+        // Dates
         if (startDate || endDate) {
-            filter.timestamp = {};
+            shFilter.timestamp = {};
+            alFilter.timestamp = {};
             if (startDate) {
-                filter.timestamp.$gte = moment(startDate).startOf('day').toDate();
+                const start = moment(startDate).startOf('day').toDate();
+                shFilter.timestamp.$gte = start;
+                alFilter.timestamp.$gte = start;
             }
             if (endDate) {
-                filter.timestamp.$lte = moment(endDate).endOf('day').toDate();
+                const end = moment(endDate).endOf('day').toDate();
+                shFilter.timestamp.$lte = end;
+                alFilter.timestamp.$lte = end;
+            }
+        }
+
+        if (newStatus) {
+            shFilter.newStatus = newStatus;
+        }
+
+        const isSHStatus = !newStatus || (newStatus !== 'created' && newStatus !== 'deleted');
+        const isALStatus = !newStatus || newStatus === 'created' || newStatus === 'deleted';
+        const isALModule = !moduleName || moduleName === 'Tuition';
+
+        if (isALStatus && isALModule) {
+            if (newStatus === 'created') {
+                alFilter.action = 'Create';
+            } else if (newStatus === 'deleted') {
+                alFilter.action = 'Delete';
+            } else {
+                alFilter.action = { $in: ['Create', 'Delete'] };
             }
         }
 
@@ -257,41 +372,100 @@ router.get('/export-csv', superadminOnly, async (req, res) => {
         // Write CSV headers
         res.write("Timestamp,Section,Tuition/Premium Code,Target ID,Old Status,New Status,Performed By\n");
 
-        const cursor = StatusHistory.find(filter).sort({ timestamp: -1 }).cursor();
+        if (isSHStatus && isALStatus && isALModule) {
+            const [shDocs, alDocs] = await Promise.all([
+                StatusHistory.find(shFilter).sort({ timestamp: -1 }).lean(),
+                ActivityLog.find(alFilter).sort({ timestamp: -1 }).lean()
+            ]);
 
-        cursor.on('data', (log) => {
-            const timestamp = moment(log.timestamp).format('DD MMM YYYY, hh:mm A');
-            const section = log.module === 'RegTeacher' ? 'Premium Teacher' :
-                            log.module === 'Tuition' ? 'Tuition' : 'Tuition Apply';
-                            
-            const code = log.tuitionCode || '-';
-            const targetId = log.resourceId || '';
-            const oldStatus = log.oldStatus || 'Created';
-            const newStatus = log.newStatus || '';
-            const performedBy = log.changedBy || '';
+            const mappedAlDocs = alDocs.map(log => ({
+                module: log.module,
+                resourceId: log.resourceId,
+                tuitionCode: log.tuitionCode,
+                oldStatus: log.action === 'Create' ? '' : 'Active',
+                newStatus: log.action === 'Create' ? 'created' : 'deleted',
+                changedBy: log.user,
+                timestamp: log.timestamp
+            }));
 
-            const row = [
-                `"${timestamp}"`,
-                `"${section}"`,
-                `"${code}"`,
-                `"${targetId}"`,
-                `"${oldStatus}"`,
-                `"${newStatus}"`,
-                `"${performedBy}"`
-            ].join(',');
-            
-            res.write(row + '\n');
-        });
+            const merged = [...shDocs, ...mappedAlDocs].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-        cursor.on('end', () => {
+            for (const log of merged) {
+                const timestamp = moment(log.timestamp).format('DD MMM YYYY, hh:mm A');
+                const section = log.module === 'RegTeacher' ? 'Premium Teacher' :
+                                log.module === 'Tuition' ? 'Tuition' : 'Tuition Apply';
+                                
+                const code = log.tuitionCode || '-';
+                const targetId = log.resourceId || '';
+                const oldStatus = log.oldStatus || 'Created';
+                const newStatus = log.newStatus || '';
+                const performedBy = log.changedBy || '';
+
+                const row = [
+                    `"${timestamp}"`,
+                    `"${section}"`,
+                    `"${code}"`,
+                    `"${targetId}"`,
+                    `"${oldStatus}"`,
+                    `"${newStatus}"`,
+                    `"${performedBy}"`
+                ].join(',');
+                
+                res.write(row + '\n');
+            }
             res.end();
-        });
+        } else if (isSHStatus) {
+            const cursor = StatusHistory.find(shFilter).sort({ timestamp: -1 }).cursor();
+            cursor.on('data', (log) => {
+                const timestamp = moment(log.timestamp).format('DD MMM YYYY, hh:mm A');
+                const section = log.module === 'RegTeacher' ? 'Premium Teacher' :
+                                log.module === 'Tuition' ? 'Tuition' : 'Tuition Apply';
+                                
+                const code = log.tuitionCode || '-';
+                const targetId = log.resourceId || '';
+                const oldStatus = log.oldStatus || 'Created';
+                const newStatus = log.newStatus || '';
+                const performedBy = log.changedBy || '';
 
-        cursor.on('error', (err) => {
-            console.error('CSV Export Error:', err);
-            // If headers are already sent, we can't send a 500 status code cleanly, just end the stream
-            res.end();
-        });
+                const row = [
+                    `"${timestamp}"`,
+                    `"${section}"`,
+                    `"${code}"`,
+                    `"${targetId}"`,
+                    `"${performedBy}"`
+                ].join(',');
+                
+                res.write(row + '\n');
+            });
+            cursor.on('end', () => res.end());
+            cursor.on('error', (err) => { console.error(err); res.end(); });
+        } else {
+            const cursor = ActivityLog.find(alFilter).sort({ timestamp: -1 }).cursor();
+            cursor.on('data', (log) => {
+                const timestamp = moment(log.timestamp).format('DD MMM YYYY, hh:mm A');
+                const section = 'Tuition';
+                                
+                const code = log.tuitionCode || '-';
+                const targetId = log.resourceId || '';
+                const oldStatus = log.action === 'Create' ? '' : 'Active';
+                const newStatus = log.action === 'Create' ? 'created' : 'deleted';
+                const performedBy = log.user || '';
+
+                const row = [
+                    `"${timestamp}"`,
+                    `"${section}"`,
+                    `"${code}"`,
+                    `"${targetId}"`,
+                    `"${oldStatus}"`,
+                    `"${newStatus}"`,
+                    `"${performedBy}"`
+                ].join(',');
+                
+                res.write(row + '\n');
+            });
+            cursor.on('end', () => res.end());
+            cursor.on('error', (err) => { console.error(err); res.end(); });
+        }
 
     } catch (err) {
         console.error('Export exception:', err);
