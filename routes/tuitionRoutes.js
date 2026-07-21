@@ -4,6 +4,7 @@ const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
+const StatusHistory = require('../models/StatusHistory');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
@@ -652,9 +653,12 @@ router.post('/add', async (req, res) => {
             }
         }
 
+        const isPublishBool = isPublish === undefined ? true : (String(isPublish) === 'true' || isPublish === true);
+
         const newTuition = new Tuition({
             tuitionCode,
-            isPublish,
+            isPublish: isPublishBool,
+            lastPublishedDate: isPublishBool ? new Date() : null,
             wantedTeacher,
             student,
             createdBy,
@@ -697,6 +701,18 @@ router.post('/add', async (req, res) => {
         });
 
         await newTuition.save();
+
+        if (newTuition.isPublish) {
+            await logStatusChange(
+                req,
+                'Tuition',
+                newTuition._id,
+                'unpublished',
+                'published',
+                newTuition.tuitionCode || null
+            );
+        }
+
         await logActivity(req, 'Create', 'Tuition', newTuition._id, {
             after: newTuition,
             importantFields: { tuitionCode: newTuition.tuitionCode }
@@ -746,6 +762,15 @@ router.put('/edit/:id', async (req, res) => {
         const oldTuition = await Tuition.findById(req.params.id).lean();
         if (!oldTuition) {
             return res.status(404).json({ message: 'Tuition not found' });
+        }
+
+        // Set lastPublishedDate when isPublish is toggled to true (or backfilled)
+        if (req.body.isPublish !== undefined) {
+            const oldPublish = oldTuition.isPublish === undefined ? true : !!oldTuition.isPublish;
+            const newPublish = String(req.body.isPublish) === 'true' || req.body.isPublish === true;
+            if ((!oldPublish && newPublish) || (newPublish && !oldTuition.lastPublishedDate)) {
+                req.body.lastPublishedDate = new Date();
+            }
         }
 
         // Auto-assignment logic based on status change

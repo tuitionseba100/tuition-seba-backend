@@ -44,6 +44,7 @@ const tuitionSchema = new mongoose.Schema({
     agentComment: { type: String },
     isSoftDelete: { type: Boolean, default: false },
     mediaFee: { type: String, default: '60%' },
+    lastPublishedDate: { type: Date },
 }, {
     timestamps: true
 });
