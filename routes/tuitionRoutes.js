@@ -806,6 +806,22 @@ router.put('/edit/:id', async (req, res) => {
             await logStatusChange(req, 'Tuition', updatedTuition._id, oldTuition.status, req.body.status, updatedTuition.tuitionCode || null);
         }
 
+        // Log isPublish change history
+        if (updatedTuition && req.body.isPublish !== undefined) {
+            const oldPublish = oldTuition.isPublish === undefined ? true : !!oldTuition.isPublish;
+            const newPublish = String(req.body.isPublish) === 'true' || req.body.isPublish === true;
+            if (oldPublish !== newPublish) {
+                await logStatusChange(
+                    req,
+                    'Tuition',
+                    updatedTuition._id,
+                    oldPublish ? 'published' : 'unpublished',
+                    newPublish ? 'published' : 'unpublished',
+                    updatedTuition.tuitionCode || null
+                );
+            }
+        }
+
         const triggerStatus = req.body.status ? req.body.status.toLowerCase() : null;
         if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {
             try {
