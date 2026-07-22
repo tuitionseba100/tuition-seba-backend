@@ -660,7 +660,7 @@ router.get('/route-report', async (req, res) => {
 
         cursor.on('data', (payment) => {
             const processPaymentSet = (pDate, pType, pTk) => {
-                if (pDate && pType) {
+                if (pDate) {
                     const dateObj = new Date(pDate);
                     if (startUTC && endUTC) {
                         if (dateObj < startUTC || dateObj > endUTC) return;
@@ -668,7 +668,7 @@ router.get('/route-report', async (req, res) => {
                     
                     const amount = parseFloat(pTk) || 0;
                     if (amount >= 0) {
-                        let route = pType.trim();
+                        let route = (pType || '').trim();
                         if (route) {
                             route = route.charAt(0).toUpperCase() + route.slice(1).toLowerCase();
                         } else {
@@ -754,7 +754,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
             
             payments.forEach(payment => {
                 const processPaymentSet = (pDate, pType, pTk) => {
-                    if (pDate && pType) {
+                    if (pDate) {
                         const dateObj = new Date(pDate);
                         if (dateObj >= startUTC && dateObj <= endUTC) {
                             const amount = parseFloat(pTk) || 0;
@@ -763,7 +763,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                                     _id: payment._id,
                                     tuitionCode: payment.tuitionCode,
                                     tutorNumber: payment.tutorNumber,
-                                    route: pType,
+                                    route: pType || 'Unknown',
                                     amount: amount,
                                     timestamp: dateObj
                                 });
@@ -873,7 +873,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
             let extractedPayments = [];
             payments.forEach(payment => {
                 const processPaymentSet = (pDate, pType, pTk) => {
-                    if (pDate && pType) {
+                    if (pDate) {
                         const dateObj = new Date(pDate);
                         if (dateObj >= startUTC && dateObj <= endUTC) {
                             const amount = parseFloat(pTk) || 0;
@@ -882,7 +882,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                                     _id: payment._id,
                                     tuitionCode: payment.tuitionCode,
                                     tutorNumber: payment.tutorNumber,
-                                    route: pType,
+                                    route: pType || 'Unknown',
                                     amount: amount,
                                     timestamp: dateObj
                                 });
@@ -1020,7 +1020,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
 
         paymentCursor.on('data', (payment) => {
             const processPaymentSet = (pDate, pType, pTk) => {
-                if (pDate && pType) {
+                if (pDate) {
                     const dateObj = new Date(pDate);
                     if (startUTC && endUTC) {
                         if (dateObj < startUTC || dateObj > endUTC) return;
