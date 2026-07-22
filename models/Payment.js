@@ -41,6 +41,10 @@ const paymentSchema = new mongoose.Schema({
     followUpDate: { type: Date },
     followUpComment: { type: String },
     duePayDateComment: { type: String },
+    installmentComment: { type: String },
+    installmentComment2: { type: String },
+    installmentComment3: { type: String },
+    installmentComment4: { type: String },
     isVerified: { type: Boolean, default: false },
     verifiedBy: { type: String }
 });

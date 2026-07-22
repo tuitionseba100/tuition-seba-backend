@@ -126,7 +126,11 @@ router.post('/add', async (req, res) => {
         assignedTo,
         followUpDate,
         followUpComment,
-        duePayDateComment
+        duePayDateComment,
+        installmentComment,
+        installmentComment2,
+        installmentComment3,
+        installmentComment4
     } = req.body;
 
     try {
@@ -199,7 +203,11 @@ router.post('/add', async (req, res) => {
             assignedTo: finalAssignedTo,
             followUpDate,
             followUpComment,
-            duePayDateComment
+            duePayDateComment,
+            installmentComment,
+            installmentComment2,
+            installmentComment3,
+            installmentComment4
         });
 
         await newPayment.save();
