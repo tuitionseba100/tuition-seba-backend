@@ -24,7 +24,7 @@ const superadminOnly = (req, res, next) => {
 // Get summary/report of status changes for today (Asia/Dhaka timezone)
 router.get('/today-report', superadminOnly, async (req, res) => {
     try {
-        const { changedBy, tuitionCode, startDate, endDate } = req.query;
+        const { changedBy, tuitionCode, startDate, endDate, isAllTime } = req.query;
 
         // Calculate start and end of today in Bangladesh Time (UTC+6)
         const nowBD = moment().tz("Asia/Dhaka");
@@ -38,6 +38,9 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             }
             if (tuitionCode) {
                 filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            }
+            if (isAllTime === 'true' || isAllTime === true) {
+                return filter;
             }
             let start = startOfDay;
             let end = endOfDay;
@@ -58,6 +61,9 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             }
             if (tuitionCode) {
                 filter.tuitionCode = new RegExp(tuitionCode.trim(), 'i');
+            }
+            if (isAllTime === 'true' || isAllTime === true) {
+                return filter;
             }
             let start = startOfDay;
             let end = endOfDay;
