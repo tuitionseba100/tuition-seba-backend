@@ -664,7 +664,10 @@ router.get('/route-report', async (req, res) => {
         const routeData = {};
         const dateDataMap = {};
 
-        const cursor = Payment.find(query).lean().cursor();
+        const cursor = Payment.find(query)
+            .select('paymentReceivedDate paymentReceivedDate2 paymentReceivedDate3 paymentReceivedDate4 paymentType paymentType2 paymentType3 paymentType4 receivedTk receivedTk2 receivedTk3 receivedTk4')
+            .lean()
+            .cursor();
 
         cursor.on('data', (payment) => {
             const processPaymentSet = (pDate, pType, pTk) => {
@@ -1007,7 +1010,10 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         const dateDataMap = {};
 
         // 1. Stream Payments
-        const paymentCursor = Payment.find(query).lean().cursor();
+        const paymentCursor = Payment.find(query)
+            .select('paymentReceivedDate paymentReceivedDate2 paymentReceivedDate3 paymentReceivedDate4 paymentType paymentType2 paymentType3 paymentType4 receivedTk receivedTk2 receivedTk3 receivedTk4')
+            .lean()
+            .cursor();
         
         const getOrCreateDateEntry = (dateString) => {
             if (!dateDataMap[dateString]) {
@@ -1065,7 +1071,10 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             ];
         }
 
-        const refundCursor = RefundPayment.find(refundQueryFallback).lean().cursor();
+        const refundCursor = RefundPayment.find(refundQueryFallback)
+            .select('returnDate requestedAt amount')
+            .lean()
+            .cursor();
 
         refundCursor.on('data', (refund) => {
             const dateObj = new Date(refund.returnDate || refund.requestedAt);
@@ -1091,7 +1100,10 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         if (startUTC && endUTC) {
             expenseQuery.date = { $gte: startUTC, $lte: endUTC };
         }
-        const expenseCursor = Expense.find(expenseQuery).lean().cursor();
+        const expenseCursor = Expense.find(expenseQuery)
+            .select('date amount')
+            .lean()
+            .cursor();
 
         expenseCursor.on('data', (expense) => {
             const dateObj = new Date(expense.date);
@@ -1117,7 +1129,10 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         if (startUTC && endUTC) {
             premiumQuery.paymentDate = { $gte: startUTC, $lte: endUTC };
         }
-        const premiumCursor = RegTeacher.find(premiumQuery).lean().cursor();
+        const premiumCursor = RegTeacher.find(premiumQuery)
+            .select('paymentDate amount')
+            .lean()
+            .cursor();
 
         premiumCursor.on('data', (teacher) => {
             const raw = String(teacher.amount || '').trim();
