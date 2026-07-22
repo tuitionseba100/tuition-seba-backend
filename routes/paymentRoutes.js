@@ -639,7 +639,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
 router.get('/route-report', async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        
+
         let startUTC, endUTC;
         let query = {};
         if (startDate && endDate) {
@@ -647,10 +647,10 @@ router.get('/route-report', async (req, res) => {
             startBD.setHours(0, 0, 0, 0);
             const endBD = new Date(endDate);
             endBD.setHours(23, 59, 59, 999);
-            
+
             startUTC = new Date(startBD.toLocaleString('en-US', { timeZone: 'UTC' }));
             endUTC = new Date(endBD.toLocaleString('en-US', { timeZone: 'UTC' }));
-            
+
             query = {
                 $or: [
                     { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
@@ -676,7 +676,7 @@ router.get('/route-report', async (req, res) => {
                     if (startUTC && endUTC) {
                         if (dateObj < startUTC || dateObj > endUTC) return;
                     }
-                    
+
                     const amount = parseFloat(pTk) || 0;
                     if (amount >= 0) {
                         let route = (pType || '').trim();
@@ -685,7 +685,7 @@ router.get('/route-report', async (req, res) => {
                         } else {
                             route = "Unknown";
                         }
-                        
+
                         if (!routeData[route]) {
                             routeData[route] = { route, amount: 0, count: 0 };
                         }
@@ -711,7 +711,7 @@ router.get('/route-report', async (req, res) => {
         cursor.on('end', () => {
             const reportArray = Object.values(routeData).sort((a, b) => b.amount - a.amount);
             const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
-            
+
             res.json({
                 data: reportArray,
                 routeData: reportArray,
@@ -727,7 +727,7 @@ router.get('/route-report', async (req, res) => {
                 res.status(500).json({ message: 'Error streaming payment report data' });
             }
         });
-        
+
     } catch (err) {
         console.error('Route report error:', err);
         res.status(500).json({ message: err.message });
@@ -760,9 +760,9 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
             };
 
             const payments = await Payment.find(query).lean();
-            
+
             let extractedPayments = [];
-            
+
             payments.forEach(payment => {
                 const processPaymentSet = (pDate, pType, pTk) => {
                     if (pDate) {
@@ -782,7 +782,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                         }
                     }
                 };
-                
+
                 processPaymentSet(payment.paymentReceivedDate, payment.paymentType, payment.receivedTk);
                 processPaymentSet(payment.paymentReceivedDate2, payment.paymentType2, payment.receivedTk2);
                 processPaymentSet(payment.paymentReceivedDate3, payment.paymentType3, payment.receivedTk3);
@@ -805,7 +805,7 @@ router.get('/date-details', authMiddleware, superadminOnly, async (req, res) => 
                 totalRecords: totalRecords,
                 totalAmount: totalAmount
             });
-            
+
         } else if (type === 'refund') {
             const query = {
                 status: 'completed',
@@ -991,7 +991,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         if (startDate && endDate) {
             startUTC = moment.utc(startDate, "YYYY-MM-DD").startOf('day').toDate();
             endUTC = moment.utc(endDate, "YYYY-MM-DD").endOf('day').toDate();
-            
+
             query = {
                 $or: [
                     { paymentReceivedDate: { $gte: startUTC, $lte: endUTC } },
@@ -1000,7 +1000,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     { paymentReceivedDate4: { $gte: startUTC, $lte: endUTC } }
                 ]
             };
-            
+
             // Assuming refunds use returnDate or requestedAt when completed
             // If returnDate exists, it's safer to use returnDate, otherwise requestedAt. We'll check requestedAt for filtering to be safe if returnDate isn't consistently used for queries.
             // Actually refundPaymentRoutes.js searches by requestedAt or returnDate. I'll search returnDate for completed refunds.
@@ -1014,14 +1014,14 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             .select('paymentReceivedDate paymentReceivedDate2 paymentReceivedDate3 paymentReceivedDate4 paymentType paymentType2 paymentType3 paymentType4 receivedTk receivedTk2 receivedTk3 receivedTk4')
             .lean()
             .cursor();
-        
+
         const getOrCreateDateEntry = (dateString) => {
             if (!dateDataMap[dateString]) {
-                dateDataMap[dateString] = { 
-                    date: dateString, 
-                    paymentAmount: 0, 
-                    paymentCount: 0, 
-                    refundAmount: 0, 
+                dateDataMap[dateString] = {
+                    date: dateString,
+                    paymentAmount: 0,
+                    paymentCount: 0,
+                    refundAmount: 0,
                     refundCount: 0,
                     expenseAmount: 0,
                     expenseCount: 0,
@@ -1039,7 +1039,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     if (startUTC && endUTC) {
                         if (dateObj < startUTC || dateObj > endUTC) return;
                     }
-                    
+
                     const amount = parseFloat(pTk) || 0;
                     if (amount >= 0) {
                         const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
@@ -1157,7 +1157,7 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
 
         // 5. Format Response
         const dateArray = Object.values(dateDataMap).sort((a, b) => new Date(b.date) - new Date(a.date));
-        
+
         res.json({
             data: dateArray,
             totalPaymentAmount: dateArray.reduce((sum, item) => sum + item.paymentAmount, 0),
