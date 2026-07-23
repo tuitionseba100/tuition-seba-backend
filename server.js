@@ -38,6 +38,7 @@ const activityLogRoutes = require('./routes/activityLogRoutes');
 const settingsRoutes = require('./routes/settingsRoutes');
 const statusHistoryRoutes = require('./routes/statusHistoryRoutes');
 const complaintSuggestionRoutes = require('./routes/complaintSuggestionRoutes');
+const reportRoutes = require('./routes/reportRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/activity-log', activityLogRoutes);
@@ -59,6 +60,7 @@ app.use('/api/expense', expenseRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/statusHistory', statusHistoryRoutes);
 app.use('/api/complaintSuggestion', complaintSuggestionRoutes);
+app.use('/api/report', reportRoutes);
 
 
 app.get('/', (req, res) => {
