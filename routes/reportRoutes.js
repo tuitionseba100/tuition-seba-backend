@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Tuition = require('../models/Tuition');
+const Settings = require('../models/Settings');
 const jwt = require('jsonwebtoken');
 
 // Middleware to protect routes
@@ -36,68 +37,83 @@ router.get('/marketing', authMiddleware, async (req, res) => {
 
         const dateGroupFormat = groupBy === 'month' ? "%Y-%m" : "%Y-%m-%d";
 
-        const report = await Tuition.aggregate([
-            { $match: matchStage },
-            {
-                $lookup: {
-                    from: "payments",
-                    localField: "tuitionCode",
-                    foreignField: "tuitionCode",
-                    as: "payments"
-                }
-            },
-            {
-                $addFields: {
-                    totalRevenueForTuition: {
-                        $sum: {
-                            $map: {
-                                input: "$payments",
-                                as: "payment",
-                                in: { 
-                                    $convert: {
-                                        input: { $ifNull: ["$$payment.totalReceivedTk", "0"] },
-                                        to: "double",
-                                        onError: 0,
-                                        onNull: 0
+        const [report, settings] = await Promise.all([
+            Tuition.aggregate([
+                { $match: matchStage },
+                {
+                    $lookup: {
+                        from: "payments",
+                        localField: "tuitionCode",
+                        foreignField: "tuitionCode",
+                        as: "payments"
+                    }
+                },
+                {
+                    $addFields: {
+                        totalRevenueForTuition: {
+                            $sum: {
+                                $map: {
+                                    input: "$payments",
+                                    as: "payment",
+                                    in: { 
+                                        $convert: {
+                                            input: { $ifNull: ["$$payment.totalReceivedTk", "0"] },
+                                            to: "double",
+                                            onError: 0,
+                                            onNull: 0
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            },
-            { 
-                $group: { 
-                    _id: { 
-                        $cond: [
-                            { $in: [{ $ifNull: ["$guardian_source_medium", ""] }, ["", null]] }, 
-                            "Unknown", 
-                            "$guardian_source_medium"
-                        ] 
-                    },
-                    count: { $sum: 1 },
-                    totalRevenue: { $sum: "$totalRevenueForTuition" },
-                    cancelledCount: { 
-                        $sum: { $cond: [{ $eq: ["$status", "cancel"] }, 1, 0] } 
-                    },
-                    suspendedCount: { 
-                        $sum: { 
-                            $cond: [{ $in: ["$status", ["suspend", "suspended"]] }, 1, 0] 
-                        } 
-                    }
-                } 
-            },
-            { $sort: { count: -1 } }
+                },
+                { 
+                    $group: { 
+                        _id: { 
+                            $cond: [
+                                { $in: [{ $ifNull: ["$guardian_source_medium", ""] }, ["", null]] }, 
+                                "Unknown", 
+                                "$guardian_source_medium"
+                            ] 
+                        },
+                        count: { $sum: 1 },
+                        totalRevenue: { $sum: "$totalRevenueForTuition" },
+                        cancelledCount: { 
+                            $sum: { $cond: [{ $eq: ["$status", "cancel"] }, 1, 0] } 
+                        },
+                        suspendedCount: { 
+                            $sum: { 
+                                $cond: [{ $in: ["$status", ["suspend", "suspended"]] }, 1, 0] 
+                            } 
+                        }
+                    } 
+                },
+                { $sort: { count: -1 } }
+            ]),
+            Settings.findOne({ key: 'marketing_mediums' })
         ]);
 
-        // Transform backend response into a flat summary array
-        const summary = report.map(item => ({
+        const marketingMediums = settings && settings.value ? settings.value : [];
+        const allMediumsSet = new Set(marketingMediums.map(m => (m || '').toLowerCase()));
+        
+        const aggregatedSummary = report.map(item => ({
             medium: item._id,
             count: item.count || 0,
             revenue: item.totalRevenue || 0,
             cancelled: item.cancelledCount || 0,
             suspended: item.suspendedCount || 0
         }));
+
+        const extraMediums = aggregatedSummary.filter(s => !allMediumsSet.has((s.medium || 'unknown').toLowerCase()));
+        
+        const summary = [
+            ...marketingMediums.map(med => {
+                const found = aggregatedSummary.find(s => (s.medium || 'unknown').toLowerCase() === (med || '').toLowerCase());
+                return found || { medium: med, count: 0, revenue: 0, cancelled: 0, suspended: 0 };
+            }),
+            ...extraMediums
+        ];
 
         res.json({
             summary
