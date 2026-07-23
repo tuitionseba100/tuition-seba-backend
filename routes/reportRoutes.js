@@ -115,6 +115,9 @@ router.get('/marketing', authMiddleware, async (req, res) => {
             ...extraMediums
         ];
 
+        // Sort by count (Tuition Got) descending
+        summary.sort((a, b) => (b.count || 0) - (a.count || 0));
+
         res.json({
             summary
         });
