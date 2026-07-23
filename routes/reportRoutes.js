@@ -181,7 +181,9 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
             expenseMatchStage.category = { $regex: new RegExp(`^${medium}$`, 'i') };
         }
 
-        const [tuitions, expenses] = await Promise.all([
+        // 1. Calculate Exact Totals via Aggregation
+        const [totalTuitionsCount, paymentTotals, expenseTotals] = await Promise.all([
+            Tuition.countDocuments(matchStage),
             Tuition.aggregate([
                 { $match: matchStage },
                 {
@@ -192,14 +194,69 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
                         as: "payments"
                     }
                 },
-                { $sort: { createdAt: -1 } }
+                {
+                    $addFields: {
+                        totalRevenueForTuition: {
+                            $sum: {
+                                $map: {
+                                    input: "$payments",
+                                    as: "payment",
+                                    in: { 
+                                        $add: [
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk2", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk3", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk4", "0"] }, to: "double", onError: 0, onNull: 0 } }
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: { $sum: "$totalRevenueForTuition" }
+                    }
+                }
             ]),
-            Expense.find(expenseMatchStage).sort({ date: -1 }).lean()
+            Expense.aggregate([
+                { $match: expenseMatchStage },
+                {
+                    $group: {
+                        _id: null,
+                        totalExpense: { 
+                            $sum: { $convert: { input: { $ifNull: ["$amount", "0"] }, to: "double", onError: 0, onNull: 0 } }
+                        }
+                    }
+                }
+            ])
+        ]);
+
+        const exactPaymentAmount = paymentTotals.length > 0 ? paymentTotals[0].totalRevenue : 0;
+        const exactExpenseAmount = expenseTotals.length > 0 ? expenseTotals[0].totalExpense : 0;
+
+        // 2. Fetch Limited Data for the UI Preview
+        const [tuitions, expenses] = await Promise.all([
+            Tuition.aggregate([
+                { $match: matchStage },
+                { $sort: { createdAt: -1 } },
+                { $limit: 500 },
+                {
+                    $lookup: {
+                        from: "payments",
+                        localField: "tuitionCode",
+                        foreignField: "tuitionCode",
+                        as: "payments"
+                    }
+                }
+            ]),
+            Expense.find(expenseMatchStage).sort({ date: -1 }).limit(500).lean()
         ]);
 
         let tuitionsList = [];
         let paymentsList = [];
-        let totalPaymentAmount = 0;
 
         tuitions.forEach(t => {
             tuitionsList.push({
@@ -220,7 +277,6 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
                             timestamp: date || p.createdAt || t.createdAt,
                             installment: index
                         });
-                        totalPaymentAmount += amount;
                     }
                 };
 
@@ -232,6 +288,7 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
         });
 
         paymentsList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        paymentsList = paymentsList.slice(0, 500); // Also limit payments to 500 for safety
 
         const formattedExpenses = expenses.map(e => ({
             _id: e._id,
@@ -239,7 +296,6 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
             amount: parseFloat(e.amount) || 0,
             timestamp: e.date
         }));
-        const totalExpenseAmount = formattedExpenses.reduce((sum, item) => sum + item.amount, 0);
 
         res.json({
             tuitions: {
