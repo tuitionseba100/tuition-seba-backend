@@ -87,7 +87,7 @@ router.get('/byCodePublic', async (req, res) => {
 
 router.get('/post-data', authMiddleware, async (req, res) => {
     try {
-        const { count, area, status, startCode, endCode } = req.query;
+        const { count, area, status, startCode, endCode, specificCodes } = req.query;
         const filter = { isPublish: true, isSoftDelete: { $ne: true } };
 
         if (area) {
@@ -104,7 +104,12 @@ router.get('/post-data', authMiddleware, async (req, res) => {
             }
         }
 
-        if (startCode && endCode) {
+        if (specificCodes) {
+            const codesArray = specificCodes.split(',').map(c => c.trim()).filter(c => c);
+            if (codesArray.length > 0) {
+                filter.tuitionCode = { $in: codesArray };
+            }
+        } else if (startCode && endCode) {
             filter.tuitionCode = { $gte: startCode, $lte: endCode };
         } else if (startCode) {
             filter.tuitionCode = { $gte: startCode };
@@ -113,11 +118,43 @@ router.get('/post-data', authMiddleware, async (req, res) => {
         }
 
         const limit = parseInt(count) || 20;
+        const { noApplies } = req.query;
 
-        const tuitions = await Tuition.find(filter)
-            .sort({ createdAt: -1 }) // Sort by creation date descending for latest
-            .limit(limit)
-            .lean();
+        let tuitions = [];
+        if (noApplies === 'true') {
+            const TuitionApply = require('../models/TuitionApply');
+            let skip = 0;
+            const batchSize = 100;
+            const maxAttempts = 20; // up to 2000 records scanned
+            
+            for (let i = 0; i < maxAttempts; i++) {
+                const batch = await Tuition.find(filter)
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(batchSize)
+                    .lean();
+                
+                if (batch.length === 0) break;
+                
+                const batchCodes = batch.map(t => t.tuitionCode);
+                const appliedCodes = await TuitionApply.distinct('tuitionCode', { tuitionCode: { $in: batchCodes } });
+                
+                const unapplied = batch.filter(t => !appliedCodes.includes(t.tuitionCode));
+                tuitions.push(...unapplied);
+                
+                if (tuitions.length >= limit) {
+                    tuitions = tuitions.slice(0, limit);
+                    break;
+                }
+                
+                skip += batchSize;
+            }
+        } else {
+            tuitions = await Tuition.find(filter)
+                .sort({ createdAt: -1 })
+                .limit(limit)
+                .lean();
+        }
 
         res.json(tuitions);
     } catch (err) {
