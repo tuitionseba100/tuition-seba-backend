@@ -141,6 +141,12 @@ router.delete('/clear', superadminOnly, async (req, res) => {
             }
         }
 
+        // Exclude Tuition Create and Delete logs from being deleted as they are used in Status History Report
+        filter.$nor = [
+            { module: 'Tuition', action: 'Create' },
+            { module: 'Tuition', action: 'Delete' }
+        ];
+
         const result = await ActivityLog.deleteMany(filter);
         res.json({ message: `Successfully cleared ${result.deletedCount} logs.`, deletedCount: result.deletedCount });
     } catch (err) {
