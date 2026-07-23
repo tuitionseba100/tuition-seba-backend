@@ -69,14 +69,11 @@ router.get('/marketing', authMiddleware, async (req, res) => {
             { 
                 $group: { 
                     _id: { 
-                        date: { $dateToString: { format: dateGroupFormat, date: "$createdAt", timezone: "+06:00" } },
-                        medium: { 
-                            $cond: [
-                                { $in: ["$guardian_source_medium", ["", null]] }, 
-                                "Unknown", 
-                                "$guardian_source_medium"
-                            ] 
-                        }
+                        $cond: [
+                            { $in: [{ $ifNull: ["$guardian_source_medium", ""] }, ["", null]] }, 
+                            "Unknown", 
+                            "$guardian_source_medium"
+                        ] 
                     },
                     count: { $sum: 1 },
                     totalRevenue: { $sum: "$totalRevenueForTuition" },
@@ -90,50 +87,20 @@ router.get('/marketing', authMiddleware, async (req, res) => {
                     }
                 } 
             },
-            { $sort: { "_id.date": -1, count: -1 } }
+            { $sort: { count: -1 } }
         ]);
 
-        // Transform backend response into summary + timeline
-        const summary = {};
-        const timelineObj = {};
-
-        report.forEach(item => {
-            const date = item._id.date;
-            const med = item._id.medium;
-
-            // Build Summary
-            if (!summary[med]) {
-                summary[med] = { medium: med, count: 0, totalRevenue: 0 };
-            }
-            summary[med].count += item.count;
-            summary[med].totalRevenue += item.totalRevenue || 0;
-
-            // Build Timeline
-            if (!timelineObj[date]) {
-                timelineObj[date] = { 
-                    date, 
-                    mediums: {}, 
-                    totalCount: 0, 
-                    totalRevenue: 0,
-                    totalCancelled: 0,
-                    totalSuspended: 0
-                };
-            }
-            timelineObj[date].mediums[med] = {
-                count: item.count,
-                revenue: item.totalRevenue || 0,
-                cancelled: item.cancelledCount || 0,
-                suspended: item.suspendedCount || 0
-            };
-            timelineObj[date].totalCount += item.count;
-            timelineObj[date].totalRevenue += item.totalRevenue || 0;
-            timelineObj[date].totalCancelled += item.cancelledCount || 0;
-            timelineObj[date].totalSuspended += item.suspendedCount || 0;
-        });
+        // Transform backend response into a flat summary array
+        const summary = report.map(item => ({
+            medium: item._id,
+            count: item.count || 0,
+            revenue: item.totalRevenue || 0,
+            cancelled: item.cancelledCount || 0,
+            suspended: item.suspendedCount || 0
+        }));
 
         res.json({
-            summary: Object.values(summary).sort((a, b) => b.count - a.count),
-            timeline: Object.values(timelineObj).sort((a, b) => new Date(b.date) - new Date(a.date))
+            summary
         });
     } catch (err) {
         console.error('Marketing report error:', err);
