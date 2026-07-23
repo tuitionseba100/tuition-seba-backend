@@ -591,7 +591,8 @@ router.post('/add', async (req, res) => {
         isReviewDone,
         agentComment,
         guardianDemandForPublic,
-        mediaFee
+        mediaFee,
+        guardian_source_medium
     } = req.body;
 
     try {
@@ -699,7 +700,8 @@ router.post('/add', async (req, res) => {
             isReviewDone,
             agentComment,
             guardianDemandForPublic,
-            mediaFee
+            mediaFee,
+            guardian_source_medium
         });
 
         await newTuition.save();
