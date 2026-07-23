@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Tuition = require('../models/Tuition');
 const Settings = require('../models/Settings');
+const Expense = require('../models/Expense');
 const jwt = require('jsonwebtoken');
 
 // Middleware to protect routes
@@ -37,7 +38,15 @@ router.get('/marketing', authMiddleware, async (req, res) => {
 
         const dateGroupFormat = groupBy === 'month' ? "%Y-%m" : "%Y-%m-%d";
 
-        const [report, settings] = await Promise.all([
+        let expenseMatchStage = {};
+        if (startDate && endDate) {
+            expenseMatchStage.date = {
+                $gte: new Date(`${startDate}T00:00:00.000Z`),
+                $lte: new Date(`${endDate}T23:59:59.999Z`)
+            };
+        }
+
+        const [report, settings, expenseReport] = await Promise.all([
             Tuition.aggregate([
                 { $match: matchStage },
                 {
@@ -91,7 +100,11 @@ router.get('/marketing', authMiddleware, async (req, res) => {
                 },
                 { $sort: { count: -1 } }
             ]),
-            Settings.findOne({ key: 'marketing_mediums' })
+            Settings.findOne({ key: 'marketing_mediums' }),
+            Expense.aggregate([
+                { $match: expenseMatchStage },
+                { $group: { _id: { $toLower: "$category" }, totalExpense: { $sum: "$amount" } } }
+            ])
         ]);
 
         const marketingMediums = settings && settings.value ? settings.value : [];
@@ -107,12 +120,23 @@ router.get('/marketing', authMiddleware, async (req, res) => {
 
         const extraMediums = aggregatedSummary.filter(s => !allMediumsSet.has((s.medium || 'unknown').toLowerCase()));
         
+        const expenseMap = new Map();
+        if (expenseReport) {
+            expenseReport.forEach(e => expenseMap.set(e._id, e.totalExpense));
+        }
+        
         const summary = [
             ...marketingMediums.map(med => {
-                const found = aggregatedSummary.find(s => (s.medium || 'unknown').toLowerCase() === (med || '').toLowerCase());
-                return found || { medium: med, count: 0, revenue: 0, cancelled: 0, suspended: 0 };
+                const lowerMed = (med || '').toLowerCase();
+                const found = aggregatedSummary.find(s => (s.medium || 'unknown').toLowerCase() === lowerMed);
+                const expenseAmt = expenseMap.get(lowerMed) || 0;
+                return found ? { ...found, expense: expenseAmt } : { medium: med, count: 0, revenue: 0, cancelled: 0, suspended: 0, expense: expenseAmt };
             }),
-            ...extraMediums
+            ...extraMediums.map(em => {
+                const lowerMed = (em.medium || '').toLowerCase();
+                const expenseAmt = expenseMap.get(lowerMed) || 0;
+                return { ...em, expense: expenseAmt };
+            })
         ];
 
         // Sort by count (Tuition Got) descending
