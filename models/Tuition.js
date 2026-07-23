@@ -16,6 +16,7 @@ const tuitionSchema = new mongoose.Schema({
     area: String,
     guardianNumber: String,
     city: String,
+    guardian_source_medium: { type: String, default: '' },
     status: String,
     note: String,
     guardianDemandForPublic: { type: String, default: '' },
