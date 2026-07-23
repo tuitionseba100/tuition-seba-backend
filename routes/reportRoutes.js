@@ -65,12 +65,12 @@ router.get('/marketing', authMiddleware, async (req, res) => {
                                     input: "$payments",
                                     as: "payment",
                                     in: { 
-                                        $convert: {
-                                            input: { $ifNull: ["$$payment.totalReceivedTk", "0"] },
-                                            to: "double",
-                                            onError: 0,
-                                            onNull: 0
-                                        }
+                                        $add: [
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk2", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk3", "0"] }, to: "double", onError: 0, onNull: 0 } },
+                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk4", "0"] }, to: "double", onError: 0, onNull: 0 } }
+                                        ]
                                     }
                                 }
                             }
@@ -148,6 +148,116 @@ router.get('/marketing', authMiddleware, async (req, res) => {
     } catch (err) {
         console.error('Marketing report error:', err);
         res.status(500).json({ error: 'Failed to generate marketing report' });
+    }
+});
+
+// GET /api/report/marketing-details
+router.get('/marketing-details', authMiddleware, async (req, res) => {
+    try {
+        const { startDate, endDate, medium } = req.query;
+        if (!medium) {
+            return res.status(400).json({ message: 'Medium parameter is required' });
+        }
+
+        let matchStage = { isSoftDelete: { $ne: true } };
+        let expenseMatchStage = {};
+
+        if (startDate && endDate) {
+            matchStage.createdAt = {
+                $gte: new Date(`${startDate}T00:00:00.000Z`),
+                $lte: new Date(`${endDate}T23:59:59.999Z`)
+            };
+            expenseMatchStage.date = {
+                $gte: new Date(`${startDate}T00:00:00.000Z`),
+                $lte: new Date(`${endDate}T23:59:59.999Z`)
+            };
+        }
+
+        if (medium.toLowerCase() === 'unknown') {
+            matchStage.guardian_source_medium = { $in: [null, ""] };
+            expenseMatchStage.category = { $in: [null, "", "Unknown", "unknown"] };
+        } else {
+            matchStage.guardian_source_medium = { $regex: new RegExp(`^${medium}$`, 'i') };
+            expenseMatchStage.category = { $regex: new RegExp(`^${medium}$`, 'i') };
+        }
+
+        const [tuitions, expenses] = await Promise.all([
+            Tuition.aggregate([
+                { $match: matchStage },
+                {
+                    $lookup: {
+                        from: "payments",
+                        localField: "tuitionCode",
+                        foreignField: "tuitionCode",
+                        as: "payments"
+                    }
+                },
+                { $sort: { createdAt: -1 } }
+            ]),
+            Expense.find(expenseMatchStage).sort({ date: -1 }).lean()
+        ]);
+
+        let tuitionsList = [];
+        let paymentsList = [];
+        let totalPaymentAmount = 0;
+
+        tuitions.forEach(t => {
+            tuitionsList.push({
+                _id: t._id,
+                tuitionCode: t.tuitionCode,
+                status: t.status,
+                timestamp: t.createdAt
+            });
+
+            t.payments.forEach(p => {
+                const processInstallment = (tk, date, index) => {
+                    let amount = parseFloat(tk) || 0;
+                    if (amount > 0) {
+                        paymentsList.push({
+                            _id: `${p._id}_${index}`,
+                            tuitionCode: p.tuitionCode,
+                            amount: amount,
+                            timestamp: date || p.createdAt || t.createdAt,
+                            installment: index
+                        });
+                        totalPaymentAmount += amount;
+                    }
+                };
+
+                processInstallment(p.receivedTk, p.paymentReceivedDate, 1);
+                processInstallment(p.receivedTk2, p.paymentReceivedDate2, 2);
+                processInstallment(p.receivedTk3, p.paymentReceivedDate3, 3);
+                processInstallment(p.receivedTk4, p.paymentReceivedDate4, 4);
+            });
+        });
+
+        paymentsList.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+        const formattedExpenses = expenses.map(e => ({
+            _id: e._id,
+            category: e.category,
+            amount: parseFloat(e.amount) || 0,
+            timestamp: e.date
+        }));
+        const totalExpenseAmount = formattedExpenses.reduce((sum, item) => sum + item.amount, 0);
+
+        res.json({
+            tuitions: {
+                data: tuitionsList,
+                totalCount: tuitionsList.length
+            },
+            payments: {
+                data: paymentsList,
+                totalAmount: totalPaymentAmount
+            },
+            expenses: {
+                data: formattedExpenses,
+                totalAmount: totalExpenseAmount
+            }
+        });
+    } catch (err) {
+        console.error('Marketing details error:', err);
+        res.status(500).json({ error: 'Failed to generate marketing details' });
     }
 });
 
