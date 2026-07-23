@@ -195,29 +195,24 @@ router.get('/marketing-details', authMiddleware, async (req, res) => {
                     }
                 },
                 {
-                    $addFields: {
-                        totalRevenueForTuition: {
-                            $sum: {
-                                $map: {
-                                    input: "$payments",
-                                    as: "payment",
-                                    in: { 
-                                        $add: [
-                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk", "0"] }, to: "double", onError: 0, onNull: 0 } },
-                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk2", "0"] }, to: "double", onError: 0, onNull: 0 } },
-                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk3", "0"] }, to: "double", onError: 0, onNull: 0 } },
-                                            { $convert: { input: { $ifNull: ["$$payment.receivedTk4", "0"] }, to: "double", onError: 0, onNull: 0 } }
-                                        ]
-                                    }
-                                }
-                            }
-                        }
+                    $unwind: {
+                        path: "$payments",
+                        preserveNullAndEmptyArrays: true
                     }
                 },
                 {
                     $group: {
                         _id: null,
-                        totalRevenue: { $sum: "$totalRevenueForTuition" }
+                        totalRevenue: {
+                            $sum: {
+                                $add: [
+                                    { $convert: { input: { $ifNull: ["$payments.receivedTk", 0] }, to: "double", onError: 0, onNull: 0 } },
+                                    { $convert: { input: { $ifNull: ["$payments.receivedTk2", 0] }, to: "double", onError: 0, onNull: 0 } },
+                                    { $convert: { input: { $ifNull: ["$payments.receivedTk3", 0] }, to: "double", onError: 0, onNull: 0 } },
+                                    { $convert: { input: { $ifNull: ["$payments.receivedTk4", 0] }, to: "double", onError: 0, onNull: 0 } }
+                                ]
+                            }
+                        }
                     }
                 }
             ]),
