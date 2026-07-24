@@ -98,6 +98,7 @@ router.get('/summary', async (req, res) => {
             serviceChargeReceived: serviceChargeReceived
         };
 
+        //summary data
         stats.forEach(stat => {
             const status = stat._id || 'pending';
             const count = stat.count;
