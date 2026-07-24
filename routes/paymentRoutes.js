@@ -1161,18 +1161,18 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         // 4.5. Stream Service Charges
         let serviceChargeQuery = {};
         if (startUTC && endUTC) {
-            serviceChargeQuery.serviceChargeDate = { $gte: startUTC, $lte: endUTC };
+            serviceChargeQuery.date = { $gte: startUTC, $lte: endUTC };
         }
         const serviceChargeCursor = ServiceCharge.find(serviceChargeQuery)
-            .select('serviceChargeDate serviceChargeAmount')
+            .select('date amount')
             .lean()
             .cursor();
 
         serviceChargeCursor.on('data', (sc) => {
-            const raw = String(sc.serviceChargeAmount || '').trim();
+            const raw = String(sc.amount || '').trim();
             const numericAmount = parseFloat(raw);
             if (isNaN(numericAmount) || !/^\d+(\.\d+)?$/.test(raw)) return; // skip non-numeric
-            const dateObj = new Date(sc.serviceChargeDate);
+            const dateObj = new Date(sc.date);
             if (startUTC && endUTC) {
                 if (dateObj < startUTC || dateObj > endUTC) return;
             }

@@ -294,7 +294,10 @@ router.put('/edit/:id', async (req, res) => {
             };
             await ServiceCharge.findOneAndUpdate(
                 { referenceId: req.params.id },
-                scData,
+                {
+                    $set: scData,
+                    $setOnInsert: { createdBy: activeUser }
+                },
                 { upsert: true, new: true, setDefaultsOnInsert: true }
             );
         } else {
