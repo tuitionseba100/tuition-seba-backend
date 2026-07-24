@@ -1,5 +1,6 @@
 const express = require('express');
 const RefundPayment = require('../models/RefundPayment');
+const ServiceCharge = require('../models/ServiceCharge');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
@@ -34,7 +35,23 @@ router.get('/all', async (req, res) => {
         const data = await RefundPayment.find(query)
             .sort({ requestedAt: -1 })
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .lean();
+
+        const scDataList = await ServiceCharge.find({ referenceId: { $in: data.map(d => d._id) } }).lean();
+        const scMap = {};
+        scDataList.forEach(sc => { scMap[sc.referenceId] = sc; });
+
+        data.forEach(d => {
+            if (scMap[d._id]) {
+                d.isServiceChargeApplicable = true;
+                d.serviceChargeAmount = scMap[d._id].amount;
+                d.serviceChargeComment = scMap[d._id].comment;
+                d.serviceChargeDate = scMap[d._id].date;
+            } else {
+                d.isServiceChargeApplicable = false;
+            }
+        });
 
         const totalRecords = await RefundPayment.countDocuments(query);
 
@@ -60,6 +77,16 @@ router.get('/summary', async (req, res) => {
             }
         ]);
 
+        const totalServiceCharge = await ServiceCharge.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalReceived: { $sum: "$amount" }
+                }
+            }
+        ]);
+        const serviceChargeReceived = totalServiceCharge.length > 0 ? totalServiceCharge[0].totalReceived : 0;
+
         const counts = {
             total: 0,
             pending: 0,
@@ -67,7 +94,8 @@ router.get('/summary', async (req, res) => {
             approved: 0,
             rejected: 0,
             completed: 0,
-            cancelled: 0
+            cancelled: 0,
+            serviceChargeReceived: serviceChargeReceived
         };
 
         stats.forEach(stat => {
@@ -101,7 +129,22 @@ router.get('/alert-today', async (req, res) => {
                 $gte: new Date(startSearch),
                 $lte: new Date(endSearch)
             }
-        }).sort({ requestedAt: -1 });
+        }).sort({ requestedAt: -1 }).lean();
+
+        const scDataList = await ServiceCharge.find({ referenceId: { $in: data.map(d => d._id) } }).lean();
+        const scMap = {};
+        scDataList.forEach(sc => { scMap[sc.referenceId] = sc; });
+
+        data.forEach(d => {
+            if (scMap[d._id]) {
+                d.isServiceChargeApplicable = true;
+                d.serviceChargeAmount = scMap[d._id].amount;
+                d.serviceChargeComment = scMap[d._id].comment;
+                d.serviceChargeDate = scMap[d._id].date;
+            } else {
+                d.isServiceChargeApplicable = false;
+            }
+        });
 
         res.json(data);
     } catch (err) {
@@ -122,7 +165,11 @@ router.post('/add', async (req, res) => {
         status,
         comment,
         createdBy,
-        returnDate
+        returnDate,
+        isServiceChargeApplicable,
+        serviceChargeAmount,
+        serviceChargeComment,
+        serviceChargeDate
     } = req.body;
 
     try {
@@ -174,9 +221,23 @@ router.post('/add', async (req, res) => {
             status: status || 'pending',
             returnDate: returnDate && returnDate !== "" ? returnDate : null
         });
-
         await newApply.save();
         const activeUser = req.headers['x-user-name'] || 'Teacher';
+
+        if (isServiceChargeApplicable) {
+            const newServiceCharge = new ServiceCharge({
+                referenceId: newApply._id,
+                tuitionCode: newApply.tuitionCode,
+                name: newApply.name,
+                paymentNumber: newApply.paymentNumber,
+                personalPhone: newApply.personalPhone,
+                amount: serviceChargeAmount,
+                comment: serviceChargeComment,
+                date: serviceChargeDate && serviceChargeDate !== "" ? serviceChargeDate : null,
+                createdBy: activeUser
+            });
+            await newServiceCharge.save();
+        }
         await logActivity(req, 'Create', 'RefundPayment', newApply._id, {
             after: newApply,
             importantFields: { tuitionCode: newApply.tuitionCode }
@@ -203,8 +264,41 @@ router.put('/edit/:id', async (req, res) => {
             updateData.returnDate = null;
         }
 
+        const isServiceChargeApplicable = updateData.isServiceChargeApplicable;
+        const serviceChargeAmount = updateData.serviceChargeAmount;
+        const serviceChargeComment = updateData.serviceChargeComment;
+        const serviceChargeDate = updateData.serviceChargeDate === "" ? null : updateData.serviceChargeDate;
+
+        delete updateData.isServiceChargeApplicable;
+        delete updateData.serviceChargeAmount;
+        delete updateData.serviceChargeComment;
+        delete updateData.serviceChargeDate;
+
         const oldData = await RefundPayment.findById(req.params.id).lean();
         const updatedData = await RefundPayment.findByIdAndUpdate(req.params.id, updateData, { new: true });
+
+        const activeUser = req.headers['x-user-name'] || 'Teacher';
+
+        if (isServiceChargeApplicable) {
+            const scData = {
+                tuitionCode: updatedData.tuitionCode,
+                name: updatedData.name,
+                paymentNumber: updatedData.paymentNumber,
+                personalPhone: updatedData.personalPhone,
+                amount: serviceChargeAmount,
+                comment: serviceChargeComment,
+                date: serviceChargeDate,
+                modifiedAt: Date.now(),
+                updatedBy: activeUser
+            };
+            await ServiceCharge.findOneAndUpdate(
+                { referenceId: req.params.id },
+                scData,
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+        } else {
+            await ServiceCharge.findOneAndDelete({ referenceId: req.params.id });
+        }
 
         if (oldData) {
             const diff = getDifferences(oldData, updatedData.toObject());
@@ -213,7 +307,13 @@ router.put('/edit/:id', async (req, res) => {
                 importantFields: { tuitionCode: updatedData.tuitionCode }
             });
         }
-        res.json(updatedData);
+        const responseData = updatedData.toObject();
+        responseData.isServiceChargeApplicable = isServiceChargeApplicable;
+        responseData.serviceChargeAmount = serviceChargeAmount;
+        responseData.serviceChargeComment = serviceChargeComment;
+        responseData.serviceChargeDate = serviceChargeDate;
+
+        res.json(responseData);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -223,6 +323,7 @@ router.delete('/delete/:id', async (req, res) => {
     try {
         const dataToDelete = await RefundPayment.findById(req.params.id).lean();
         await RefundPayment.findByIdAndDelete(req.params.id);
+        await ServiceCharge.findOneAndDelete({ referenceId: req.params.id });
 
         if (dataToDelete) {
             await logActivity(req, 'Delete', 'RefundPayment', req.params.id, {
