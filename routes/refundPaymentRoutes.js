@@ -94,6 +94,7 @@ router.get('/summary', async (req, res) => {
             approved: 0,
             rejected: 0,
             completed: 0,
+            adjusted: 0,
             cancelled: 0,
             serviceChargeReceived: serviceChargeReceived
         };
@@ -108,6 +109,7 @@ router.get('/summary', async (req, res) => {
             else if (status === 'approved') counts.approved = count;
             else if (status === 'rejected') counts.rejected = count;
             else if (status === 'completed') counts.completed = count;
+            else if (status === 'adjusted') counts.adjusted = count;
             else if (status === 'cancelled') counts.cancelled = count;
         });
 
@@ -152,7 +154,6 @@ router.get('/alert-today', async (req, res) => {
         res.status(500).json({ message: err.message });
     }
 });
-
 
 router.post('/add', async (req, res) => {
     const {
