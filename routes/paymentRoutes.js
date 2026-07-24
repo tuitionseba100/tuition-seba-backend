@@ -1201,7 +1201,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
             totalExpenseAmount: dateArray.reduce((sum, item) => sum + item.expenseAmount, 0),
             totalExpenseCount: dateArray.reduce((sum, item) => sum + item.expenseCount, 0),
             totalPremiumFeeAmount: dateArray.reduce((sum, item) => sum + item.premiumFeeAmount, 0),
-            totalPremiumFeeCount: dateArray.reduce((sum, item) => sum + item.premiumFeeCount, 0)
+            totalPremiumFeeCount: dateArray.reduce((sum, item) => sum + item.premiumFeeCount, 0),
+            totalServiceChargeAmount: dateArray.reduce((sum, item) => sum + item.serviceChargeAmount, 0),
+            totalServiceChargeCount: dateArray.reduce((sum, item) => sum + item.serviceChargeCount, 0)
         });
 
     } catch (err) {
