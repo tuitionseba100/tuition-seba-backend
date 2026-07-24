@@ -9,6 +9,7 @@ const Attendance = require('../models/Attendance');
 const RefundPayment = require('../models/RefundPayment');
 const Expense = require('../models/Expense');
 const RegTeacher = require('../models/RegTeacher');
+const ServiceCharge = require('../models/ServiceCharge');
 
 
 const authMiddleware = (req, res, next) => {
@@ -1026,7 +1027,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
                     expenseAmount: 0,
                     expenseCount: 0,
                     premiumFeeAmount: 0,
-                    premiumFeeCount: 0
+                    premiumFeeCount: 0,
+                    serviceChargeAmount: 0,
+                    serviceChargeCount: 0
                 };
             }
             return dateDataMap[dateString];
@@ -1153,6 +1156,37 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         await new Promise((resolve, reject) => {
             premiumCursor.on('end', resolve);
             premiumCursor.on('error', reject);
+        });
+
+        // 4.5. Stream Service Charges
+        let serviceChargeQuery = {};
+        if (startUTC && endUTC) {
+            serviceChargeQuery.serviceChargeDate = { $gte: startUTC, $lte: endUTC };
+        }
+        const serviceChargeCursor = ServiceCharge.find(serviceChargeQuery)
+            .select('serviceChargeDate serviceChargeAmount')
+            .lean()
+            .cursor();
+
+        serviceChargeCursor.on('data', (sc) => {
+            const raw = String(sc.serviceChargeAmount || '').trim();
+            const numericAmount = parseFloat(raw);
+            if (isNaN(numericAmount) || !/^\d+(\.\d+)?$/.test(raw)) return; // skip non-numeric
+            const dateObj = new Date(sc.serviceChargeDate);
+            if (startUTC && endUTC) {
+                if (dateObj < startUTC || dateObj > endUTC) return;
+            }
+            if (numericAmount >= 0) {
+                const dateString = moment.utc(dateObj).format('YYYY-MM-DD');
+                const entry = getOrCreateDateEntry(dateString);
+                entry.serviceChargeAmount += numericAmount;
+                entry.serviceChargeCount += 1;
+            }
+        });
+
+        await new Promise((resolve, reject) => {
+            serviceChargeCursor.on('end', resolve);
+            serviceChargeCursor.on('error', reject);
         });
 
         // 5. Format Response
