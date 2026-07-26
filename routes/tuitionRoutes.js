@@ -841,7 +841,16 @@ router.put('/edit/:id', async (req, res) => {
                 req.body.nextUpdateDate = sevenDaysLater;
                 req.body.nextUpdateComment = "teacher lagbe kina dekhen - system generated";
             }
-            // 3. Progressive statuses -> Status Change Setting
+            // 3. Guardian No Response -> Guardian No Response Setting
+            else if (newStatus === 'guardian no response') {
+                const setting = await Settings.findOne({ key: 'guardian_no_response_status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) req.body.assignedTo = nextUser;
+                }
+            }
+            // 4. Progressive statuses -> Status Change Setting
             else if (['given number', 'guardian meet', 'demo class running'].includes(newStatus)) {
                 const setting = await Settings.findOne({ key: 'status_change_auto_assign_user' });
                 if (setting && setting.value && setting.value.length > 0) {
@@ -850,8 +859,8 @@ router.put('/edit/:id', async (req, res) => {
                     if (nextUser) req.body.assignedTo = nextUser;
                 }
             }
-            // 4. Back to Available -> Restore previous assigned user
-            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running'].includes(oldStatus)) {
+            // 5. Back to Available -> Restore previous assigned user
+            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running', 'guardian no response'].includes(oldStatus)) {
                 if (oldTuition.previousAssignedTo) {
                     req.body.assignedTo = oldTuition.previousAssignedTo;
                 }
