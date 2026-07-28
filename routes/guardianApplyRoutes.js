@@ -2,7 +2,6 @@ const express = require('express');
 const GuardianApply = require('../models/GuardianApply');
 const Phone = require('../models/Phone');
 const Tuition = require('../models/Tuition');
-const ExistingGuardian = require('../models/ExistingGuardian');
 const moment = require('moment-timezone');
 const router = express.Router();
 
@@ -301,53 +300,7 @@ router.put('/update-status/:id', async (req, res) => {
     }
 });
 
-router.get('/existing-guardians', async (req, res) => {
-    try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 50;
-        const phone = req.query.phone || '';
-        const area = req.query.area || '';
-        const subject = req.query.subject || '';
-        const studentClass = req.query.studentClass || '';
-        const statusFilter = req.query.statusFilter || '';
 
-        const query = {};
-
-        if (phone) {
-            query.guardianNumber = new RegExp(escapeRegex(phone.trim()), 'i');
-        }
-        if (area) {
-            query.areas = new RegExp(escapeRegex(area.trim()), 'i');
-        }
-        if (subject) {
-            query.subjects = new RegExp(escapeRegex(subject.trim()), 'i');
-        }
-        if (studentClass) {
-            query.classes = new RegExp(escapeRegex(studentClass.trim()), 'i');
-        }
-        if (statusFilter === 'spam') {
-            query.isSpam = true;
-        } else if (statusFilter === 'best') {
-            query.isBestGuardian = true;
-        }
-
-        const total = await ExistingGuardian.countDocuments(query);
-        const data = await ExistingGuardian.find(query)
-            .sort({ lastTuitionDate: -1 })
-            .skip((page - 1) * limit)
-            .limit(limit)
-            .lean();
-
-        res.json({
-            data,
-            currentPage: page,
-            totalPages: Math.ceil(total / limit),
-            totalRecords: total
-        });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 router.get('/tuition-details/:code', async (req, res) => {
     try {

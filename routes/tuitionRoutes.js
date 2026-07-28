@@ -2,7 +2,6 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
-const ExistingGuardian = require('../models/ExistingGuardian');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const StatusHistory = require('../models/StatusHistory');
@@ -51,68 +50,6 @@ const getLeastAssignedUser = async (userList) => {
     
     return counts[0].user;
 };
-
-const syncExistingGuardianTuition = async (guardianNumber, tuitionCode, status, tuitionId, additionalInfo = {}) => {
-    if (!guardianNumber) return;
-    const gNumber = guardianNumber.trim();
-    
-    try {
-        let guardian = await ExistingGuardian.findOne({ guardianNumber: gNumber });
-        
-        if (!guardian) {
-            guardian = new ExistingGuardian({
-                guardianNumber: gNumber,
-                tuitionCodes: [tuitionCode],
-                tuitions: [{ tuitionId, code: tuitionCode, status: status }],
-                areas: additionalInfo.area ? [additionalInfo.area] : [],
-                classes: additionalInfo.class ? [additionalInfo.class] : [],
-                subjects: additionalInfo.subject ? [additionalInfo.subject] : [],
-                isSpam: !!additionalInfo.isSpam,
-                isBestGuardian: !!additionalInfo.isBestGuardian,
-                guardianBehavior: additionalInfo.guardianBehavior || '',
-                lastTuitionDate: additionalInfo.lastTuitionDate || new Date()
-            });
-            await guardian.save();
-        } else {
-            if (!guardian.tuitionCodes.includes(tuitionCode)) {
-                guardian.tuitionCodes.push(tuitionCode);
-            }
-            
-            if (!guardian.tuitions) {
-                guardian.tuitions = [];
-            }
-            const existingTuitionIndex = guardian.tuitions.findIndex(t => t.code === tuitionCode);
-            if (existingTuitionIndex > -1) {
-                guardian.tuitions[existingTuitionIndex].status = status;
-                if (tuitionId) {
-                    guardian.tuitions[existingTuitionIndex].tuitionId = tuitionId;
-                }
-            } else {
-                guardian.tuitions.push({ tuitionId, code: tuitionCode, status: status });
-            }
-            
-            if (additionalInfo.area && !guardian.areas.includes(additionalInfo.area)) {
-                guardian.areas.push(additionalInfo.area);
-            }
-            if (additionalInfo.class && !guardian.classes.includes(additionalInfo.class)) {
-                guardian.classes.push(additionalInfo.class);
-            }
-            if (additionalInfo.subject && !guardian.subjects.includes(additionalInfo.subject)) {
-                guardian.subjects.push(additionalInfo.subject);
-            }
-            
-            if (additionalInfo.isSpam !== undefined) guardian.isSpam = !!additionalInfo.isSpam;
-            if (additionalInfo.isBestGuardian !== undefined) guardian.isBestGuardian = !!additionalInfo.isBestGuardian;
-            if (additionalInfo.guardianBehavior !== undefined) guardian.guardianBehavior = additionalInfo.guardianBehavior || '';
-            if (additionalInfo.lastTuitionDate) guardian.lastTuitionDate = additionalInfo.lastTuitionDate;
-            
-            await guardian.save();
-        }
-    } catch (err) {
-        console.error('Error syncing existing guardian tuition status:', err);
-    }
-};
-
 //available tuition
 router.get('/available', async (req, res) => {
     try {
@@ -807,23 +744,7 @@ router.post('/add', async (req, res) => {
 
         await newTuition.save();
 
-        if (newTuition.guardianNumber) {
-            await syncExistingGuardianTuition(
-                newTuition.guardianNumber,
-                newTuition.tuitionCode,
-                newTuition.status || 'pending',
-                newTuition._id,
-                {
-                    area: newTuition.area,
-                    class: newTuition.class,
-                    subject: newTuition.subject,
-                    isSpam: !!newTuition.isSpamGuardian,
-                    isBestGuardian: !!newTuition.isBestGuardian,
-                    guardianBehavior: newTuition.guardianBehavior || '',
-                    lastTuitionDate: newTuition.createdAt || new Date()
-                }
-            );
-        }
+
 
         if (newTuition.isPublish) {
             await logStatusChange(
@@ -904,6 +825,19 @@ router.put('/edit/:id', async (req, res) => {
             // 1. Confirm -> TSF
             if (newStatus === 'confirm') {
                 req.body.assignedTo = 'TSF';
+                const oneMonthLater = new Date();
+                oneMonthLater.setDate(oneMonthLater.getDate() + 30);
+                
+                const teacherNum = req.body.tutorNumber || oldTuition.tutorNumber || '-';
+                const initialFollowUp = {
+                    lastFollowUpDate: new Date(),
+                    lastFollowUpComment: `টিউশনটি কনফার্ম করা হয়েছে এবং এই টিচারটি দেওয়া হয়েছে (${teacherNum})`,
+                    nextFollowUpDate: oneMonthLater,
+                    nextFollowUpComment: "শিক্ষক কেমন পড়াচ্ছেন ফিডব্যাক নিন - system generated",
+                    createdBy: req.body.updatedBy || 'System',
+                    createdAt: new Date()
+                };
+                req.body.$push = { confirmationFollowUps: initialFollowUp };
             }
             // 2. Cancel -> Cancel Setting
             // 2. Cancel -> Cancel Setting + Scheduling
@@ -1053,23 +987,7 @@ router.put('/edit/:id', async (req, res) => {
             }
         }
 
-        if (updatedTuition.guardianNumber) {
-            await syncExistingGuardianTuition(
-                updatedTuition.guardianNumber,
-                updatedTuition.tuitionCode,
-                updatedTuition.status,
-                updatedTuition._id,
-                {
-                    area: updatedTuition.area,
-                    class: updatedTuition.class,
-                    subject: updatedTuition.subject,
-                    isSpam: !!updatedTuition.isSpamGuardian,
-                    isBestGuardian: !!updatedTuition.isBestGuardian,
-                    guardianBehavior: updatedTuition.guardianBehavior || '',
-                    lastTuitionDate: updatedTuition.updatedAt || new Date()
-                }
-            );
-        }
+
 
         res.json(updatedTuition);
     } catch (err) {
@@ -1327,6 +1245,35 @@ router.delete('/delete/:id', async (req, res) => {
         });
 
         res.status(200).json({ message: 'Tuition soft deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/:id/confirmation-followup', authMiddleware, async (req, res) => {
+    try {
+        const { lastFollowUpDate, lastFollowUpComment, nextFollowUpDate, nextFollowUpComment, guardianFeedback, createdBy } = req.body;
+        const tuition = await Tuition.findById(req.params.id);
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+
+        const newFollowUp = {
+            lastFollowUpDate: lastFollowUpDate ? new Date(lastFollowUpDate) : null,
+            lastFollowUpComment,
+            nextFollowUpDate: nextFollowUpDate ? new Date(nextFollowUpDate) : null,
+            nextFollowUpComment,
+            guardianFeedback,
+            createdBy
+        };
+
+        if (!tuition.confirmationFollowUps) {
+            tuition.confirmationFollowUps = [];
+        }
+        tuition.confirmationFollowUps.push(newFollowUp);
+
+        await tuition.save();
+        res.status(200).json(tuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
