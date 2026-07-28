@@ -365,6 +365,53 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
+router.get('/guardian-followup-today', async (req, res) => {
+    try {
+        const { assignedTo } = req.query;
+        const filter = {
+            status: 'confirm',
+            isSoftDelete: { $ne: true }
+        };
+        if (assignedTo) {
+            if (assignedTo === 'unassigned') {
+                filter.assignedTo = { $in: ['', null] };
+            } else if (assignedTo === 'assigned') {
+                filter.assignedTo = { $nin: ['', null] };
+            } else {
+                filter.assignedTo = assignedTo;
+            }
+        }
+
+        const tuitions = await Tuition.find(filter).lean();
+
+        // Calculate Bangladesh Time start/end of today
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        // Filter tuitions where the latest follow-up has nextFollowUpDate today
+        const filtered = tuitions.filter(t => {
+            if (!t.confirmationFollowUps || t.confirmationFollowUps.length === 0) return false;
+            const latest = t.confirmationFollowUps[t.confirmationFollowUps.length - 1];
+            if (!latest.nextFollowUpDate) return false;
+            const nextDate = new Date(latest.nextFollowUpDate);
+            return nextDate >= startUTC && nextDate <= endUTC;
+        });
+
+        res.json(filtered);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/auto-migrate', authMiddleware, async (req, res) => {
     try {
         const { tuitionIds } = req.body;
