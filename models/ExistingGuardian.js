@@ -3,6 +3,11 @@ const mongoose = require('mongoose');
 const existingGuardianSchema = new mongoose.Schema({
     guardianNumber: { type: String, required: true, unique: true, index: true },
     tuitionCodes: [{ type: String }],
+    tuitions: [{
+        tuitionId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tuition' },
+        code: { type: String, required: true },
+        status: { type: String }
+    }],
     areas: [{ type: String }],
     classes: [{ type: String }],
     subjects: [{ type: String }],

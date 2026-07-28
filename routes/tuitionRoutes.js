@@ -52,6 +52,67 @@ const getLeastAssignedUser = async (userList) => {
     return counts[0].user;
 };
 
+const syncExistingGuardianTuition = async (guardianNumber, tuitionCode, status, tuitionId, additionalInfo = {}) => {
+    if (!guardianNumber) return;
+    const gNumber = guardianNumber.trim();
+    
+    try {
+        let guardian = await ExistingGuardian.findOne({ guardianNumber: gNumber });
+        
+        if (!guardian) {
+            guardian = new ExistingGuardian({
+                guardianNumber: gNumber,
+                tuitionCodes: [tuitionCode],
+                tuitions: [{ tuitionId, code: tuitionCode, status: status }],
+                areas: additionalInfo.area ? [additionalInfo.area] : [],
+                classes: additionalInfo.class ? [additionalInfo.class] : [],
+                subjects: additionalInfo.subject ? [additionalInfo.subject] : [],
+                isSpam: !!additionalInfo.isSpam,
+                isBestGuardian: !!additionalInfo.isBestGuardian,
+                guardianBehavior: additionalInfo.guardianBehavior || '',
+                lastTuitionDate: additionalInfo.lastTuitionDate || new Date()
+            });
+            await guardian.save();
+        } else {
+            if (!guardian.tuitionCodes.includes(tuitionCode)) {
+                guardian.tuitionCodes.push(tuitionCode);
+            }
+            
+            if (!guardian.tuitions) {
+                guardian.tuitions = [];
+            }
+            const existingTuitionIndex = guardian.tuitions.findIndex(t => t.code === tuitionCode);
+            if (existingTuitionIndex > -1) {
+                guardian.tuitions[existingTuitionIndex].status = status;
+                if (tuitionId) {
+                    guardian.tuitions[existingTuitionIndex].tuitionId = tuitionId;
+                }
+            } else {
+                guardian.tuitions.push({ tuitionId, code: tuitionCode, status: status });
+            }
+            
+            if (additionalInfo.area && !guardian.areas.includes(additionalInfo.area)) {
+                guardian.areas.push(additionalInfo.area);
+            }
+            if (additionalInfo.class && !guardian.classes.includes(additionalInfo.class)) {
+                guardian.classes.push(additionalInfo.class);
+            }
+            if (additionalInfo.subject && !guardian.subjects.includes(additionalInfo.subject)) {
+                guardian.subjects.push(additionalInfo.subject);
+            }
+            
+            if (additionalInfo.isSpam !== undefined) guardian.isSpam = !!additionalInfo.isSpam;
+            if (additionalInfo.isBestGuardian !== undefined) guardian.isBestGuardian = !!additionalInfo.isBestGuardian;
+            if (additionalInfo.guardianBehavior !== undefined) guardian.guardianBehavior = additionalInfo.guardianBehavior || '';
+            if (additionalInfo.lastTuitionDate) guardian.lastTuitionDate = additionalInfo.lastTuitionDate;
+            
+            await guardian.save();
+        }
+    } catch (err) {
+        console.error('Error syncing existing guardian tuition status:', err);
+    }
+};
+
 //available tuition
 router.get('/available', async (req, res) => {
     try {
@@ -747,23 +808,20 @@ router.post('/add', async (req, res) => {
         await newTuition.save();
 
         if (newTuition.guardianNumber) {
-            const addToSetObj = { tuitionCodes: newTuition.tuitionCode };
-            if (newTuition.area) addToSetObj.areas = newTuition.area;
-            if (newTuition.class) addToSetObj.classes = newTuition.class;
-            if (newTuition.subject) addToSetObj.subjects = newTuition.subject;
-
-            await ExistingGuardian.findOneAndUpdate(
-                { guardianNumber: newTuition.guardianNumber.trim() },
+            await syncExistingGuardianTuition(
+                newTuition.guardianNumber,
+                newTuition.tuitionCode,
+                newTuition.status || 'pending',
+                newTuition._id,
                 {
-                    $addToSet: addToSetObj,
-                    $set: {
-                        isSpam: !!newTuition.isSpamGuardian,
-                        isBestGuardian: !!newTuition.isBestGuardian,
-                        guardianBehavior: newTuition.guardianBehavior || '',
-                        lastTuitionDate: newTuition.createdAt || new Date()
-                    }
-                },
-                { upsert: true, new: true }
+                    area: newTuition.area,
+                    class: newTuition.class,
+                    subject: newTuition.subject,
+                    isSpam: !!newTuition.isSpamGuardian,
+                    isBestGuardian: !!newTuition.isBestGuardian,
+                    guardianBehavior: newTuition.guardianBehavior || '',
+                    lastTuitionDate: newTuition.createdAt || new Date()
+                }
             );
         }
 
@@ -993,6 +1051,24 @@ router.put('/edit/:id', async (req, res) => {
             } catch (applyErr) {
                 console.error('Error updating tuition applications for progressive status:', applyErr);
             }
+        }
+
+        if (updatedTuition.guardianNumber) {
+            await syncExistingGuardianTuition(
+                updatedTuition.guardianNumber,
+                updatedTuition.tuitionCode,
+                updatedTuition.status,
+                updatedTuition._id,
+                {
+                    area: updatedTuition.area,
+                    class: updatedTuition.class,
+                    subject: updatedTuition.subject,
+                    isSpam: !!updatedTuition.isSpamGuardian,
+                    isBestGuardian: !!updatedTuition.isBestGuardian,
+                    guardianBehavior: updatedTuition.guardianBehavior || '',
+                    lastTuitionDate: updatedTuition.updatedAt || new Date()
+                }
+            );
         }
 
         res.json(updatedTuition);
