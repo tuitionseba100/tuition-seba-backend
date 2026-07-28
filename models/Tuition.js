@@ -50,6 +50,5 @@ const tuitionSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
-
 const Tuition = mongoose.model('Tuition', tuitionSchema);
 module.exports = Tuition;
