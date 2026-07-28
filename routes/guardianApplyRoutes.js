@@ -349,6 +349,17 @@ router.get('/existing-guardians', async (req, res) => {
     }
 });
 
+router.get('/tuition-details/:code', async (req, res) => {
+    try {
+        const tuition = await Tuition.findOne({ tuitionCode: req.params.code, isSoftDelete: { $ne: true } }).lean();
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+        res.json(tuition);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
 router.delete('/delete/:id', async (req, res) => {
     try {

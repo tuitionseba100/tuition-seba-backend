@@ -2,6 +2,7 @@ const express = require('express');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const Phone = require('../models/Phone');
+const ExistingGuardian = require('../models/ExistingGuardian');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const StatusHistory = require('../models/StatusHistory');
@@ -744,6 +745,27 @@ router.post('/add', async (req, res) => {
         });
 
         await newTuition.save();
+
+        if (newTuition.guardianNumber) {
+            const addToSetObj = { tuitionCodes: newTuition.tuitionCode };
+            if (newTuition.area) addToSetObj.areas = newTuition.area;
+            if (newTuition.class) addToSetObj.classes = newTuition.class;
+            if (newTuition.subject) addToSetObj.subjects = newTuition.subject;
+
+            await ExistingGuardian.findOneAndUpdate(
+                { guardianNumber: newTuition.guardianNumber.trim() },
+                {
+                    $addToSet: addToSetObj,
+                    $set: {
+                        isSpam: !!newTuition.isSpamGuardian,
+                        isBestGuardian: !!newTuition.isBestGuardian,
+                        guardianBehavior: newTuition.guardianBehavior || '',
+                        lastTuitionDate: newTuition.createdAt || new Date()
+                    }
+                },
+                { upsert: true, new: true }
+            );
+        }
 
         if (newTuition.isPublish) {
             await logStatusChange(
