@@ -38,32 +38,48 @@ const getLeastAssignedUser = async (userList) => {
     }));
 
     counts.sort((a, b) => a.count - b.count);
-    
+
     // Tie-breaking: pick randomly among users with the same minimum count
     const minCount = counts[0].count;
     const candidates = counts.filter(c => c.count === minCount);
-    
+
     if (candidates.length > 1) {
         const randomIndex = Math.floor(Math.random() * candidates.length);
         return candidates[randomIndex].user;
     }
-    
+
     return counts[0].user;
 };
 //available tuition
 router.get('/available', async (req, res) => {
     try {
-        const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: { $ne: true } })
+        const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: false })
             .sort({ _id: -1 })
             .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
             .limit(400)
             .lean();
 
-        res.json(tuitions);
+        res.json(tuitions.reverse());
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
+
+//available-web tuition (increased limit for web view)
+router.get('/available-web', async (req, res) => {
+    try {
+        const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: false })
+            .sort({ _id: -1 })
+            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
+            .limit(450)
+            .lean();
+
+        res.json(tuitions.reverse());
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 
 // Public route to get tuition details by code
 router.get('/byCodePublic', async (req, res) => {
@@ -75,7 +91,7 @@ router.get('/byCodePublic', async (req, res) => {
         const tuition = await Tuition.findOne({ tuitionCode: tuitionCode.trim(), isSoftDelete: { $ne: true } })
             .select('-guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -agentComment -tuitionCancelReason -guardianBehavior')
             .lean();
-        
+
         if (!tuition) {
             return res.status(404).json({ message: 'Tuition not found' });
         }
@@ -88,7 +104,7 @@ router.get('/byCodePublic', async (req, res) => {
 router.get('/post-data', authMiddleware, async (req, res) => {
     try {
         const { count, area, status, startCode, endCode, specificCodes } = req.query;
-        const filter = { isPublish: true, isSoftDelete: { $ne: true } };
+        const filter = { isPublish: true, isSoftDelete: false };
 
         if (area) {
             const areaArray = area.split(',').filter(a => a.trim());
@@ -126,27 +142,27 @@ router.get('/post-data', authMiddleware, async (req, res) => {
             let skip = 0;
             const batchSize = 100;
             const maxAttempts = 20; // up to 2000 records scanned
-            
+
             for (let i = 0; i < maxAttempts; i++) {
                 const batch = await Tuition.find(filter)
                     .sort({ createdAt: -1 })
                     .skip(skip)
                     .limit(batchSize)
                     .lean();
-                
+
                 if (batch.length === 0) break;
-                
+
                 const batchCodes = batch.map(t => t.tuitionCode);
                 const appliedCodes = await TuitionApply.distinct('tuitionCode', { tuitionCode: { $in: batchCodes } });
-                
+
                 const unapplied = batch.filter(t => !appliedCodes.includes(t.tuitionCode));
                 tuitions.push(...unapplied);
-                
+
                 if (tuitions.length >= limit) {
                     tuitions = tuitions.slice(0, limit);
                     break;
                 }
-                
+
                 skip += batchSize;
             }
         } else {
@@ -167,7 +183,7 @@ router.get('/published-summary', async (req, res) => {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
-        const publishedTuitions = await Tuition.find({ isPublish: true, isSoftDelete: { $ne: true } }).select('createdAt area').lean();
+        const publishedTuitions = await Tuition.find({ isPublish: true, isSoftDelete: false }).select('createdAt area').lean();
 
         const total = publishedTuitions.length;
 
@@ -198,7 +214,7 @@ router.get('/published-summary', async (req, res) => {
 
 router.get('/all', authMiddleware, async (req, res) => {
     try {
-        const tuitions = await Tuition.find({ isSoftDelete: { $ne: true } })
+        const tuitions = await Tuition.find({ isSoftDelete: false })
             .sort({ _id: -1 })
             .limit(100)
             .lean(); // Limit to prevents OOM crashes
@@ -229,7 +245,7 @@ router.get('/getTableData', async (req, res) => {
         isReviewDone
     } = req.query;
 
-    const filter = { isSoftDelete: { $ne: true } };
+    const filter = { isSoftDelete: false };
 
     if (type === 'spam') {
         filter.isSpamGuardian = true;
@@ -333,7 +349,7 @@ router.get('/alert-today', async (req, res) => {
         const { assignedTo } = req.query;
         const filter = {
             nextUpdateDate: { $gte: startUTC, $lte: endUTC },
-            isSoftDelete: { $ne: true }
+            isSoftDelete: false
         };
 
         if (assignedTo) {
@@ -371,7 +387,7 @@ router.get('/guardian-followup-today', async (req, res) => {
         const { assignedTo } = req.query;
         const filter = {
             status: 'confirm',
-            isSoftDelete: { $ne: true }
+            isSoftDelete: false
         };
         if (assignedTo) {
             if (assignedTo === 'unassigned') {
@@ -431,7 +447,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
 
         const filter = {
             nextUpdateDate: { $gte: startUTC, $lte: endUTC },
-            isSoftDelete: { $ne: true }
+            isSoftDelete: false
         };
 
         // If specific IDs are provided, limit to those
@@ -475,7 +491,7 @@ router.get('/pending-payment-creation', async (req, res) => {
         const tuitions = await Tuition.find({
             status: 'confirm',
             isPaymentCreated: false,
-            isSoftDelete: { $ne: true }
+            isSoftDelete: false
         }).lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
@@ -595,7 +611,7 @@ router.get('/summary', async (req, res) => {
         });
 
         const total = await Tuition.countDocuments(filter);
-        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true, isSoftDelete: { $ne: true } });
+        const isPublishTrueCount = await Tuition.countDocuments({ isPublish: true, isSoftDelete: false });
 
         // Optimized and more informative pending application count
         let pendingApplyCount = 0;
@@ -716,11 +732,11 @@ router.post('/add', async (req, res) => {
             const setting = await Settings.findOne({ key: 'tuition_auto_assign_user' });
             if (setting && setting.value && setting.value.length > 0) {
                 const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
-                
+
                 // Filter users who have started their day (active attendance today)
                 const todayStart = new Date();
                 todayStart.setHours(0, 0, 0, 0);
-                
+
                 const activeUsers = [];
                 for (const username of userList) {
                     const attendance = await Attendance.findOne({
@@ -875,7 +891,7 @@ router.put('/edit/:id', async (req, res) => {
                 req.body.assignedTo = 'TSF';
                 const oneMonthLater = new Date();
                 oneMonthLater.setDate(oneMonthLater.getDate() + 30);
-                
+
                 const teacherNum = req.body.tutorNumber || oldTuition.tutorNumber || '-';
                 const initialFollowUp = {
                     lastFollowUpDate: new Date(),
@@ -1048,7 +1064,7 @@ router.get('/export', async (req, res) => {
         const { status } = req.query;
 
         // Build filter based on status
-        const filter = { isSoftDelete: { $ne: true } };
+        const filter = { isSoftDelete: false };
         if (status && status !== 'all') {
             filter.status = status;
         }
@@ -1163,7 +1179,7 @@ router.get('/exportData', async (req, res) => {
         const { status } = req.query;
 
         // Build filter
-        const filter = { isSoftDelete: { $ne: true } };
+        const filter = { isSoftDelete: false };
         if (status && status !== 'all') {
             filter.status = status;
         }
@@ -1266,7 +1282,7 @@ router.get('/exportData', async (req, res) => {
 
 router.get('/:id', async (req, res) => {
     try {
-        const tuition = await Tuition.findOne({ _id: req.params.id, isSoftDelete: { $ne: true } });
+        const tuition = await Tuition.findOne({ _id: req.params.id, isSoftDelete: false });
         if (!tuition) {
             return res.status(404).json({ message: 'Tuition not found or deleted' });
         }

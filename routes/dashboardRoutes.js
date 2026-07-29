@@ -34,8 +34,8 @@ router.get('/all', async (req, res) => {
             tuitionAssignments,
             paymentAssignments
         ] = await Promise.all([
-            Tuition.countDocuments({ isSoftDelete: { $ne: true } }),
-            Tuition.countDocuments({ isPublish: true, isSoftDelete: { $ne: true } }),
+            Tuition.countDocuments({ isSoftDelete: false }),
+            Tuition.countDocuments({ isPublish: true, isSoftDelete: false }),
             TuitionApply.countDocuments({ status: 'pending' }),
             Phone.countDocuments({ isSpam: false }),
             RegTeacher.countDocuments({ status: 'verified' }),
@@ -102,7 +102,7 @@ router.get('/all', async (req, res) => {
             ]),
 
             Tuition.aggregate([
-                { $match: { assignedTo: { $exists: true, $ne: "" }, isSoftDelete: { $ne: true } } },
+                { $match: { assignedTo: { $exists: true, $ne: "" }, isSoftDelete: false } },
                 { $group: { _id: "$assignedTo", count: { $sum: 1 } } }
             ]),
 

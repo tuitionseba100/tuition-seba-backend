@@ -56,7 +56,7 @@ router.get('/phone/:phoneNumber', async (req, res) => {
                     { guardianNumber: phoneRegex },
                     { tutorNumber: phoneRegex }
                 ],
-                isSoftDelete: { $ne: true }
+                isSoftDelete: false
             }),
             TuitionApply.find({ phone: phoneRegex }),
             TeacherPayment.find({
