@@ -54,6 +54,7 @@ const getLeastAssignedUser = async (userList) => {
 router.get('/available', async (req, res) => {
     try {
         const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: { $ne: true } })
+            .sort({ _id: -1 })
             .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
             .limit(400)
             .lean();
