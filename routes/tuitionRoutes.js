@@ -80,7 +80,7 @@ router.get('/available-web', async (req, res) => {
     }
 });
 
-
+//updates
 // Public route to get tuition details by code
 router.get('/byCodePublic', async (req, res) => {
     try {
