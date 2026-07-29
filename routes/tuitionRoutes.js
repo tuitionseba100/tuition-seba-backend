@@ -74,7 +74,7 @@ router.get('/available-web', async (req, res) => {
             .limit(450)
             .lean();
 
-        res.json(tuitions.reverse());
+        res.json(tuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
