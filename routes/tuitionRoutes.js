@@ -833,6 +833,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        delete req.body.confirmationFollowUps;
         if (req.body.tuitionCode) {
             const duplicateTuition = await Tuition.findOne({
                 tuitionCode: req.body.tuitionCode,
