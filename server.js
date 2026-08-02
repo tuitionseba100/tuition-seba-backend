@@ -93,13 +93,6 @@ const io = new Server(server, {
 // Keep track of active agents joined in each member's room
 const activeAgents = {};
 
-// Bot auto-responses list
-const botReplies = {
-    greetings: ["hello", "hi", "hey", "assalamu alaikum", "hlw"],
-    payment: ["payment", "pay", "charge", "fee", "send money", "bkash", "nagad"],
-    status: ["status", "approve", "verify", "active", "pending"],
-    agent: ["agent", "talk to human", "live chat", "chat with agent", "admin", "representative"]
-};
 
 // Import models for Socket.io database writes
 const ChatMessage = require('./models/ChatMessage');
@@ -160,58 +153,7 @@ io.on('connection', (socket) => {
             // Notify agents in the system of a new/updated session
             io.emit('session_updated');
 
-            // Bot Auto-Reply Trigger
-            if (sender === 'member') {
-                const hasAgent = activeAgents[phone] && activeAgents[phone] > 0;
-                
-                if (!hasAgent) {
-                    setTimeout(async () => {
-                        try {
-                            let botText = "";
-                            const textLower = text.toLowerCase().trim();
 
-                            if (botReplies.greetings.some(g => textLower.includes(g))) {
-                                botText = `Hello ${senderName}! 🤖 I am the Chat Bot. \nHow can I help you today? Please reply with one of the options below:\n1. **Payment** - To know about support and billing.\n2. **Status** - To check your member status.\n3. **Agent** - To talk directly to a live representative.`;
-                            } else if (botReplies.payment.some(p => textLower.includes(p)) || textLower === '1') {
-                                botText = `💳 **Billing & Payments**:\n- Payments can be processed securely through bKash or Nagad.\n- Contact our billing representative for direct assistance.`;
-                            } else if (botReplies.status.some(s => textLower.includes(s)) || textLower === '2') {
-                                botText = `🔍 **Membership Status**:\n- Verified Premium Members enjoy full priority support and access.\n- Your session is currently active and monitored.`;
-                            } else if (botReplies.agent.some(a => textLower.includes(a)) || textLower === '3') {
-                                botText = `📞 **Connecting to Agent**:\nI have requested an agent to join our chat. Please hold on, they will reply shortly!`;
-                                io.emit('agent_requested', { phone, name: senderName });
-                            } else {
-                                botText = `Sorry, I didn't quite get that. 🤖\nType **Agent** to talk to a human agent, **Payment** for payment details, or **Status** for account details.`;
-                            }
-
-                            // Save bot message
-                            const botMsg = new ChatMessage({
-                                phone,
-                                premiumCode,
-                                sender: 'bot',
-                                senderName: 'Support Bot',
-                                text: botText,
-                                isRead: false
-                            });
-                            await botMsg.save();
-
-                            // Update session last message
-                            await ChatSession.findOneAndUpdate(
-                                { phone },
-                                {
-                                    lastMessage: botText,
-                                    lastMessageAt: new Date()
-                                }
-                            );
-
-                            // Broadcast to room
-                            io.to(phone).emit('receive_message', botMsg);
-                            io.emit('session_updated');
-                        } catch (err) {
-                            console.error('Socket Bot replay error:', err);
-                        }
-                    }, 1000);
-                }
-            }
         } catch (err) {
             console.error('Socket send_message error:', err);
         }
