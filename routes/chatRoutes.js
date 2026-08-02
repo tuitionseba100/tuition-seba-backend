@@ -68,6 +68,12 @@ router.post('/read/:phone', async (req, res) => {
     try {
         await ChatMessage.updateMany({ phone: req.params.phone, sender: 'member', isRead: false }, { isRead: true });
         await ChatSession.findOneAndUpdate({ phone: req.params.phone }, { unreadCount: 0 });
+        
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('session_updated');
+        }
+        
         res.json({ success: true });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });

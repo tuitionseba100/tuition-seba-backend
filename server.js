@@ -89,6 +89,7 @@ const io = new Server(server, {
         methods: ['GET', 'POST']
     }
 });
+app.set('socketio', io);
 
 // Keep track of active agents joined in each member's room
 const activeAgents = {};
