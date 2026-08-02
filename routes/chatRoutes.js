@@ -3,6 +3,20 @@ const router = express.Router();
 const ChatMessage = require('../models/ChatMessage');
 const RegTeacher = require('../models/RegTeacher');
 const ChatSession = require('../models/ChatSession');
+const jwt = require('jsonwebtoken');
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) return res.status(401).json({ message: 'Access Denied' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
 
 // Fetch past messages for a chat session (with pagination)
 router.get('/history/:phone', async (req, res) => {
@@ -75,6 +89,61 @@ router.post('/read/:phone', async (req, res) => {
         }
         
         res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Clear/delete a specific chat session and its history (Superadmin only)
+router.delete('/session/:phone', authMiddleware, async (req, res) => {
+    try {
+        if (req.user.role !== 'superadmin') {
+            return res.status(403).json({ success: false, message: 'Only Superadmins can delete chats' });
+        }
+
+        const { phone } = req.params;
+        
+        // Delete messages
+        await ChatMessage.deleteMany({ phone });
+        
+        // Delete session
+        await ChatSession.deleteOne({ phone });
+
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('session_updated');
+        }
+
+        res.json({ success: true, message: 'Chat session deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Unsend/delete a specific message (Admin only - agent messages only)
+router.patch('/message/:messageId/unsend', authMiddleware, async (req, res) => {
+    try {
+        const message = await ChatMessage.findById(req.params.messageId);
+        if (!message) {
+            return res.status(404).json({ success: false, message: 'Message not found' });
+        }
+
+        if (message.sender !== 'agent' && message.sender !== 'bot') {
+            return res.status(400).json({ success: false, message: 'Only agent/bot messages can be unsent' });
+        }
+
+        const { username } = req.body;
+        message.isUnsent = true;
+        message.deletedBy = username || 'Admin';
+        await message.save();
+
+        // Notify all connected clients about the unsent message
+        const io = req.app.get('socketio');
+        if (io) {
+            io.emit('message_unsent', { messageId: message._id, phone: message.phone, deletedBy: message.deletedBy });
+        }
+
+        res.json({ success: true, message: 'Message unsent successfully' });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

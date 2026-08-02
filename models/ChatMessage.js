@@ -11,7 +11,9 @@ const chatMessageSchema = new mongoose.Schema({
     sender: { type: String, enum: ['member', 'agent', 'bot'], required: true },
     senderName: { type: String, required: true },
     text: { type: String, required: true },
-    isRead: { type: Boolean, default: false }
+    isRead: { type: Boolean, default: false },
+    isUnsent: { type: Boolean, default: false },
+    deletedBy: { type: String, default: null }
 }, { timestamps: true });
 
 // Performance indexes for scaling to 100+ concurrent chats
