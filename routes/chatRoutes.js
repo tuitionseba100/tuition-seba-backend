@@ -26,10 +26,23 @@ router.get('/history/:phone', async (req, res) => {
     }
 });
 
-// Fetch all active chat sessions (for the Agent console)
+// Fetch all active chat sessions (for the Agent console, with search)
 router.get('/sessions', async (req, res) => {
     try {
-        const sessions = await ChatSession.find().sort({ lastMessageAt: -1 });
+        const { search } = req.query;
+        let query = {};
+        if (search && search.trim() !== '') {
+            // Escape special characters to prevent invalid regex errors
+            const escapedSearch = search.trim().replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+            query = {
+                $or: [
+                    { phone: { $regex: escapedSearch, $options: 'i' } },
+                    { premiumCode: { $regex: escapedSearch, $options: 'i' } },
+                    { name: { $regex: escapedSearch, $options: 'i' } }
+                ]
+            };
+        }
+        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 });
         res.json(sessions);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
