@@ -57,5 +57,10 @@ const teacherSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now }
 });
 
+// Indexes for fast verification (combines phone fields & premiumCode)
+teacherSchema.index({ phone: 1, premiumCode: 1 });
+teacherSchema.index({ alternativePhone: 1, premiumCode: 1 });
+teacherSchema.index({ whatsapp: 1, premiumCode: 1 });
+
 const RegTeacher = mongoose.model('RegTeacher', teacherSchema);
 module.exports = RegTeacher;
