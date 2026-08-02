@@ -4,13 +4,23 @@ const ChatMessage = require('../models/ChatMessage');
 const RegTeacher = require('../models/RegTeacher');
 const ChatSession = require('../models/ChatSession');
 
-// Fetch past messages for a chat session
+// Fetch past messages for a chat session (with pagination)
 router.get('/history/:phone', async (req, res) => {
     try {
-        const messages = await ChatMessage.find({ phone: req.params.phone })
-            .sort({ createdAt: 1 })
-            .limit(100);
-        res.json(messages);
+        const limit = parseInt(req.query.limit) || 20;
+        const before = req.query.before;
+        
+        const query = { phone: req.params.phone };
+        if (before) {
+            query.createdAt = { $lt: new Date(before) };
+        }
+
+        const messages = await ChatMessage.find(query)
+            .sort({ createdAt: -1 })
+            .limit(limit);
+        
+        // Reverse to return in chronological order
+        res.json(messages.reverse());
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
