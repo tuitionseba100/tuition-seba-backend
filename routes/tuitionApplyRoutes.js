@@ -562,16 +562,36 @@ router.get('/byPremiumCode', async (req, res) => {
             return res.status(400).json({ message: 'Premium code is required' });
         }
 
+        const paymentsWithDue = await Payment.find({
+            duePayment: { $nin: [null, undefined, '', '0'] }
+        }).select('tutorNumber paymentNumber').lean();
+
+        const dueTutorSet = new Set(
+            paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
+        );
+        const duePaymentSet = new Set(
+            paymentsWithDue.map(p => escapeRegex(p.paymentNumber))
+        );
+
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isSpam isBest isExpress'
         ).sort({ appliedAt: -1 }).lean();
 
         if (tuitionApplies.length === 0) {
             return res.status(404).json({ message: 'No applications found for this premium code' });
         }
 
-        res.json(tuitionApplies);
+        const data = tuitionApplies.map(apply => {
+            const escapedPhone = escapeRegex(apply.phone);
+            const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
+            return {
+                ...apply,
+                hasDue
+            };
+        });
+
+        res.json(data);
     } catch (err) {
         console.error('Error fetching tuition applies by premium code:', err);
         res.status(500).json({ message: err.message });
