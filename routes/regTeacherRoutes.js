@@ -34,14 +34,73 @@ function escapeRegex(str) {
 
 router.get('/public-teachers', async (req, res) => {
     try {
-        const teachers = await RegTeacher.find({
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 50;
+        const skip = (page - 1) * limit;
+
+        const filter = {
             premiumCode: { $exists: true, $ne: null, $ne: '' },
             status: { $ne: 'suspended' }
-        }).select(
-            'name gender currentArea fullAddress academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow isBiodataShow sscResult hscResult experience favoriteSubject hscGroup sscGroup school college rating'
-        );
+        };
 
-        res.json(teachers);
+        if (req.query.gender) {
+            filter.gender = { $regex: new RegExp(`^${escapeRegex(req.query.gender)}$`, 'i') };
+        }
+
+        if (req.query.area) {
+            filter.currentArea = { $regex: new RegExp(escapeRegex(req.query.area), 'i') };
+        }
+
+        if (req.query.subject) {
+            filter.favoriteSubject = { $regex: new RegExp(escapeRegex(req.query.subject), 'i') };
+        }
+
+        if (req.query.university) {
+            const uniRegex = { $regex: new RegExp(escapeRegex(req.query.university), 'i') };
+            filter.$or = [
+                { honorsUniversity: uniRegex },
+                { mastersUniversity: uniRegex },
+                { uniCode: uniRegex }
+            ];
+        }
+
+        if (req.query.searchTerm) {
+            const searchRegex = { $regex: new RegExp(escapeRegex(req.query.searchTerm), 'i') };
+            const searchConditions = [
+                { name: searchRegex },
+                { premiumCode: searchRegex },
+                { uniCode: searchRegex },
+                { currentArea: searchRegex },
+                { favoriteSubject: searchRegex },
+                { honorsDept: searchRegex },
+                { mastersDept: searchRegex }
+            ];
+            if (filter.$or) {
+                filter.$and = [
+                    { $or: filter.$or },
+                    { $or: searchConditions }
+                ];
+                delete filter.$or;
+            } else {
+                filter.$or = searchConditions;
+            }
+        }
+
+        const total = await RegTeacher.countDocuments(filter);
+        const teachers = await RegTeacher.find(filter)
+            .select(
+                'name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow sscResult hscResult experience favoriteSubject hscGroup sscGroup school college'
+            )
+            .sort({ rating: -1, _id: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+
+        res.json({
+            teachers,
+            totalPages: Math.ceil(total / limit),
+            totalTeachers: total
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -205,7 +264,15 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 
     try {
-        const records = await RegTeacher.find(filter).lean();
+        const countsAggregation = await RegTeacher.aggregate([
+            { $match: filter },
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 }
+                }
+            }
+        ]);
 
         const counts = {
             pending: 0,
@@ -215,19 +282,27 @@ router.get('/summary', authMiddleware, async (req, res) => {
             verified: 0
         };
 
-        records.forEach(teacher => {
-            const stat = teacher.status?.toLowerCase();
-
-            if (stat === 'pending') counts.pending++;
-            else if (stat === 'under review') counts.under_review++;
-            else if (stat === 'pending payment') counts.pending_payment++;
-            else if (stat === 'rejected') counts.rejected++;
-            else if (stat === 'verified') counts.verified++;
+        let total = 0;
+        countsAggregation.forEach(item => {
+            const stat = item._id?.toLowerCase();
+            total += item.count;
+            if (stat === 'pending') counts.pending = item.count;
+            else if (stat === 'under review') counts.under_review = item.count;
+            else if (stat === 'pending payment') counts.pending_payment = item.count;
+            else if (stat === 'rejected') counts.rejected = item.count;
+            else if (stat === 'verified') counts.verified = item.count;
         });
+
+        let records = [];
+        if (req.query.allData === 'true') {
+            records = await RegTeacher.find(filter)
+                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status')
+                .lean();
+        }
 
         res.json({
             ...counts,
-            total: records.length,
+            total,
             allData: records
         });
     } catch (err) {
