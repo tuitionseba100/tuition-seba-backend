@@ -15,7 +15,6 @@ const chatSessionSchema = new mongoose.Schema({
     unreadCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
-chatSessionSchema.index({ phone: 1 });
 chatSessionSchema.index({ lastMessageAt: -1 });
 
 module.exports = chatDB.model('ChatSession', chatSessionSchema);
