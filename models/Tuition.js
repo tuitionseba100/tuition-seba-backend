@@ -20,6 +20,7 @@ const tuitionSchema = new mongoose.Schema({
     status: String,
     note: String,
     guardianDemandForPublic: { type: String, default: '' },
+    tuitionType: { type: String, default: '' },
     taskAssignedTo: String,
     tutorNumber: String,
     createdBy: String,

@@ -242,7 +242,8 @@ router.get('/getTableData', async (req, res) => {
         area,
         assignedTo,
         type,
-        isReviewDone
+        isReviewDone,
+        tuitionType
     } = req.query;
 
     const filter = { isSoftDelete: false };
@@ -297,6 +298,10 @@ router.get('/getTableData', async (req, res) => {
         } else {
             filter.assignedTo = assignedTo;
         }
+    }
+
+    if (tuitionType) {
+        filter.tuitionType = tuitionType;
     }
 
     try {
@@ -523,7 +528,8 @@ router.get('/summary', async (req, res) => {
         area,
         assignedTo,
         type,
-        isReviewDone
+        isReviewDone,
+        tuitionType
     } = req.query;
 
     const filter = { isSoftDelete: { $ne: true } };
@@ -578,6 +584,10 @@ router.get('/summary', async (req, res) => {
         } else {
             filter.assignedTo = assignedTo;
         }
+    }
+
+    if (tuitionType) {
+        filter.tuitionType = tuitionType;
     }
 
     try {
@@ -692,6 +702,7 @@ router.post('/add', async (req, res) => {
         isReviewDone,
         agentComment,
         guardianDemandForPublic,
+        tuitionType,
         mediaFee,
         guardian_source_medium
     } = req.body;
@@ -802,6 +813,7 @@ router.post('/add', async (req, res) => {
             isReviewDone,
             agentComment,
             guardianDemandForPublic,
+            tuitionType,
             mediaFee,
             guardian_source_medium
         });
