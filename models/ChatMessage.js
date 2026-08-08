@@ -8,7 +8,7 @@ chatDB.on('error', (err) => console.error('Chat Database connection error:', err
 const chatMessageSchema = new mongoose.Schema({
     phone: { type: String, required: true },
     premiumCode: { type: String, required: true },
-    sender: { type: String, enum: ['member', 'agent', 'bot'], required: true },
+    sender: { type: String, enum: ['member', 'agent', 'bot', 'bot-auto-comment'], required: true },
     senderName: { type: String, required: true },
     text: { type: String, required: true },
     isRead: { type: Boolean, default: false },

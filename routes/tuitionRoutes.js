@@ -243,7 +243,8 @@ router.get('/getTableData', async (req, res) => {
         assignedTo,
         type,
         isReviewDone,
-        tuitionType
+        tuitionType,
+        applyType
     } = req.query;
 
     const filter = { isSoftDelete: false };
@@ -302,6 +303,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (tuitionType) {
         filter.tuitionType = tuitionType;
+    }
+
+    if (applyType) {
+        filter.applyType = applyType;
     }
 
     try {
@@ -529,7 +534,8 @@ router.get('/summary', async (req, res) => {
         assignedTo,
         type,
         isReviewDone,
-        tuitionType
+        tuitionType,
+        applyType
     } = req.query;
 
     const filter = { isSoftDelete: { $ne: true } };
@@ -588,6 +594,10 @@ router.get('/summary', async (req, res) => {
 
     if (tuitionType) {
         filter.tuitionType = tuitionType;
+    }
+
+    if (applyType) {
+        filter.applyType = applyType;
     }
 
     try {
