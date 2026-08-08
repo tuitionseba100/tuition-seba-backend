@@ -684,7 +684,7 @@ router.post('/add', async (req, res) => {
         tutorNumber,
         isUrgent,
         taskAssignedTo,
-        isWhatsappApply,
+        applyType,
         updatedBy,
         lastAvailableCheck,
         lastUpdate,
@@ -793,7 +793,7 @@ router.post('/add', async (req, res) => {
             tutorNumber,
             isUrgent,
             taskAssignedTo,
-            isWhatsappApply,
+            applyType,
             updatedBy,
             lastAvailableCheck: lastAvailableCheck ? new Date(lastAvailableCheck) : null,
             lastUpdate: lastUpdate ? new Date(lastUpdate) : null,
@@ -1149,7 +1149,7 @@ router.get('/export', async (req, res) => {
                     escapeCsvField(doc.tutorNumber || ''),
                     escapeCsvField(doc.isUrgent ? 'Yes' : 'No'),
                     escapeCsvField(doc.taskAssignedTo || ''),
-                    escapeCsvField(doc.isWhatsappApply ? 'Yes' : 'No'),
+                    escapeCsvField(doc.applyType || 'Server'),
                     escapeCsvField(doc.updatedBy || ''),
                     escapeCsvField(doc.lastAvailableCheck
                         ? doc.lastAvailableCheck.toISOString().replace('T', ' ').slice(0, 19)
@@ -1255,7 +1255,7 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.tutorNumber),
                     escapeCsvField(doc.isUrgent ? 'Yes' : 'No'),
                     escapeCsvField(doc.taskAssignedTo),
-                    escapeCsvField(doc.isWhatsappApply ? 'Yes' : 'No'),
+                    escapeCsvField(doc.applyType || 'Server'),
                     escapeCsvField(doc.updatedBy),
                     escapeCsvField(doc.lastAvailableCheck
                         ? doc.lastAvailableCheck.toISOString().replace('T', ' ').slice(0, 19)
