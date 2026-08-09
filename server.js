@@ -142,6 +142,7 @@ io.on('connection', (socket) => {
                     name: sender === 'member' ? senderName : undefined,
                     premiumCode: sender === 'member' ? premiumCode : undefined,
                     lastMessage: text,
+                    lastSender: sender,
                     lastMessageAt: new Date(),
                     $inc: { unreadCount: (sender === 'member') ? 1 : 0 }
                 },

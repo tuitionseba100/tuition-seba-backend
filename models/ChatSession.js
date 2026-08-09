@@ -10,6 +10,7 @@ const chatSessionSchema = new mongoose.Schema({
     name: { type: String, required: true },
     premiumCode: { type: String, required: true },
     assignedTo: { type: String, default: null }, // Store username or userId of the assigned admin
+    lastSender: { type: String, default: '' },
     lastMessage: { type: String, default: '' },
     lastMessageAt: { type: Date, default: Date.now },
     unreadCount: { type: Number, default: 0 }
