@@ -50,6 +50,11 @@ const getLeastAssignedUser = async (userList) => {
 
     return counts[0].user;
 };
+//test route
+router.get('/test', (req, res) => {
+    res.send('hi tuition');
+});
+
 //available tuition
 router.get('/available', async (req, res) => {
     try {
