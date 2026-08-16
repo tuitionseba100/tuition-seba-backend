@@ -1,7 +1,7 @@
 const ActivityLog = require('../models/ActivityLog');
 
 /**
- * Logs an activity to the database.
+ * Logs an activity to the database. th
  * @param {Object} req - The Express request object.
  * @param {string} action - The action performed (Create, Edit, Delete).
  * @param {string} module - The module name (Tuition, Payment, TeacherPayment).
@@ -11,7 +11,7 @@ const ActivityLog = require('../models/ActivityLog');
 const logActivity = async (req, action, module, resourceId, details, overrideUser = null) => {
     try {
         const user = overrideUser || req.headers['x-user-name'] || 'System';
-        
+
         // Extract tuitionCode if present in importantFields or explicitly passed in details
         let tuitionCode = details.tuitionCode;
         if (!tuitionCode && details.importantFields && details.importantFields.tuitionCode) {
