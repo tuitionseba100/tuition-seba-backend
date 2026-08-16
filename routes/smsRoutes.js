@@ -54,6 +54,8 @@ router.post('/send-single', authMiddleware, async (req, res) => {
         const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
         const senderId = process.env.SMS_SENDER_ID || '8809617621855';
 
+        console.log(`[SMS DEBUG] Sending SMS to ${phone} using apiKey: "${apiKey}", senderId: "${senderId}"`);
+
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
         
         if (isUnicode) {
