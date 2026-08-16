@@ -51,8 +51,11 @@ router.post('/send-single', authMiddleware, async (req, res) => {
 
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        const senderId = process.env.SMS_SENDER_ID || '8809617621855';
+        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+
+        apiKey = apiKey.trim();
+        senderId = senderId.trim();
 
         console.log(`[SMS DEBUG] Sending SMS to ${phone} using apiKey: "${apiKey}", senderId: "${senderId}"`);
 
@@ -122,8 +125,11 @@ router.post('/send-bulk', authMiddleware, async (req, res) => {
         
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        const senderId = process.env.SMS_SENDER_ID || '8809617621855';
+        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+
+        apiKey = apiKey.trim();
+        senderId = senderId.trim();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${msisdn}&smstext=${encodedMessage}`;
         
@@ -179,8 +185,11 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
             return res.status(400).json({ success: false, statusMessage: 'Valid messages array is required' });
         }
 
-        const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        const senderId = process.env.SMS_SENDER_ID || '8809617621855';
+        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+
+        apiKey = apiKey.trim();
+        senderId = senderId.trim();
 
         const apiResponse = await axios.post('https://api.automas.com.bd/smsapimany', {
             apikey: apiKey,
@@ -229,7 +238,8 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
 // Check SMS Balance
 router.get('/balance', async (req, res) => {
     try {
-        const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        apiKey = apiKey.trim();
         const apiUrl = `https://api.automas.com.bd/getbalancev3?apikey=${apiKey}`;
 
         const apiResponse = await axios.get(apiUrl);
@@ -250,8 +260,11 @@ router.post('/send', authMiddleware, async (req, res) => {
 
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        const apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        const senderId = process.env.SMS_SENDER_ID || '8809617621855';
+        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+
+        apiKey = apiKey.trim();
+        senderId = senderId.trim();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
         if (isUnicode) {
