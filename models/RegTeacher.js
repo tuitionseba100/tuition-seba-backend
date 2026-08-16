@@ -54,6 +54,7 @@ const teacherSchema = new mongoose.Schema({
     referPersonPhone: { type: String },
     referStatus: { type: String },
     referComment: { type: String },
+    isSmsSent: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
 
