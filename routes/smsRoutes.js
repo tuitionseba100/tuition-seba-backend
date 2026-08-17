@@ -191,7 +191,8 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
         apiKey = apiKey.trim();
         senderId = senderId.trim();
 
-        const sanitizedMessages = messages.map(m => ({
+        const sanitizedMessages = messages.map((m, index) => ({
+            id: index + 1,
             msisdn: m.msisdn,
             smstext: m.smstext
         }));
