@@ -219,7 +219,7 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
 
         return res.json({ success: true, apiResponse: apiResponse.data });
     } catch (err) {
-        console.error('Dynamic SMS sending failed:', err.message || err);
+        console.error('Dynamic SMS sending failed:', err.response?.data || err.message || err);
         try {
             if (Array.isArray(messages)) {
                 const logs = messages.map(m => ({
@@ -236,7 +236,11 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
         } catch (logErr) {
             console.error('Error saving failed Dynamic SMS logs:', logErr.message);
         }
-        return res.status(500).json({ success: false, statusMessage: err.message || 'Unknown error' });
+        const apiErrorText = err.response?.data ? JSON.stringify(err.response.data) : '';
+        return res.status(500).json({ 
+            success: false, 
+            statusMessage: `Automas API Error: ${err.message}. Details: ${apiErrorText}` 
+        });
     }
 });
 
