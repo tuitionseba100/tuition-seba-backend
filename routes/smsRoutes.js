@@ -60,7 +60,7 @@ router.post('/send-single', authMiddleware, async (req, res) => {
         console.log(`[SMS DEBUG] Sending SMS to ${phone} using apiKey: "${apiKey}", senderId: "${senderId}"`);
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
-        
+
         if (isUnicode) {
             apiUrl += `&smsformat=8`;
         }
@@ -122,7 +122,7 @@ router.post('/send-bulk', authMiddleware, async (req, res) => {
         // Convert array to comma-separated string if needed
         const msisdn = Array.isArray(phones) ? phones.join(',') : phones;
         const phoneList = Array.isArray(phones) ? phones : phones.split(',');
-        
+
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
         let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
@@ -132,7 +132,7 @@ router.post('/send-bulk', authMiddleware, async (req, res) => {
         senderId = senderId.trim();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${msisdn}&smstext=${encodedMessage}`;
-        
+
         if (isUnicode) {
             apiUrl += `&smsformat=8`;
         }

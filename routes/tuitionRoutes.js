@@ -718,6 +718,10 @@ router.post('/add', async (req, res) => {
     } = req.body;
 
     try {
+        if (!guardianNumber || !guardianNumber.trim()) {
+            return res.status(400).json({ message: 'Guardian number is required' });
+        }
+
         const existingTuition = await Tuition.findOne({ tuitionCode });
         if (existingTuition) {
             return res.status(400).json({ message: 'Tuition code already exists' });
