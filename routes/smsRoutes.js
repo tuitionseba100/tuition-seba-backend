@@ -191,11 +191,19 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
         apiKey = apiKey.trim();
         senderId = senderId.trim();
 
-        const sanitizedMessages = messages.map((m, index) => ({
-            id: index + 1,
-            msisdn: m.msisdn,
-            smstext: m.smstext
-        }));
+        const sanitizedMessages = messages.map((m, index) => {
+            let phone = (m.msisdn || '').trim();
+            if (phone.startsWith('01')) {
+                phone = '88' + phone;
+            } else if (phone.startsWith('+8801')) {
+                phone = phone.replace('+', '');
+            }
+            return {
+                id: index + 1,
+                msisdn: phone,
+                smstext: m.smstext
+            };
+        });
 
         const apiResponse = await axios.post('https://api.automas.com.bd/smsapimany', {
             apikey: apiKey,
