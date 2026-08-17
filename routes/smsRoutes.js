@@ -191,10 +191,15 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
         apiKey = apiKey.trim();
         senderId = senderId.trim();
 
+        const sanitizedMessages = messages.map(m => ({
+            msisdn: m.msisdn,
+            smstext: m.smstext
+        }));
+
         const apiResponse = await axios.post('https://api.automas.com.bd/smsapimany', {
             apikey: apiKey,
             sender: senderId,
-            messages: messages
+            messages: sanitizedMessages
         });
 
         const smsStatus = apiResponse.data?.response?.[0]?.status;
