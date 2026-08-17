@@ -3,6 +3,7 @@ const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const SmsLog = require('../models/SmsLog');
+const TuitionApply = require('../models/TuitionApply');
 
 // Flexible auth middleware to extract user name for logging
 const authMiddleware = (req, res, next) => {
@@ -365,9 +366,43 @@ router.get('/logs', strictAuthMiddleware, async (req, res) => {
             .limit(parseInt(limit))
             .lean();
 
+        // Map tuition application status for each log
+        const tuitionCodes = [...new Set(logs.map(log => log.tuitionCode).filter(Boolean))];
+        const appliesMap = new Map();
+        if (tuitionCodes.length > 0) {
+            const applies = await TuitionApply.find({ tuitionCode: { $in: tuitionCodes } })
+                .select('premiumCode tuitionCode status')
+                .lean();
+
+            applies.forEach(app => {
+                const status = app.status || 'pending';
+                if (app.tuitionCode && app.premiumCode) {
+                    appliesMap.set(`${app.tuitionCode.trim()}_pc_${app.premiumCode.trim()}`, status);
+                }
+            });
+        }
+
+        const logsWithApplyStatus = logs.map(log => {
+            const cleanTuitionCode = log.tuitionCode ? log.tuitionCode.trim() : '';
+            const cleanPremiumCode = log.premiumCode ? log.premiumCode.trim() : '';
+
+            let appliedStatus = null;
+            if (cleanTuitionCode && cleanPremiumCode) {
+                if (appliesMap.has(`${cleanTuitionCode}_pc_${cleanPremiumCode}`)) {
+                    appliedStatus = appliesMap.get(`${cleanTuitionCode}_pc_${cleanPremiumCode}`);
+                }
+            }
+
+            return {
+                ...log,
+                hasApplied: appliedStatus !== null,
+                applicationStatus: appliedStatus
+            };
+        });
+
         res.json({
             success: true,
-            logs,
+            logs: logsWithApplyStatus,
             total,
             currentPage: parseInt(page),
             totalPages: Math.ceil(total / parseInt(limit))
