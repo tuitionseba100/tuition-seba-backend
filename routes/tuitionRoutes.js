@@ -5,6 +5,8 @@ const Phone = require('../models/Phone');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const StatusHistory = require('../models/StatusHistory');
+const RegTeacher = require('../models/RegTeacher');
+const SmsLog = require('../models/SmsLog');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
@@ -714,7 +716,8 @@ router.post('/add', async (req, res) => {
         guardianDemandForPublic,
         tuitionType,
         mediaFee,
-        guardian_source_medium
+        guardian_source_medium,
+        isProposal
     } = req.body;
 
     try {
@@ -829,7 +832,8 @@ router.post('/add', async (req, res) => {
             guardianDemandForPublic,
             tuitionType,
             mediaFee,
-            guardian_source_medium
+            guardian_source_medium,
+            isProposal: isProposal === undefined ? false : (String(isProposal) === 'true' || isProposal === true)
         });
 
         await newTuition.save();
@@ -1365,6 +1369,81 @@ router.post('/:id/confirmation-followup', authMiddleware, async (req, res) => {
 
         await tuition.save();
         res.status(200).json(tuition);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
+    try {
+        const tuition = await Tuition.findById(req.params.id);
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+
+        const filter = {};
+
+        // Match areas (case-insensitive)
+        const searchArea = req.query.area !== undefined ? req.query.area : tuition.area;
+        if (searchArea) {
+            const escapedArea = escapeRegex(searchArea.trim());
+            filter.$or = [
+                { currentArea: new RegExp(escapedArea, 'i') },
+                { expectedTuitionAreas: new RegExp(escapedArea, 'i') }
+            ];
+        }
+
+        // Apply filters from query params
+        if (req.query.status) {
+            filter.status = req.query.status;
+        }
+
+        if (req.query.gender) {
+            filter.gender = req.query.gender;
+        }
+
+        const teachers = await RegTeacher.find(filter)
+            .select('name gender phone currentArea expectedTuitionAreas university department academicYear status premiumCode')
+            .sort({ rating: -1, createdAt: -1 })
+            .lean();
+
+        // Fetch applications for this tuition to mark already applied teachers
+        const applications = await TuitionApply.find({ tuitionId: tuition._id }).select('phone premiumCode status').lean();
+        const appliedPhones = new Set(applications.map(app => app.phone?.trim()).filter(Boolean));
+        const appliedPremiumCodes = new Set(applications.map(app => app.premiumCode?.trim()).filter(Boolean));
+
+        const teachersWithApplyStatus = teachers.map(teacher => {
+            const hasApplied = (teacher.phone && appliedPhones.has(teacher.phone.trim())) || 
+                               (teacher.premiumCode && appliedPremiumCodes.has(teacher.premiumCode.trim()));
+            const matchedApp = applications.find(app => 
+                (teacher.phone && app.phone?.trim() === teacher.phone.trim()) || 
+                (teacher.premiumCode && app.premiumCode?.trim() === teacher.premiumCode.trim())
+            );
+            return {
+                ...teacher,
+                hasApplied,
+                applicationStatus: matchedApp ? matchedApp.status : null
+            };
+        });
+
+        res.json({ success: true, teachers: teachersWithApplyStatus });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/:id/sms-history', authMiddleware, async (req, res) => {
+    try {
+        const tuition = await Tuition.findById(req.params.id);
+        if (!tuition) {
+            return res.status(404).json({ message: 'Tuition not found' });
+        }
+
+        const logs = await SmsLog.find({ tuitionCode: tuition.tuitionCode })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        res.json({ success: true, logs });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

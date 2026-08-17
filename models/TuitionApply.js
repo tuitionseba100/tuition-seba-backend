@@ -25,6 +25,7 @@ const tuitionApplySchema = new mongoose.Schema({
 });
 
 tuitionApplySchema.index({ tuitionCode: 1, status: 1 });
+tuitionApplySchema.index({ tuitionId: 1 });
 
 const TuitionApply = mongoose.model('TuitionApply', tuitionApplySchema);
 module.exports = TuitionApply;
