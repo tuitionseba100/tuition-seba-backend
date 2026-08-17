@@ -1381,30 +1381,46 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Tuition not found' });
         }
 
-        const filter = {};
+        const andFilters = [];
 
         // Match areas (case-insensitive)
         const searchArea = req.query.area !== undefined ? req.query.area : tuition.area;
         if (searchArea) {
             const escapedArea = escapeRegex(searchArea.trim());
-            filter.$or = [
-                { currentArea: new RegExp(escapedArea, 'i') },
-                { expectedTuitionAreas: new RegExp(escapedArea, 'i') }
-            ];
+            andFilters.push({
+                $or: [
+                    { currentArea: new RegExp(escapedArea, 'i') },
+                    { expectedTuitionAreas: new RegExp(escapedArea, 'i') }
+                ]
+            });
+        }
+
+        // Match department (case-insensitive across general, honors, and masters departments)
+        if (req.query.department) {
+            const escapedDept = escapeRegex(req.query.department.trim());
+            andFilters.push({
+                $or: [
+                    { department: new RegExp(escapedDept, 'i') },
+                    { honorsDept: new RegExp(escapedDept, 'i') },
+                    { mastersDept: new RegExp(escapedDept, 'i') }
+                ]
+            });
         }
 
         // Apply filters from query params
         if (req.query.status) {
-            filter.status = req.query.status;
+            andFilters.push({ status: req.query.status });
         }
 
         if (req.query.gender) {
-            filter.gender = req.query.gender;
+            andFilters.push({ gender: req.query.gender });
         }
 
         if (req.query.unicode) {
-            filter.uniCode = req.query.unicode;
+            andFilters.push({ uniCode: req.query.unicode });
         }
+
+        const filter = andFilters.length > 0 ? { $and: andFilters } : {};
 
         const teachers = await RegTeacher.find(filter)
             .select('name gender phone currentArea expectedTuitionAreas university department academicYear status premiumCode uniCode')
