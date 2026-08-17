@@ -1385,7 +1385,7 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
 
         // Match areas (case-insensitive)
         const searchArea = req.query.area !== undefined ? req.query.area : tuition.area;
-        if (searchArea) {
+        if (searchArea && searchArea !== 'all') {
             const areas = Array.isArray(searchArea) 
                 ? searchArea 
                 : String(searchArea).split(',').map(a => a.trim()).filter(Boolean);
@@ -1414,7 +1414,7 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
         }
 
         // Apply filters from query params
-        if (req.query.status) {
+        if (req.query.status && req.query.status !== 'all') {
             const statuses = Array.isArray(req.query.status)
                 ? req.query.status
                 : String(req.query.status).split(',').map(s => s.trim()).filter(Boolean);
@@ -1427,7 +1427,7 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
             andFilters.push({ gender: req.query.gender });
         }
 
-        if (req.query.unicode) {
+        if (req.query.unicode && req.query.unicode !== 'all') {
             const unicodes = Array.isArray(req.query.unicode)
                 ? req.query.unicode
                 : String(req.query.unicode).split(',').map(u => u.trim()).filter(Boolean);
