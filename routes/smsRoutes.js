@@ -335,7 +335,7 @@ router.post('/send', authMiddleware, async (req, res) => {
 // Get SMS logs (server-side pagination, search, filters)
 router.get('/logs', strictAuthMiddleware, async (req, res) => {
     try {
-        const { page = 1, limit = 50, search = '', status = '', category = '' } = req.query;
+        const { page = 1, limit = 50, search = '', status = '', category = '', premiumCode = '' } = req.query;
         const filter = {};
 
         if (status) {
@@ -344,6 +344,10 @@ router.get('/logs', strictAuthMiddleware, async (req, res) => {
 
         if (category) {
             filter.category = new RegExp(category, 'i');
+        }
+
+        if (premiumCode) {
+            filter.premiumCode = premiumCode;
         }
 
         if (search) {
