@@ -1402,6 +1402,10 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
             filter.gender = req.query.gender;
         }
 
+        if (req.query.unicode) {
+            filter.uniCode = req.query.unicode;
+        }
+
         const teachers = await RegTeacher.find(filter)
             .select('name gender phone currentArea expectedTuitionAreas university department academicYear status premiumCode uniCode')
             .sort({ rating: -1, createdAt: -1 })
