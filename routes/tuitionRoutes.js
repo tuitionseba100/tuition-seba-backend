@@ -1484,12 +1484,9 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
             .select('phone premiumCode status')
             .lean();
 
-        // Create a fast-lookup map for applications
+        // Create a fast-lookup map for applications based strictly on premiumCode
         const appliesMap = new Map();
         applies.forEach(app => {
-            if (app.phone) {
-                appliesMap.set(app.phone.trim(), app.status || 'pending');
-            }
             if (app.premiumCode) {
                 appliesMap.set(app.premiumCode.trim(), app.status || 'pending');
             }
@@ -1497,13 +1494,10 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
 
         // Map logs with their applied status
         const logsWithApplyStatus = logs.map(log => {
-            const cleanPhone = log.phone ? log.phone.trim() : '';
             const cleanPremiumCode = log.premiumCode ? log.premiumCode.trim() : '';
             
             let appliedStatus = null;
-            if (cleanPhone && appliesMap.has(cleanPhone)) {
-                appliedStatus = appliesMap.get(cleanPhone);
-            } else if (cleanPremiumCode && appliesMap.has(cleanPremiumCode)) {
+            if (cleanPremiumCode && appliesMap.has(cleanPremiumCode)) {
                 appliedStatus = appliesMap.get(cleanPremiumCode);
             }
             
