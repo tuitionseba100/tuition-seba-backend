@@ -180,75 +180,78 @@ router.post('/send-bulk', authMiddleware, async (req, res) => {
 // Send Dynamic SMS (different messages to different recipients in JSON format)
 router.post('/send-dynamic', authMiddleware, async (req, res) => {
     const { messages, category } = req.body;
-    try {
-        if (!messages || !Array.isArray(messages) || messages.length === 0) {
-            return res.status(400).json({ success: false, statusMessage: 'Valid messages array is required' });
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+        return res.status(400).json({ success: false, statusMessage: 'Valid messages array is required' });
+    }
+
+    let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
+    let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+
+    apiKey = apiKey.trim();
+    senderId = senderId.trim();
+
+    const logs = [];
+    let successCount = 0;
+    let failedCount = 0;
+
+    for (const m of messages) {
+        let phone = (m.msisdn || '').trim();
+        if (phone.startsWith('01')) {
+            phone = '88' + phone;
+        } else if (phone.startsWith('+8801')) {
+            phone = phone.replace('+', '');
         }
 
-        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
+        const isUnicode = /[^\u0000-\u007F]/.test(m.smstext);
+        const encodedMessage = encodeURIComponent(m.smstext);
+        let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
+        if (isUnicode) {
+            apiUrl += `&smsformat=8`;
+        }
 
-        apiKey = apiKey.trim();
-        senderId = senderId.trim();
-
-        const sanitizedMessages = messages.map((m, index) => {
-            let phone = (m.msisdn || '').trim();
-            if (phone.startsWith('01')) {
-                phone = '88' + phone;
-            } else if (phone.startsWith('+8801')) {
-                phone = phone.replace('+', '');
+        let isSuccess = false;
+        try {
+            console.log(`[SMS DEBUG] Sending dynamic item to ${phone} using single v3 API`);
+            const apiResponse = await axios.get(apiUrl);
+            const smsStatus = apiResponse.data?.response?.[0]?.status;
+            if (smsStatus === 0) {
+                isSuccess = true;
+                successCount++;
+            } else {
+                console.error(`[SMS DEBUG] Automas returned status ${smsStatus} for ${phone}`);
+                failedCount++;
             }
-            return {
-                id: index + 1,
-                msisdn: phone,
-                smstext: m.smstext
-            };
-        });
+        } catch (err) {
+            console.error(`[SMS DEBUG] Request failed for ${phone}:`, err.message);
+            failedCount++;
+        }
 
-        const apiResponse = await axios.post('https://api.automas.com.bd/smsapimany', {
-            apikey: apiKey,
-            sender: senderId,
-            messages: sanitizedMessages
-        });
-
-        const smsStatus = apiResponse.data?.response?.[0]?.status;
-        const isSuccess = (smsStatus === 0);
-
-        // Save logs for each dynamic message
-        const logs = messages.map(m => ({
-            sentBy: req.username,
+        logs.push({
+            sentBy: req.username || 'System',
             tuitionCode: m.tuitionCode || req.body.tuitionCode || '',
             premiumCode: m.premiumCode || req.body.premiumCode || '',
-            category: m.category || category || 'General',
+            category: m.category || category || 'Proposal',
             phone: m.msisdn,
             message: m.smstext,
             status: isSuccess ? 'success' : 'failed'
-        }));
-        await SmsLog.insertMany(logs);
+        });
+    }
 
-        return res.json({ success: true, apiResponse: apiResponse.data });
-    } catch (err) {
-        console.error('Dynamic SMS sending failed:', err.response?.data || err.message || err);
-        try {
-            if (Array.isArray(messages)) {
-                const logs = messages.map(m => ({
-                    sentBy: req.username,
-                    tuitionCode: m.tuitionCode || req.body.tuitionCode || '',
-                    premiumCode: m.premiumCode || req.body.premiumCode || '',
-                    category: m.category || category || 'General',
-                    phone: m.msisdn || 'Unknown',
-                    message: m.smstext || 'N/A',
-                    status: 'failed'
-                }));
-                await SmsLog.insertMany(logs);
-            }
-        } catch (logErr) {
-            console.error('Error saving failed Dynamic SMS logs:', logErr.message);
-        }
-        const apiErrorText = err.response?.data ? JSON.stringify(err.response.data) : '';
+    try {
+        await SmsLog.insertMany(logs);
+    } catch (logErr) {
+        console.error('Error saving SMS logs:', logErr.message);
+    }
+
+    if (successCount > 0) {
+        return res.json({ 
+            success: true, 
+            statusMessage: `Successfully sent ${successCount} messages. ${failedCount > 0 ? `Failed to send ${failedCount} messages.` : ''}`
+        });
+    } else {
         return res.status(500).json({ 
             success: false, 
-            statusMessage: `Automas API Error: ${err.message}. Details: ${apiErrorText}` 
+            statusMessage: `Failed to send all ${messages.length} messages. Please check the logs.` 
         });
     }
 });
