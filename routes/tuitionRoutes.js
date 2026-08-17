@@ -1386,13 +1386,19 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
         // Match areas (case-insensitive)
         const searchArea = req.query.area !== undefined ? req.query.area : tuition.area;
         if (searchArea) {
-            const escapedArea = escapeRegex(searchArea.trim());
-            andFilters.push({
-                $or: [
-                    { currentArea: new RegExp(escapedArea, 'i') },
-                    { expectedTuitionAreas: new RegExp(escapedArea, 'i') }
-                ]
-            });
+            const areas = Array.isArray(searchArea) 
+                ? searchArea 
+                : String(searchArea).split(',').map(a => a.trim()).filter(Boolean);
+            
+            if (areas.length > 0) {
+                const areaOrQueries = [];
+                areas.forEach(area => {
+                    const escapedArea = escapeRegex(area);
+                    areaOrQueries.push({ currentArea: new RegExp(escapedArea, 'i') });
+                    areaOrQueries.push({ expectedTuitionAreas: new RegExp(escapedArea, 'i') });
+                });
+                andFilters.push({ $or: areaOrQueries });
+            }
         }
 
         // Match department (case-insensitive across general, honors, and masters departments)
@@ -1409,7 +1415,12 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
 
         // Apply filters from query params
         if (req.query.status) {
-            andFilters.push({ status: req.query.status });
+            const statuses = Array.isArray(req.query.status)
+                ? req.query.status
+                : String(req.query.status).split(',').map(s => s.trim()).filter(Boolean);
+            if (statuses.length > 0) {
+                andFilters.push({ status: { $in: statuses } });
+            }
         }
 
         if (req.query.gender) {
@@ -1417,7 +1428,12 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
         }
 
         if (req.query.unicode) {
-            andFilters.push({ uniCode: req.query.unicode });
+            const unicodes = Array.isArray(req.query.unicode)
+                ? req.query.unicode
+                : String(req.query.unicode).split(',').map(u => u.trim()).filter(Boolean);
+            if (unicodes.length > 0) {
+                andFilters.push({ uniCode: { $in: unicodes } });
+            }
         }
 
         const filter = andFilters.length > 0 ? { $and: andFilters } : {};
