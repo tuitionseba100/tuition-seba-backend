@@ -246,7 +246,8 @@ router.get('/getTableData', async (req, res) => {
         type,
         isReviewDone,
         tuitionType,
-        applyType
+        applyType,
+        isProposal
     } = req.query;
 
     const filter = { isSoftDelete: false };
@@ -283,6 +284,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (isUrgent === 'true' || isUrgent === 'false') {
         filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (isProposal === 'true' || isProposal === 'false') {
+        filter.isProposal = isProposal === 'true';
     }
 
     if (status) {
@@ -537,7 +542,8 @@ router.get('/summary', async (req, res) => {
         type,
         isReviewDone,
         tuitionType,
-        applyType
+        applyType,
+        isProposal
     } = req.query;
 
     const filter = { isSoftDelete: { $ne: true } };
@@ -574,6 +580,10 @@ router.get('/summary', async (req, res) => {
 
     if (isUrgent === 'true' || isUrgent === 'false') {
         filter.isUrgent = isUrgent === 'true';
+    }
+
+    if (isProposal === 'true' || isProposal === 'false') {
+        filter.isProposal = isProposal === 'true';
     }
 
     if (status) {
