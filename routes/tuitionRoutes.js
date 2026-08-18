@@ -728,7 +728,8 @@ router.post('/add', async (req, res) => {
         mediaFee,
         guardian_source_medium,
         isProposal,
-        isGuardianSmsSent
+        isGuardianSmsSent,
+        isGuardianNoResponseSmsSent
     } = req.body;
 
     try {
@@ -845,7 +846,8 @@ router.post('/add', async (req, res) => {
             mediaFee,
             guardian_source_medium,
             isProposal: isProposal === undefined ? false : (String(isProposal) === 'true' || isProposal === true),
-            isGuardianSmsSent: isGuardianSmsSent === undefined ? false : (String(isGuardianSmsSent) === 'true' || isGuardianSmsSent === true)
+            isGuardianSmsSent: isGuardianSmsSent === undefined ? false : (String(isGuardianSmsSent) === 'true' || isGuardianSmsSent === true),
+            isGuardianNoResponseSmsSent: isGuardianNoResponseSmsSent === undefined ? false : (String(isGuardianNoResponseSmsSent) === 'true' || isGuardianNoResponseSmsSent === true)
         });
 
         await newTuition.save();

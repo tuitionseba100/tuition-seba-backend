@@ -51,6 +51,7 @@ const tuitionSchema = new mongoose.Schema({
     mediaFee: { type: String, default: '60%' },
     lastPublishedDate: { type: Date },
     isGuardianSmsSent: { type: Boolean, default: false },
+    isGuardianNoResponseSmsSent: { type: Boolean, default: false },
     confirmationFollowUps: [{
         lastFollowUpDate: { type: Date },
         lastFollowUpComment: { type: String },
