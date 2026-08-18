@@ -168,10 +168,11 @@ router.post('/add', authMiddleware, async (req, res) => {
 
 router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
+        const { createdBy, ...updateData } = req.body;
         const updated = await Lead.findByIdAndUpdate(
             req.params.id,
             {
-                ...req.body,
+                ...updateData,
                 followUpDate: req.body.followUpDate ? new Date(req.body.followUpDate) : null
             },
             { new: true }
