@@ -1477,7 +1477,10 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Tuition not found' });
         }
 
-        const logs = await SmsLog.find({ tuitionCode: tuition.tuitionCode })
+        const logs = await SmsLog.find({ 
+            tuitionCode: tuition.tuitionCode,
+            category: 'Proposal'
+        })
             .sort({ createdAt: -1 })
             .lean();
 
