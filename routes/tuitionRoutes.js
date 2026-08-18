@@ -717,7 +717,8 @@ router.post('/add', async (req, res) => {
         tuitionType,
         mediaFee,
         guardian_source_medium,
-        isProposal
+        isProposal,
+        isGuardianSmsSent
     } = req.body;
 
     try {
@@ -833,7 +834,8 @@ router.post('/add', async (req, res) => {
             tuitionType,
             mediaFee,
             guardian_source_medium,
-            isProposal: isProposal === undefined ? false : (String(isProposal) === 'true' || isProposal === true)
+            isProposal: isProposal === undefined ? false : (String(isProposal) === 'true' || isProposal === true),
+            isGuardianSmsSent: isGuardianSmsSent === undefined ? false : (String(isGuardianSmsSent) === 'true' || isGuardianSmsSent === true)
         });
 
         await newTuition.save();
