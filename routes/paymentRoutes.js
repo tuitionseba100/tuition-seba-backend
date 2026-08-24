@@ -1159,7 +1159,9 @@ router.get('/overall-report', authMiddleware, superadminOnly, async (req, res) =
         });
 
         // 4.5. Stream Service Charges
-        let serviceChargeQuery = {};
+        let serviceChargeQuery = {
+            status: { $nin: ['pending', 'cancelled'] }
+        };
         if (startUTC && endUTC) {
             serviceChargeQuery.date = { $gte: startUTC, $lte: endUTC };
         }

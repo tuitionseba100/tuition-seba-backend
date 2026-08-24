@@ -79,6 +79,11 @@ router.get('/summary', async (req, res) => {
 
         const totalServiceCharge = await ServiceCharge.aggregate([
             {
+                $match: {
+                    status: { $nin: ['pending', 'cancelled'] }
+                }
+            },
+            {
                 $group: {
                     _id: null,
                     totalReceived: { $sum: "$amount" }
@@ -236,7 +241,8 @@ router.post('/add', async (req, res) => {
                 amount: serviceChargeAmount,
                 comment: serviceChargeComment,
                 date: serviceChargeDate && serviceChargeDate !== "" ? serviceChargeDate : null,
-                createdBy: activeUser
+                createdBy: activeUser,
+                status: 'completed'
             });
             await newServiceCharge.save();
         }
@@ -291,7 +297,8 @@ router.put('/edit/:id', async (req, res) => {
                 comment: serviceChargeComment,
                 date: serviceChargeDate,
                 modifiedAt: Date.now(),
-                updatedBy: activeUser
+                updatedBy: activeUser,
+                status: 'completed'
             };
             await ServiceCharge.findOneAndUpdate(
                 { referenceId: req.params.id },

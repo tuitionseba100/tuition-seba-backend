@@ -12,7 +12,8 @@ const serviceChargeSchema = new mongoose.Schema({
     createdAt: { type: Date, default: Date.now },
     modifiedAt: { type: Date },
     createdBy: { type: String },
-    updatedBy: { type: String }
+    updatedBy: { type: String },
+    status: { type: String, default: 'completed' }
 });
 
 const ServiceCharge = mongoose.model('ServiceCharge', serviceChargeSchema);
