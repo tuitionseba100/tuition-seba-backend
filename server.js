@@ -41,6 +41,7 @@ const complaintSuggestionRoutes = require('./routes/complaintSuggestionRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const serviceChargeRoutes = require('./routes/serviceChargeRoutes');
 const chatRoutes = require('./routes/chatRoutes');
+const internalChatRoutes = require('./routes/internalChatRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/activity-log', activityLogRoutes);
@@ -65,6 +66,7 @@ app.use('/api/complaintSuggestion', complaintSuggestionRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/serviceCharge', serviceChargeRoutes);
 app.use('/api/chat', chatRoutes);
+app.use('/api/internal-chat', internalChatRoutes);
 
 
 app.get('/', (req, res) => {
@@ -98,6 +100,8 @@ const activeAgents = {};
 // Import models for Socket.io database writes
 const ChatMessage = require('./models/ChatMessage');
 const ChatSession = require('./models/ChatSession');
+const InternalChatMessage = require('./models/InternalChatMessage');
+const InternalConversation = require('./models/InternalConversation');
 
 io.on('connection', (socket) => {
     console.log(`New user connected: ${socket.id}`);
@@ -191,6 +195,74 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log(`User disconnected: ${socket.id}`);
+    });
+
+    // ─── Internal Employee Chat Events ────────────────────────────────────────
+
+    // Each employee joins a personal room so we can push messages directly to them
+    socket.on('join_internal_room', ({ username }) => {
+        if (!username) return;
+        socket.join(`internal_user_${username}`);
+        console.log(`Employee joined internal room: internal_user_${username}`);
+    });
+
+    // Send an internal message
+    socket.on('send_internal_message', async (data) => {
+        try {
+            const { conversationId, senderId, senderName, text } = data;
+            if (!conversationId || !senderId || !text) return;
+
+            // Save message
+            const newMsg = new InternalChatMessage({
+                conversationId,
+                senderId,
+                senderName,
+                text,
+            });
+            await newMsg.save();
+
+            // Update conversation preview + increment unread for all OTHER participants
+            const conversation = await InternalConversation.findById(conversationId);
+            if (conversation) {
+                conversation.lastMessage = text;
+                conversation.lastSenderName = senderName;
+                conversation.lastMessageAt = new Date();
+                for (const participant of conversation.participants) {
+                    if (participant !== senderId) {
+                        const prev = conversation.unreadCounts.get(participant) || 0;
+                        conversation.unreadCounts.set(participant, prev + 1);
+                    }
+                }
+                await conversation.save();
+
+                // Push message to all participants' personal rooms
+                for (const participant of conversation.participants) {
+                    io.to(`internal_user_${participant}`).emit('receive_internal_message', newMsg);
+                    io.to(`internal_user_${participant}`).emit('internal_conversation_updated', conversation);
+                }
+            }
+        } catch (err) {
+            console.error('Socket send_internal_message error:', err);
+        }
+    });
+
+    // Typing indicator for internal chat
+    socket.on('internal_typing', ({ conversationId, senderId, senderName, isTyping, participants }) => {
+        try {
+            if (!participants) return;
+            for (const participant of participants) {
+                if (participant !== senderId) {
+                    io.to(`internal_user_${participant}`).emit('internal_display_typing', {
+                        conversationId,
+                        senderId,
+                        senderName,
+                        isTyping,
+                    });
+                }
+            }
+        } catch (err) {
+            console.error('Socket internal_typing error:', err);
+        }
     });
 });
 
