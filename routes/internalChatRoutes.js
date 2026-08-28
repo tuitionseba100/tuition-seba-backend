@@ -25,7 +25,10 @@ const authMiddleware = (req, res, next) => {
 // Returns all employees for the sidebar (excluding password)
 router.get('/users', authMiddleware, async (req, res) => {
     try {
-        const users = await User.find({}, 'username name role').lean();
+        const isSuperadmin = req.user.role === 'superadmin';
+        // Admins cannot see locked users; superadmin sees everyone
+        const filter = isSuperadmin ? {} : { isLocked: { $ne: true } };
+        const users = await User.find(filter, 'username name role isLocked').lean();
         res.json(users);
     } catch (err) {
         res.status(500).json({ message: err.message });
