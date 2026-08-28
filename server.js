@@ -206,25 +206,35 @@ io.on('connection', (socket) => {
         console.log(`Employee joined internal room: internal_user_${username}`);
     });
 
-    // Send an internal message
+    // Send an internal message (text or task card)
     socket.on('send_internal_message', async (data) => {
         try {
-            const { conversationId, senderId, senderName, text } = data;
-            if (!conversationId || !senderId || !text) return;
+            const { conversationId, senderId, senderName, text, type, taskData } = data;
+            if (!conversationId || !senderId) return;
 
-            // Save message
-            const newMsg = new InternalChatMessage({
-                conversationId,
-                senderId,
-                senderName,
-                text,
-            });
+            const isTask = type === 'task' && taskData;
+            if (!isTask && !text) return; // plain text must have content
+
+            // Build the message — task fields embedded directly, no separate collection
+            const msgFields = isTask
+                ? {
+                    conversationId, senderId, senderName,
+                    type: 'task', text: '',
+                    taskTitle:       taskData.title || '',
+                    taskDescription: taskData.description || '',
+                    taskAssignedTo:  taskData.assignedTo || '',
+                    taskDueDate:     taskData.dueDate || null,
+                    taskStatus:      'pending',
+                }
+                : { conversationId, senderId, senderName, text };
+
+            const newMsg = new InternalChatMessage(msgFields);
             await newMsg.save();
 
-            // Update conversation preview + increment unread for all OTHER participants
+            // Update conversation preview + unread counts for all other participants
             const conversation = await InternalConversation.findById(conversationId);
             if (conversation) {
-                conversation.lastMessage = text;
+                conversation.lastMessage = isTask ? `\uD83D\uDCCB ${taskData.title}` : text;
                 conversation.lastSenderName = senderName;
                 conversation.lastMessageAt = new Date();
                 for (const participant of conversation.participants) {
@@ -235,7 +245,7 @@ io.on('connection', (socket) => {
                 }
                 await conversation.save();
 
-                // Push message to all participants' personal rooms
+                // Push to all participants
                 for (const participant of conversation.participants) {
                     io.to(`internal_user_${participant}`).emit('receive_internal_message', newMsg);
                     io.to(`internal_user_${participant}`).emit('internal_conversation_updated', conversation);

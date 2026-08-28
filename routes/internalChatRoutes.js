@@ -4,7 +4,6 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const InternalConversation = require('../models/InternalConversation');
 const InternalChatMessage = require('../models/InternalChatMessage');
-const ChatTask = require('../models/ChatTask');
 
 const JWT_SECRET = 'mahedi1000abcdefgh100';
 
@@ -253,129 +252,44 @@ router.get('/unread-summary', authMiddleware, async (req, res) => {
     }
 });
 
-// ─── Task Routes ─────────────────────────────────────────────────────────────
-
-
-// POST /api/internal-chat/tasks
-// Superadmin assigns a task to an employee inside a conversation
-router.post('/tasks', authMiddleware, async (req, res) => {
-    try {
-        if (req.user.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Only superadmins can assign tasks' });
-        }
-        const { conversationId, title, description, assignedTo, dueDate } = req.body;
-        if (!conversationId || !title || !assignedTo) {
-            return res.status(400).json({ message: 'conversationId, title, and assignedTo are required' });
-        }
-        const assignedBy = req.headers['x-user-name'];
-
-        // Resolve assigner display name
-        const assignerUser = await User.findOne({ username: assignedBy }, 'name').lean();
-        const senderName = assignerUser?.name || assignedBy;
-
-        // Create the task
-        const task = await ChatTask.create({
-            conversationId,
-            title: title.trim(),
-            description: (description || '').trim(),
-            assignedTo,
-            assignedBy,
-            dueDate: dueDate || null,
-        });
-
-        // Create a task-type message (acts as the card in chat)
-        const message = new InternalChatMessage({
-            conversationId,
-            senderId: assignedBy,
-            senderName,
-            type: 'task',
-            taskId: task._id.toString(),
-            text: '',
-        });
-        await message.save();
-
-        // Back-link message → task
-        task.messageId = message._id.toString();
-        await task.save();
-
-        // Update conversation preview + unread counts
-        const conversation = await InternalConversation.findById(conversationId);
-        if (conversation) {
-            conversation.lastMessage = `\uD83D\uDCCB Task: ${title}`;
-            conversation.lastSenderName = senderName;
-            conversation.lastMessageAt = new Date();
-            for (const p of conversation.participants) {
-                if (p !== assignedBy) {
-                    conversation.unreadCounts.set(p, (conversation.unreadCounts.get(p) || 0) + 1);
-                }
-            }
-            await conversation.save();
-
-            // Emit to all participants in real-time
-            const io = req.app.get('socketio');
-            if (io) {
-                const fullMsg = { ...message.toObject(), task: task.toObject() };
-                for (const p of conversation.participants) {
-                    io.to(`internal_user_${p}`).emit('receive_internal_message', fullMsg);
-                    io.to(`internal_user_${p}`).emit('internal_conversation_updated', conversation);
-                }
-            }
-        }
-
-        res.status(201).json({ task, message });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// PATCH /api/internal-chat/tasks/:id/status
-// Assigned employee or superadmin can update task status
-router.patch('/tasks/:id/status', authMiddleware, async (req, res) => {
+// PATCH /api/internal-chat/messages/:id/task-status
+// Assignee or superadmin updates the status of a task message
+router.patch('/messages/:id/task-status', authMiddleware, async (req, res) => {
     try {
         const username = req.headers['x-user-name'];
         const { status } = req.body;
         const validStatuses = ['pending', 'in_review', 'done'];
         if (!validStatuses.includes(status)) {
-            return res.status(400).json({ message: 'Invalid status. Must be: pending, in_review, done' });
+            return res.status(400).json({ message: 'Invalid status. Use: pending, in_review, done' });
         }
 
-        const task = await ChatTask.findById(req.params.id);
-        if (!task) return res.status(404).json({ message: 'Task not found' });
+        const message = await InternalChatMessage.findById(req.params.id);
+        if (!message || message.type !== 'task') {
+            return res.status(404).json({ message: 'Task message not found' });
+        }
 
-        // Only the assigned user or superadmin can update
-        if (task.assignedTo !== username && req.user.role !== 'superadmin') {
+        // Only the assigned employee or superadmin can update
+        if (message.taskAssignedTo !== username && req.user.role !== 'superadmin') {
             return res.status(403).json({ message: 'Not authorized to update this task' });
         }
 
-        task.status = status;
-        await task.save();
+        message.taskStatus = status;
+        await message.save();
 
-        // Broadcast status change to all conversation participants
+        // Broadcast real-time update to all conversation participants
         const io = req.app.get('socketio');
-        const conversation = await InternalConversation.findById(task.conversationId);
+        const conversation = await InternalConversation.findById(message.conversationId);
         if (io && conversation) {
             for (const p of conversation.participants) {
                 io.to(`internal_user_${p}`).emit('internal_task_status_updated', {
-                    taskId: task._id.toString(),
-                    messageId: task.messageId,
-                    status: task.status,
+                    messageId: message._id.toString(),
+                    status: message.taskStatus,
                     updatedBy: username,
                 });
             }
         }
 
-        res.json(task);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// GET /api/internal-chat/tasks/conversation/:convId
-// Fetch all tasks in a conversation (to hydrate task cards on load)
-router.get('/tasks/conversation/:convId', authMiddleware, async (req, res) => {
-    try {
-        const tasks = await ChatTask.find({ conversationId: req.params.convId }).lean();
-        res.json(tasks);
+        res.json(message);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
