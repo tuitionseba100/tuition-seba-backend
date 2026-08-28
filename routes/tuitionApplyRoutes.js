@@ -236,6 +236,7 @@ router.post('/add', async (req, res) => {
         comment,
         commentForTeacher,
         agentComment,
+        regTeacherStatus,
     } = req.body;
 
     try {
@@ -314,6 +315,14 @@ router.post('/add', async (req, res) => {
             });
         }
 
+        let finalRegTeacherStatus = regTeacherStatus;
+        if (!finalRegTeacherStatus && premiumCode) {
+            const t = await RegTeacher.findOne({ premiumCode }).lean();
+            if (t) {
+                finalRegTeacherStatus = t.status;
+            }
+        }
+
         const newApply = new TuitionApply({
             premiumCode,
             tuitionCode,
@@ -332,7 +341,8 @@ router.post('/add', async (req, res) => {
             isBest,
             isExpress,
             agentComment,
-            isAppApply: true
+            isAppApply: true,
+            regTeacherStatus: finalRegTeacherStatus || ''
         });
 
         await newApply.save();
@@ -357,6 +367,7 @@ router.post('/add-web', async (req, res) => {
         comment,
         commentForTeacher,
         agentComment,
+        regTeacherStatus,
     } = req.body;
 
     try {
@@ -434,6 +445,14 @@ router.post('/add-web', async (req, res) => {
             console.error('Error fetching tuition for auto feedback:', tErr);
         }
 
+        let finalRegTeacherStatus = regTeacherStatus;
+        if (!finalRegTeacherStatus && premiumCode) {
+            const t = await RegTeacher.findOne({ premiumCode }).lean();
+            if (t) {
+                finalRegTeacherStatus = t.status;
+            }
+        }
+
         const newApply = new TuitionApply({
             premiumCode,
             tuitionCode,
@@ -452,7 +471,8 @@ router.post('/add-web', async (req, res) => {
             isBest,
             isExpress,
             agentComment,
-            isAppApply: false
+            isAppApply: false,
+            regTeacherStatus: finalRegTeacherStatus || ''
         });
 
         await newApply.save();
@@ -482,7 +502,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
 
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher'
+            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
         const data = appliedList.map(apply => {
@@ -575,7 +595,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isSpam isBest isExpress'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isSpam isBest isExpress regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
         if (tuitionApplies.length === 0) {
@@ -686,7 +706,7 @@ router.get('/exportData', async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+            'Tuition Code,Tuition ID,Premium Code,Reg Teacher Status,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
 
         res.write(header);
 
@@ -720,6 +740,7 @@ router.get('/exportData', async (req, res) => {
                     escapeCsvField(doc.tuitionCode),
                     escapeCsvField(doc.tuitionId),
                     escapeCsvField(doc.premiumCode),
+                    escapeCsvField(doc.regTeacherStatus || ''),
                     escapeCsvField(doc.name),
                     escapeCsvField(doc.phone),
                     escapeCsvField(doc.institute),
@@ -767,7 +788,7 @@ router.get('/exportAll', async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Tuition ID,Premium Code,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        const header = 'Tuition Code,Tuition ID,Premium Code,Reg Teacher Status,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -797,6 +818,7 @@ router.get('/exportAll', async (req, res) => {
                     escapeCsvField(doc.tuitionCode || ''),
                     escapeCsvField(doc.tuitionId || ''),
                     escapeCsvField(doc.premiumCode || ''),
+                    escapeCsvField(doc.regTeacherStatus || ''),
                     escapeCsvField(doc.name || ''),
                     escapeCsvField(doc.phone || ''),
                     escapeCsvField(doc.institute || ''),

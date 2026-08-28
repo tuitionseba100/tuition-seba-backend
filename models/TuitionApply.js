@@ -21,6 +21,7 @@ const tuitionApplySchema = new mongoose.Schema({
     isExpress: { type: Boolean, default: false },
     hasDue: { type: Boolean, default: false },
     isAppApply: { type: Boolean, default: false },
+    regTeacherStatus: { type: String, default: '' },
     appliedAt: { type: Date, default: Date.now }
 });
 
