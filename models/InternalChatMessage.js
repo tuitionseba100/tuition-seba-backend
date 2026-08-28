@@ -9,10 +9,13 @@ const internalChatMessageSchema = new mongoose.Schema({
     conversationId: { type: String, required: true },  // InternalConversation._id as string
     senderId: { type: String, required: true },         // username
     senderName: { type: String, required: true },       // display name
-    text: { type: String, required: true },
+    text: { type: String, default: '' },               // empty for task messages
+    type: { type: String, enum: ['text', 'task'], default: 'text' },
+    taskId: { type: String, default: null },            // references ChatTask._id
     isUnsent: { type: Boolean, default: false },
     deletedBy: { type: String, default: null },
 }, { timestamps: true });
+
 
 internalChatMessageSchema.index({ conversationId: 1 });
 internalChatMessageSchema.index({ conversationId: 1, createdAt: 1 });
