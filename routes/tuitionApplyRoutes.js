@@ -285,11 +285,11 @@ router.post('/add', async (req, res) => {
                     } else { // suspended
                         autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
                     }
-                } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+                } else if (['demo class running', '1st demo class', '2nd demo class', 'given number', 'guardian meet'].includes(normalizedTuitionStatus)) {
                     autoStatus = 'shortlisted';
                     if (normalizedTuitionStatus === 'given number') {
                         autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                    } else if (normalizedTuitionStatus === 'demo class running') {
+                    } else if (['demo class running', '1st demo class', '2nd demo class'].includes(normalizedTuitionStatus)) {
                         autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                     } else { // guardian meet
                         autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
@@ -427,11 +427,11 @@ router.post('/add-web', async (req, res) => {
                     } else { // suspended
                         autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
                     }
-                } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+                } else if (['demo class running', '1st demo class', '2nd demo class', 'given number', 'guardian meet'].includes(normalizedTuitionStatus)) {
                     autoStatus = 'shortlisted';
                     if (normalizedTuitionStatus === 'given number') {
                         autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                    } else if (normalizedTuitionStatus === 'demo class running') {
+                    } else if (['demo class running', '1st demo class', '2nd demo class'].includes(normalizedTuitionStatus)) {
                         autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                     } else { // guardian meet
                         autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
@@ -869,11 +869,11 @@ router.get('/get-auto-comment/:tuitionId', async (req, res) => {
                 } else { // suspended
                     autoCommentForTeacher = 'টিউশনটি সাসপেন্ড করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
                 }
-            } else if (normalizedTuitionStatus === 'demo class running' || normalizedTuitionStatus === 'given number' || normalizedTuitionStatus === 'guardian meet') {
+            } else if (['demo class running', '1st demo class', '2nd demo class', 'given number', 'guardian meet'].includes(normalizedTuitionStatus)) {
                 autoStatus = 'shortlisted';
                 if (normalizedTuitionStatus === 'given number') {
                     autoCommentForTeacher = 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
-                } else if (normalizedTuitionStatus === 'demo class running') {
+                } else if (['demo class running', '1st demo class', '2nd demo class'].includes(normalizedTuitionStatus)) {
                     autoCommentForTeacher = 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';
                 } else { // guardian meet
                     autoCommentForTeacher = 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।';

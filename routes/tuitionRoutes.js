@@ -118,7 +118,7 @@ router.get('/post-data', authMiddleware, async (req, res) => {
         if (status) {
             const statusArray = status.split(',').filter(s => s.trim());
             if (statusArray.length > 0) {
-                filter.status = { $in: statusArray };
+                filter.status = { $in: statusArray.map(s => new RegExp(`^${escapeRegex(s.trim())}$`, 'i')) };
             }
         }
 
@@ -291,7 +291,7 @@ router.get('/getTableData', async (req, res) => {
     }
 
     if (status) {
-        filter.status = status;
+        filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
     }
 
     if (area) {
@@ -587,7 +587,7 @@ router.get('/summary', async (req, res) => {
     }
 
     if (status) {
-        filter.status = status;
+        filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
     }
 
     if (area) {
@@ -637,7 +637,7 @@ router.get('/summary', async (req, res) => {
             if (stat === 'available') counts.available = item.count;
             else if (stat === 'given number') counts.givenNumber = item.count;
             else if (stat === 'guardian meet') counts.guardianMeet = item.count;
-            else if (stat === 'demo class running') counts.demoClassRunning = item.count;
+            else if (stat === 'demo class running' || stat === '1st demo class' || stat === '2nd demo class') counts.demoClassRunning += item.count;
             else if (stat === 'confirm') counts.confirm = item.count;
             else if (stat === 'cancel') counts.cancel = item.count;
         });
@@ -974,7 +974,7 @@ router.put('/edit/:id', async (req, res) => {
                 }
             }
             // 4. Progressive statuses -> Status Change Setting
-            else if (['given number', 'guardian meet', 'demo class running'].includes(newStatus)) {
+            else if (['given number', 'guardian meet', 'demo class running', '1st demo class', '2nd demo class'].includes(newStatus)) {
                 const setting = await Settings.findOne({ key: 'status_change_auto_assign_user' });
                 if (setting && setting.value && setting.value.length > 0) {
                     const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
@@ -983,7 +983,7 @@ router.put('/edit/:id', async (req, res) => {
                 }
             }
             // 5. Back to Available -> Restore previous assigned user
-            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running', 'guardian no response'].includes(oldStatus)) {
+            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running', '1st demo class', '2nd demo class', 'guardian no response'].includes(oldStatus)) {
                 if (oldTuition.previousAssignedTo) {
                     req.body.assignedTo = oldTuition.previousAssignedTo;
                 }
@@ -1062,6 +1062,8 @@ router.put('/edit/:id', async (req, res) => {
             'given number': 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
             'guardian meet': 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
             'demo class running': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            '1st demo class': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            '2nd demo class': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
         };
 
         if (triggerStatus && progressiveStatusMessages[triggerStatus]) {
@@ -1111,7 +1113,7 @@ router.get('/export', async (req, res) => {
         // Build filter based on status
         const filter = { isSoftDelete: false };
         if (status && status !== 'all') {
-            filter.status = status;
+            filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
         }
 
         // Set headers for CSV download
@@ -1226,7 +1228,7 @@ router.get('/exportData', async (req, res) => {
         // Build filter
         const filter = { isSoftDelete: false };
         if (status && status !== 'all') {
-            filter.status = status;
+            filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
         }
 
         // Set headers for CSV download
