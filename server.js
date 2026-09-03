@@ -1,4 +1,5 @@
 const express = require('express');
+const compression = require('compression');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dns = require('node:dns');
@@ -11,6 +12,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 const app = express();
+app.use(compression());
 app.use(cors());
 app.use(express.json());
 

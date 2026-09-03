@@ -64,5 +64,12 @@ const tuitionSchema = new mongoose.Schema({
 }, {
     timestamps: true
 });
+
+// Compound indexes for high-frequency queries
+tuitionSchema.index({ isPublish: 1, isSoftDelete: 1, _id: -1 });
+tuitionSchema.index({ status: 1, isSoftDelete: 1 });
+tuitionSchema.index({ nextUpdateDate: 1, isSoftDelete: 1 });
+tuitionSchema.index({ assignedTo: 1, isSoftDelete: 1 });
+
 const Tuition = mongoose.model('Tuition', tuitionSchema);
 module.exports = Tuition;

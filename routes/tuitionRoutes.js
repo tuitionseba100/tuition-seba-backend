@@ -52,16 +52,42 @@ const getLeastAssignedUser = async (userList) => {
 
     return counts[0].user;
 };
+
+// In-Memory Cache for public available tuitions (auto-cleared on mutations)
+const availableCache = {
+    available: null,
+    availableExpiresAt: 0,
+    availableWeb: null,
+    availableWebExpiresAt: 0,
+    clear() {
+        this.available = null;
+        this.availableExpiresAt = 0;
+        this.availableWeb = null;
+        this.availableWebExpiresAt = 0;
+    }
+};
+
+const EXCLUDE_AVAILABLE_FIELDS = '-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior -confirmationFollowUps -assignedTo -previousAssignedTo';
+
 //available tuition
 router.get('/available', async (req, res) => {
     try {
+        const now = Date.now();
+        if (availableCache.available && availableCache.availableExpiresAt > now) {
+            return res.json(availableCache.available);
+        }
+
         const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: false })
             .sort({ _id: -1 })
-            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
+            .select(EXCLUDE_AVAILABLE_FIELDS)
             .limit(400)
             .lean();
 
-        res.json(tuitions.reverse());
+        const result = tuitions.reverse();
+        availableCache.available = result;
+        availableCache.availableExpiresAt = now + 45000; // 45s TTL
+
+        res.json(result);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -70,11 +96,19 @@ router.get('/available', async (req, res) => {
 //available-web tuition (increased limit for web view)
 router.get('/available-web', async (req, res) => {
     try {
+        const now = Date.now();
+        if (availableCache.availableWeb && availableCache.availableWebExpiresAt > now) {
+            return res.json(availableCache.availableWeb);
+        }
+
         const tuitions = await Tuition.find({ isPublish: true, isSoftDelete: false })
             .sort({ _id: -1 })
-            .select('-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior')
+            .select(EXCLUDE_AVAILABLE_FIELDS)
             .limit(450)
             .lean();
+
+        availableCache.availableWeb = tuitions;
+        availableCache.availableWebExpiresAt = now + 45000; // 45s TTL
 
         res.json(tuitions);
     } catch (err) {
@@ -552,6 +586,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
             updatedCount++;
         }
 
+        availableCache.clear();
         res.json({ message: `Successfully updated ${updatedCount} tuition(s).`, count: updatedCount });
     } catch (err) {
         console.error('Auto migration failed:', err);
@@ -925,6 +960,7 @@ router.post('/add', async (req, res) => {
             after: newTuition,
             importantFields: { tuitionCode: newTuition.tuitionCode }
         });
+        availableCache.clear();
         res.status(201).json(newTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -1156,6 +1192,7 @@ router.put('/edit/:id', async (req, res) => {
 
 
 
+        availableCache.clear();
         res.json(updatedTuition);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -1411,6 +1448,7 @@ router.delete('/delete/:id', async (req, res) => {
             }
         });
 
+        availableCache.clear();
         res.status(200).json({ message: 'Tuition soft deleted successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
