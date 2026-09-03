@@ -446,6 +446,62 @@ router.get('/guardian-followup-today', async (req, res) => {
     }
 });
 
+router.post('/guardian-followup/auto-migrate', authMiddleware, async (req, res) => {
+    try {
+        const { tuitionIds } = req.body;
+
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const filter = {
+            status: 'confirm',
+            isSoftDelete: false
+        };
+
+        if (tuitionIds && Array.isArray(tuitionIds) && tuitionIds.length > 0) {
+            filter._id = { $in: tuitionIds };
+        }
+
+        const tuitions = await Tuition.find(filter);
+
+        let updatedCount = 0;
+        for (const tuition of tuitions) {
+            if (!tuition.confirmationFollowUps || tuition.confirmationFollowUps.length === 0) continue;
+            const latest = tuition.confirmationFollowUps[tuition.confirmationFollowUps.length - 1];
+            if (!latest.nextFollowUpDate) continue;
+
+            const nextDate = new Date(latest.nextFollowUpDate);
+            if (!tuitionIds || !Array.isArray(tuitionIds) || tuitionIds.length === 0) {
+                if (nextDate < startUTC || nextDate > endUTC) continue;
+            }
+
+            const currentNextDate = new Date(latest.nextFollowUpDate);
+            currentNextDate.setDate(currentNextDate.getDate() + 1);
+
+            latest.nextFollowUpDate = currentNextDate;
+            tuition.markModified('confirmationFollowUps');
+            tuition.updatedBy = req.user?.username || 'auto migration';
+
+            await tuition.save();
+            updatedCount++;
+        }
+
+        res.json({ message: `Successfully migrated ${updatedCount} guardian follow-up(s) to next day.`, count: updatedCount });
+    } catch (err) {
+        console.error('Guardian follow-up auto migration failed:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/auto-migrate', authMiddleware, async (req, res) => {
     try {
         const { tuitionIds } = req.body;
