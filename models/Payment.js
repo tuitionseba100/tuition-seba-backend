@@ -49,5 +49,9 @@ const paymentSchema = new mongoose.Schema({
     verifiedBy: { type: String }
 });
 
+paymentSchema.index({ tutorNumber: 1, duePayment: 1 });
+paymentSchema.index({ paymentNumber: 1, duePayment: 1 });
+paymentSchema.index({ tuitionCode: 1 });
+
 const Payment = mongoose.model('Payment', paymentSchema);
 module.exports = Payment;
