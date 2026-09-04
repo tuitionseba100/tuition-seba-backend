@@ -585,13 +585,21 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
         }
 
         const normalizedPhone = normalizePhoneForSave(phone);
+
+        // Filter for latest 2 months (60 days)
+        const twoMonthsAgo = new Date();
+        twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60);
+
         const matchedTuitions = await TuitionApply.find(
-            { phone: normalizedPhone },
+            { 
+                phone: normalizedPhone,
+                appliedAt: { $gte: twoMonthsAgo }
+            },
             '_id tuitionCode appliedAt status commentForTeacher phone'
-        ).lean();
+        ).sort({ appliedAt: -1 }).lean();
 
         if (matchedTuitions.length === 0) {
-            return res.status(404).json({ message: 'No applications found for this phone number' });
+            return res.status(404).json({ message: 'গত ২ মাসে এই নম্বরে কোনো আবেদন পাওয়া যায়নি' });
         }
 
         const enhancedTuitions = await Promise.all(matchedTuitions.map(async (apply) => {
