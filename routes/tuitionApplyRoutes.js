@@ -596,7 +596,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
                 appliedAt: { $gte: twoMonthsAgo }
             },
             '_id tuitionCode appliedAt status commentForTeacher phone'
-        ).sort({ appliedAt: -1 }).lean();
+        ).sort({ appliedAt: 1 }).lean();
 
         if (matchedTuitions.length === 0) {
             return res.status(404).json({ message: 'গত ২ মাসে এই নম্বরে কোনো আবেদন পাওয়া যায়নি' });
