@@ -620,6 +620,9 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
             };
         }));
 
+        // Sort latest first (most recent appliedAt first) before sending response
+        enhancedTuitions.sort((a, b) => new Date(b.appliedAt || 0) - new Date(a.appliedAt || 0));
+
         res.json(enhancedTuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
