@@ -27,7 +27,7 @@ router.get('/phone/:phoneNumber', async (req, res) => {
         // Regex to match the end of the phone fields
         const phoneRegex = new RegExp(last10Digits);
 
-        // Search across models
+        // Search across models with field projection and .lean() for zero bloat
         const [
             guardianApplies,
             leads,
@@ -39,9 +39,18 @@ router.get('/phone/:phoneNumber', async (req, res) => {
             payments,
             refunds
         ] = await Promise.all([
-            GuardianApply.find({ phone: phoneRegex }),
-            Lead.find({ phone: phoneRegex }),
-            Phone.find({ phone: phoneRegex }),
+            GuardianApply.find({ phone: phoneRegex })
+                .select('studentName phone tuitionCode appliedAt status')
+                .sort({ _id: -1 })
+                .lean(),
+            Lead.find({ phone: phoneRegex })
+                .select('name phone status tuitionCode')
+                .sort({ _id: -1 })
+                .lean(),
+            Phone.find({ phone: phoneRegex })
+                .select('phone isSpam isBest isExpress note')
+                .sort({ _id: -1 })
+                .lean(),
             RegTeacher.find({
                 $or: [
                     { phone: phoneRegex },
@@ -50,34 +59,52 @@ router.get('/phone/:phoneNumber', async (req, res) => {
                     { familyPhone: phoneRegex },
                     { friendPhone: phoneRegex }
                 ]
-            }),
+            })
+                .select('premiumCode name phone alternativePhone whatsapp status')
+                .sort({ _id: -1 })
+                .lean(),
             Tuition.find({
                 $or: [
                     { guardianNumber: phoneRegex },
                     { tutorNumber: phoneRegex }
                 ],
                 isSoftDelete: false
-            }),
-            TuitionApply.find({ phone: phoneRegex }),
+            })
+                .select('tuitionCode city area guardianNumber tutorNumber status lastUpdate lastUpdateComment nextUpdateDate nextUpdateComment')
+                .sort({ _id: -1 })
+                .lean(),
+            TuitionApply.find({ phone: phoneRegex })
+                .select('name phone tuitionCode status')
+                .sort({ _id: -1 })
+                .lean(),
             TeacherPayment.find({
                 $or: [
                     { paymentNumber: phoneRegex },
                     { personalPhone: phoneRegex }
                 ],
                 isSoftDelete: { $ne: true }
-            }),
+            })
+                .select('tuitionCode personalPhone amount status')
+                .sort({ _id: -1 })
+                .lean(),
             Payment.find({
                 $or: [
                     { tutorNumber: phoneRegex },
                     { paymentNumber: phoneRegex }
                 ]
-            }),
+            })
+                .select('tuitionCode tutorNumber receivedTk duePayment totalReceivedTk paymentStatus')
+                .sort({ _id: -1 })
+                .lean(),
             RefundPayment.find({
                 $or: [
                     { paymentNumber: phoneRegex },
                     { personalPhone: phoneRegex }
                 ]
             })
+                .select('tuitionCode personalPhone amount status')
+                .sort({ _id: -1 })
+                .lean()
         ]);
 
         res.json({
@@ -103,7 +130,7 @@ router.get('/tuition/:tuitionCode', async (req, res) => {
     try {
         const { tuitionCode } = req.params;
 
-        // Search across models
+        // Search across models with field projection and .lean() for zero bloat
         const [
             tuitionApplies,
             tuitions,
@@ -113,13 +140,34 @@ router.get('/tuition/:tuitionCode', async (req, res) => {
             payments,
             leads
         ] = await Promise.all([
-            TuitionApply.find({ tuitionCode }),
-            Tuition.find({ tuitionCode, isSoftDelete: { $ne: true } }),
-            TeacherPayment.find({ tuitionCode, isSoftDelete: { $ne: true } }),
-            TaskData.find({ tuitionCode }),
-            RefundPayment.find({ tuitionCode }),
-            Payment.find({ tuitionCode }),
+            TuitionApply.find({ tuitionCode })
+                .select('name phone tuitionCode status')
+                .sort({ _id: -1 })
+                .lean(),
+            Tuition.find({ tuitionCode, isSoftDelete: { $ne: true } })
+                .select('tuitionCode city area guardianNumber tutorNumber status lastUpdate lastUpdateComment nextUpdateDate nextUpdateComment')
+                .sort({ _id: -1 })
+                .lean(),
+            TeacherPayment.find({ tuitionCode, isSoftDelete: { $ne: true } })
+                .select('tuitionCode personalPhone amount status')
+                .sort({ _id: -1 })
+                .lean(),
+            TaskData.find({ tuitionCode })
+                .select('tuitionCode taskType status note')
+                .sort({ _id: -1 })
+                .lean(),
+            RefundPayment.find({ tuitionCode })
+                .select('tuitionCode personalPhone amount status')
+                .sort({ _id: -1 })
+                .lean(),
+            Payment.find({ tuitionCode })
+                .select('tuitionCode tutorNumber receivedTk duePayment totalReceivedTk paymentStatus')
+                .sort({ _id: -1 })
+                .lean(),
             Lead.find({ tuitionCode })
+                .select('name phone status tuitionCode')
+                .sort({ _id: -1 })
+                .lean()
         ]);
 
         res.json({

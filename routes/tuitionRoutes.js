@@ -1486,7 +1486,7 @@ router.post('/:id/confirmation-followup', authMiddleware, async (req, res) => {
 
 router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
     try {
-        const tuition = await Tuition.findById(req.params.id);
+        const tuition = await Tuition.findById(req.params.id).lean();
         if (!tuition) {
             return res.status(404).json({ message: 'Tuition not found' });
         }
@@ -1551,24 +1551,33 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
         const teachers = await RegTeacher.find(filter)
             .select('name gender phone currentArea expectedTuitionAreas university department academicYear status premiumCode uniCode')
             .sort({ rating: -1, createdAt: -1 })
+            .limit(2000)
             .lean();
 
         // Fetch applications for this tuition to mark already applied teachers
         const applications = await TuitionApply.find({ tuitionId: tuition._id }).select('phone premiumCode status').lean();
-        const appliedPhones = new Set(applications.map(app => app.phone?.trim()).filter(Boolean));
-        const appliedPremiumCodes = new Set(applications.map(app => app.premiumCode?.trim()).filter(Boolean));
+        const phoneAppMap = new Map();
+        const codeAppMap = new Map();
+        applications.forEach(app => {
+            if (app.phone) phoneAppMap.set(app.phone.trim(), app.status || null);
+            if (app.premiumCode) codeAppMap.set(app.premiumCode.trim(), app.status || null);
+        });
 
         const teachersWithApplyStatus = teachers.map(teacher => {
-            const hasApplied = (teacher.phone && appliedPhones.has(teacher.phone.trim())) || 
-                               (teacher.premiumCode && appliedPremiumCodes.has(teacher.premiumCode.trim()));
-            const matchedApp = applications.find(app => 
-                (teacher.phone && app.phone?.trim() === teacher.phone.trim()) || 
-                (teacher.premiumCode && app.premiumCode?.trim() === teacher.premiumCode.trim())
-            );
+            const cleanPhone = teacher.phone ? teacher.phone.trim() : '';
+            const cleanCode = teacher.premiumCode ? teacher.premiumCode.trim() : '';
+
+            let applicationStatus = null;
+            if (cleanPhone && phoneAppMap.has(cleanPhone)) {
+                applicationStatus = phoneAppMap.get(cleanPhone);
+            } else if (cleanCode && codeAppMap.has(cleanCode)) {
+                applicationStatus = codeAppMap.get(cleanCode);
+            }
+
             return {
                 ...teacher,
-                hasApplied,
-                applicationStatus: matchedApp ? matchedApp.status : null
+                hasApplied: applicationStatus !== null,
+                applicationStatus
             };
         });
 
@@ -1580,7 +1589,7 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
 
 router.get('/:id/sms-history', authMiddleware, async (req, res) => {
     try {
-        const tuition = await Tuition.findById(req.params.id);
+        const tuition = await Tuition.findById(req.params.id).lean();
         if (!tuition) {
             return res.status(404).json({ message: 'Tuition not found' });
         }
@@ -1590,6 +1599,7 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
             category: 'Proposal'
         })
             .sort({ createdAt: -1 })
+            .limit(500)
             .lean();
 
         // Fetch applications for this tuition using indexed tuitionCode
