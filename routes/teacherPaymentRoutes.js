@@ -104,18 +104,6 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const filteredPayments = await TeacherPayment.find(filter);
-
-        const totalPaymentsCount = filteredPayments.length;
-        const totalPayments = filteredPayments.reduce((sum, payment) =>
-            sum + parseFloat(payment.amount || 0), 0
-        );
-
-        const totalApprovedPaymentsCount = filteredPayments.filter(payment => {
-            const stat = (payment.status || '').toString().toLowerCase();
-            return stat === 'received' || stat === 'recieved';
-        }).length;
-
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
         const startOfDayBD = new Date(todayBD);
@@ -125,22 +113,68 @@ router.get('/summary', async (req, res) => {
         const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        const todayPayments = filteredPayments.filter(payment => {
-            const paymentDate = new Date(payment.requestedAt);
-            return paymentDate >= startUTC && paymentDate <= endUTC;
-        });
+        const [summaryResult] = await TeacherPayment.aggregate([
+            { $match: filter },
+            {
+                $facet: {
+                    allPayments: [
+                        {
+                            $group: {
+                                _id: null,
+                                totalPaymentsCount: { $sum: 1 },
+                                totalPayments: {
+                                    $sum: {
+                                        $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 }
+                                    }
+                                },
+                                totalApprovedPaymentsCount: {
+                                    $sum: {
+                                        $cond: [
+                                            {
+                                                $in: [
+                                                    { $toLower: { $ifNull: ["$status", ""] } },
+                                                    ["received", "recieved"]
+                                                ]
+                                            },
+                                            1,
+                                            0
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    ],
+                    todayPayments: [
+                        {
+                            $match: {
+                                requestedAt: { $gte: startUTC, $lte: endUTC }
+                            }
+                        },
+                        {
+                            $group: {
+                                _id: null,
+                                totalPaymentsTodayCount: { $sum: 1 },
+                                totalPaymentsToday: {
+                                    $sum: {
+                                        $convert: { input: "$amount", to: "double", onError: 0, onNull: 0 }
+                                    }
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]);
 
-        const totalPaymentsTodayCount = todayPayments.length;
-        const totalPaymentsToday = todayPayments.reduce((sum, payment) =>
-            sum + parseFloat(payment.amount || 0), 0
-        );
+        const all = summaryResult?.allPayments?.[0] || {};
+        const today = summaryResult?.todayPayments?.[0] || {};
 
         res.json({
-            totalPaymentsCount,
-            totalPayments,
-            totalApprovedPaymentsCount,
-            totalPaymentsTodayCount,
-            totalPaymentsToday
+            totalPaymentsCount: all.totalPaymentsCount || 0,
+            totalPayments: all.totalPayments || 0,
+            totalApprovedPaymentsCount: all.totalApprovedPaymentsCount || 0,
+            totalPaymentsTodayCount: today.totalPaymentsTodayCount || 0,
+            totalPaymentsToday: today.totalPaymentsToday || 0
         });
 
     } catch (err) {

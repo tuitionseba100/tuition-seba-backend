@@ -45,24 +45,31 @@ router.get('/all', async (req, res) => {
             TuitionApply.find()
                 .sort({ _id: -1 })
                 .limit(3)
-                .select('name tuitionCode premiumCode status'),
+                .select('name tuitionCode premiumCode status')
+                .lean(),
 
             RegTeacher.find()
                 .sort({ _id: -1 })
                 .limit(3)
-                .select('name phone status'),
+                .select('name phone status')
+                .lean(),
 
             TeacherPayment.find({ isSoftDelete: { $ne: true } })
                 .sort({ _id: -1 })
                 .limit(3)
-                .select('tuitionCode paymentNumber personalPhone amount status'),
+                .select('tuitionCode paymentNumber personalPhone amount status')
+                .lean(),
 
             RefundPayment.find()
                 .sort({ _id: -1 })
                 .limit(3)
-                .select('tuitionCode paymentNumber personalPhone amount status'),
+                .select('tuitionCode paymentNumber personalPhone amount status')
+                .lean(),
 
             TuitionApply.aggregate([
+                {
+                    $match: { appliedAt: { $exists: true, $ne: null } }
+                },
                 {
                     $group: {
                         _id: { $month: "$appliedAt" },
@@ -73,6 +80,9 @@ router.get('/all', async (req, res) => {
 
             TuitionApply.aggregate([
                 {
+                    $match: { status: { $exists: true, $ne: null, $ne: "" } }
+                },
+                {
                     $group: {
                         _id: "$status",
                         value: { $sum: 1 }
@@ -82,7 +92,7 @@ router.get('/all', async (req, res) => {
 
             TeacherPayment.aggregate([
                 {
-                    $match: { status: "received", isSoftDelete: { $ne: true } }
+                    $match: { status: "received", isSoftDelete: { $ne: true }, requestedAt: { $exists: true, $ne: null } }
                 },
                 {
                     $group: {
@@ -93,6 +103,9 @@ router.get('/all', async (req, res) => {
             ]),
 
             RefundPayment.aggregate([
+                {
+                    $match: { requestedAt: { $exists: true, $ne: null } }
+                },
                 {
                     $group: {
                         _id: { $month: "$requestedAt" },
@@ -123,7 +136,7 @@ router.get('/all', async (req, res) => {
         });
 
         const applicationStatusBreakdown = statusBreakdown.map(s => ({
-            name: s._id.charAt(0).toUpperCase() + s._id.slice(1),
+            name: s._id ? s._id.charAt(0).toUpperCase() + s._id.slice(1) : 'Unknown',
             value: s.value
         }));
 
