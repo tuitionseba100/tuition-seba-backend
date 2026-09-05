@@ -52,8 +52,11 @@ router.get('/marketing', authMiddleware, async (req, res) => {
                 {
                     $lookup: {
                         from: "payments",
-                        localField: "tuitionCode",
-                        foreignField: "tuitionCode",
+                        let: { tCode: "$tuitionCode" },
+                        pipeline: [
+                            { $match: { $expr: { $eq: ["$tuitionCode", "$$tCode"] } } },
+                            { $project: { receivedTk: 1, receivedTk2: 1, receivedTk3: 1, receivedTk4: 1 } }
+                        ],
                         as: "payments"
                     }
                 },
@@ -100,7 +103,7 @@ router.get('/marketing', authMiddleware, async (req, res) => {
                 },
                 { $sort: { count: -1 } }
             ]),
-            Settings.findOne({ key: 'marketing_mediums' }),
+            Settings.findOne({ key: 'marketing_mediums' }).lean(),
             Expense.aggregate([
                 { $match: expenseMatchStage },
                 { $group: { _id: { $toLower: "$category" }, totalExpense: { $sum: "$amount" } } }

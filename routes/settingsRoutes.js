@@ -26,7 +26,7 @@ const superadminMiddleware = (req, res, next) => {
 // Get all settings
 router.get('/', authMiddleware, async (req, res) => {
     try {
-        const settings = await Settings.find();
+        const settings = await Settings.find().lean();
         res.json(settings);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -36,7 +36,7 @@ router.get('/', authMiddleware, async (req, res) => {
 // Get a setting by key
 router.get('/:key', authMiddleware, async (req, res) => {
     try {
-        const setting = await Settings.findOne({ key: req.params.key });
+        const setting = await Settings.findOne({ key: req.params.key }).lean();
         res.json(setting || { key: req.params.key, value: null });
     } catch (err) {
         res.status(500).json({ message: err.message });

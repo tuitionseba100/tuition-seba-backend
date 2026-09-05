@@ -6,7 +6,7 @@ const moment = require('moment-timezone');
 
 router.get('/all', async (req, res) => {
     try {
-        const all = await TeacherPayment.find({ isSoftDelete: { $ne: true } });
+        const all = await TeacherPayment.find({ isSoftDelete: { $ne: true } }).lean();
         res.json(all);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -59,7 +59,8 @@ router.get('/getTableData', async (req, res) => {
         const payments = await TeacherPayment.find(filter)
             .sort({ _id: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         res.json({
             data: payments,
@@ -317,7 +318,7 @@ router.post('/add', async (req, res) => {
 
 router.get('/getPaymentRequestStatuses', async (req, res) => {
     try {
-        const summary = await TeacherPayment.find({ isSoftDelete: { $ne: true } }, 'tuitionCode paymentType paymentNumber status phone');
+        const summary = await TeacherPayment.find({ isSoftDelete: { $ne: true } }, 'tuitionCode paymentType paymentNumber status phone').lean();
         res.json(summary);
     } catch (err) {
         res.status(500).json({ message: err.message });

@@ -179,7 +179,9 @@ router.get('/history/:moduleName/:resourceId', async (req, res) => {
         const history = await StatusHistory.find({ 
             module: moduleName, 
             resourceId: resourceId.toString() 
-        }).sort({ timestamp: -1 }); // newest first
+        })
+        .sort({ timestamp: -1 })
+        .lean(); // newest first
         res.json(history);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -258,8 +260,16 @@ router.get('/list', superadminOnly, async (req, res) => {
 
         if (shCount > 0 && alCount > 0) {
             const [shDocs, alDocs] = await Promise.all([
-                StatusHistory.find(shFilter).sort({ timestamp: -1 }).limit(page * limit).lean(),
-                ActivityLog.find(alFilter).sort({ timestamp: -1 }).limit(page * limit).lean()
+                StatusHistory.find(shFilter)
+                    .select('module resourceId tuitionCode oldStatus newStatus changedBy timestamp')
+                    .sort({ timestamp: -1 })
+                    .limit(page * limit)
+                    .lean(),
+                ActivityLog.find(alFilter)
+                    .select('module resourceId tuitionCode action user timestamp')
+                    .sort({ timestamp: -1 })
+                    .limit(page * limit)
+                    .lean()
             ]);
 
             const mappedAlDocs = alDocs.map(log => ({
@@ -277,12 +287,14 @@ router.get('/list', superadminOnly, async (req, res) => {
             combinedData = merged.slice((page - 1) * limit, page * limit);
         } else if (shCount > 0) {
             combinedData = await StatusHistory.find(shFilter)
+                .select('module resourceId tuitionCode oldStatus newStatus changedBy timestamp')
                 .sort({ timestamp: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
                 .lean();
         } else if (alCount > 0) {
             const alDocs = await ActivityLog.find(alFilter)
+                .select('module resourceId tuitionCode action user timestamp')
                 .sort({ timestamp: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
@@ -380,8 +392,14 @@ router.get('/export-csv', superadminOnly, async (req, res) => {
 
         if (isSHStatus && isALStatus && isALModule) {
             const [shDocs, alDocs] = await Promise.all([
-                StatusHistory.find(shFilter).sort({ timestamp: -1 }).lean(),
-                ActivityLog.find(alFilter).sort({ timestamp: -1 }).lean()
+                StatusHistory.find(shFilter)
+                    .select('module resourceId tuitionCode oldStatus newStatus changedBy timestamp')
+                    .sort({ timestamp: -1 })
+                    .lean(),
+                ActivityLog.find(alFilter)
+                    .select('module resourceId tuitionCode action user timestamp')
+                    .sort({ timestamp: -1 })
+                    .lean()
             ]);
 
             const mappedAlDocs = alDocs.map(log => ({

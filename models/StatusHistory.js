@@ -30,4 +30,10 @@ const statusHistorySchema = new mongoose.Schema({
     }
 });
 
+statusHistorySchema.index({ timestamp: -1 });
+statusHistorySchema.index({ module: 1, resourceId: 1, timestamp: -1 });
+statusHistorySchema.index({ module: 1, newStatus: 1, timestamp: -1 });
+statusHistorySchema.index({ tuitionCode: 1, timestamp: -1 });
+statusHistorySchema.index({ changedBy: 1, timestamp: -1 });
+
 module.exports = mongoose.model('StatusHistory', statusHistorySchema);
