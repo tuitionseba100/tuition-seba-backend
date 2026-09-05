@@ -293,7 +293,7 @@ router.get('/alert-today', async (req, res) => {
             }
         }
 
-        const payments = await Payment.find(filter).sort({ duePayDate: 1 });
+        const payments = await Payment.find(filter).sort({ duePayDate: 1 }).lean();
 
         res.json(payments);
     } catch (err) {
@@ -463,7 +463,8 @@ router.get('/getTableData', async (req, res) => {
         const payments = await Payment.find(filter)
             .sort({ _id: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         res.json({
             data: payments,
@@ -518,14 +519,6 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const filteredPayments = await Payment.find(filter);
-
-        const totalPaymentsCount = filteredPayments.length;
-
-        const totalPaymentTK = filteredPayments.reduce((sum, payment) =>
-            sum + parseFloat(payment.totalReceivedTk || 0), 0
-        );
-
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
         const startOfDayBD = new Date(todayBD);
@@ -535,55 +528,110 @@ router.get('/summary', async (req, res) => {
         const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        let totalPaymentTKToday = 0;
-        let totalPaymentsTodayCount = 0;
-
-        filteredPayments.forEach(payment => {
-            let isCountedForToday = false;
-
-            // Check each of the 4 payment dates
-            const dates = [
-                payment.paymentReceivedDate,
-                payment.paymentReceivedDate2,
-                payment.paymentReceivedDate3,
-                payment.paymentReceivedDate4
-            ];
-            const amounts = [
-                payment.receivedTk,
-                payment.receivedTk2,
-                payment.receivedTk3,
-                payment.receivedTk4
-            ];
-
-            dates.forEach((date, index) => {
-                if (date) {
-                    const pDate = new Date(date);
-                    if (pDate >= startUTC && pDate <= endUTC) {
-                        totalPaymentTKToday += parseFloat(amounts[index] || 0);
-                        isCountedForToday = true;
+        const stats = await Payment.aggregate([
+            { $match: filter },
+            {
+                $project: {
+                    totalReceivedTkNum: {
+                        $convert: { input: "$totalReceivedTk", to: "double", onError: 0, onNull: 0 }
+                    },
+                    duePaymentNum: {
+                        $convert: { input: "$duePayment", to: "double", onError: 0, onNull: 0 }
+                    },
+                    isToday1: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate", null] }, { $gte: ["$paymentReceivedDate", startUTC] }, { $lte: ["$paymentReceivedDate", endUTC] }] },
+                            1, 0
+                        ]
+                    },
+                    amountToday1: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate", null] }, { $gte: ["$paymentReceivedDate", startUTC] }, { $lte: ["$paymentReceivedDate", endUTC] }] },
+                            { $convert: { input: "$receivedTk", to: "double", onError: 0, onNull: 0 } },
+                            0
+                        ]
+                    },
+                    isToday2: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate2", null] }, { $gte: ["$paymentReceivedDate2", startUTC] }, { $lte: ["$paymentReceivedDate2", endUTC] }] },
+                            1, 0
+                        ]
+                    },
+                    amountToday2: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate2", null] }, { $gte: ["$paymentReceivedDate2", startUTC] }, { $lte: ["$paymentReceivedDate2", endUTC] }] },
+                            { $convert: { input: "$receivedTk2", to: "double", onError: 0, onNull: 0 } },
+                            0
+                        ]
+                    },
+                    isToday3: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate3", null] }, { $gte: ["$paymentReceivedDate3", startUTC] }, { $lte: ["$paymentReceivedDate3", endUTC] }] },
+                            1, 0
+                        ]
+                    },
+                    amountToday3: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate3", null] }, { $gte: ["$paymentReceivedDate3", startUTC] }, { $lte: ["$paymentReceivedDate3", endUTC] }] },
+                            { $convert: { input: "$receivedTk3", to: "double", onError: 0, onNull: 0 } },
+                            0
+                        ]
+                    },
+                    isToday4: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate4", null] }, { $gte: ["$paymentReceivedDate4", startUTC] }, { $lte: ["$paymentReceivedDate4", endUTC] }] },
+                            1, 0
+                        ]
+                    },
+                    amountToday4: {
+                        $cond: [
+                            { $and: [{ $ne: ["$paymentReceivedDate4", null] }, { $gte: ["$paymentReceivedDate4", startUTC] }, { $lte: ["$paymentReceivedDate4", endUTC] }] },
+                            { $convert: { input: "$receivedTk4", to: "double", onError: 0, onNull: 0 } },
+                            0
+                        ]
                     }
                 }
-            });
-
-            if (isCountedForToday) {
-                totalPaymentsTodayCount++;
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalPaymentsCount: { $sum: 1 },
+                    totalPaymentTK: { $sum: "$totalReceivedTkNum" },
+                    totalPaymentTKToday: { $sum: { $add: ["$amountToday1", "$amountToday2", "$amountToday3", "$amountToday4"] } },
+                    totalPaymentsTodayCount: {
+                        $sum: {
+                            $cond: [
+                                { $gt: [{ $add: ["$isToday1", "$isToday2", "$isToday3", "$isToday4"] }, 0] },
+                                1, 0
+                            ]
+                        }
+                    },
+                    totalDues: { $sum: "$duePaymentNum" },
+                    totalDuesCount: {
+                        $sum: {
+                            $cond: [{ $gt: ["$duePaymentNum", 0] }, 1, 0]
+                        }
+                    }
+                }
             }
-        });
+        ]);
 
-        const totalDues = filteredPayments.reduce((sum, payment) =>
-            sum + parseFloat(payment.duePayment || 0), 0
-        );
-        const totalDuesCount = filteredPayments.filter(payment =>
-            parseFloat(payment.duePayment || 0) > 0
-        ).length;
+        const result = stats.length > 0 ? stats[0] : {
+            totalPaymentsCount: 0,
+            totalPaymentTK: 0,
+            totalPaymentsTodayCount: 0,
+            totalPaymentTKToday: 0,
+            totalDues: 0,
+            totalDuesCount: 0
+        };
 
         res.json({
-            totalPaymentsCount,
-            totalPaymentTK,
-            totalPaymentsTodayCount,
-            totalPaymentTKToday,
-            totalDues,
-            totalDuesCount
+            totalPaymentsCount: result.totalPaymentsCount,
+            totalPaymentTK: result.totalPaymentTK,
+            totalPaymentsTodayCount: result.totalPaymentsTodayCount,
+            totalPaymentTKToday: result.totalPaymentTKToday,
+            totalDues: result.totalDues,
+            totalDuesCount: result.totalDuesCount
         });
 
     } catch (err) {
