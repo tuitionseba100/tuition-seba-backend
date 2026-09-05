@@ -635,17 +635,6 @@ router.get('/byPremiumCode', async (req, res) => {
             return res.status(400).json({ message: 'Premium code is required' });
         }
 
-        const paymentsWithDue = await Payment.find({
-            duePayment: { $nin: [null, undefined, '', '0'] }
-        }).select('tutorNumber paymentNumber').lean();
-
-        const dueTutorSet = new Set(
-            paymentsWithDue.map(p => escapeRegex(p.tutorNumber))
-        );
-        const duePaymentSet = new Set(
-            paymentsWithDue.map(p => escapeRegex(p.paymentNumber))
-        );
-
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
             'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isSpam isBest isExpress regTeacherStatus'
@@ -655,9 +644,33 @@ router.get('/byPremiumCode', async (req, res) => {
             return res.status(404).json({ message: 'No applications found for this premium code' });
         }
 
+        const teacherPhones = [...new Set(tuitionApplies.flatMap(a => getPhoneVariations(a.phone)))];
+
+        const paymentsWithDue = teacherPhones.length > 0
+            ? await Payment.find({
+                duePayment: { $nin: [null, undefined, '', '0'] },
+                $or: [
+                    { tutorNumber: { $in: teacherPhones } },
+                    { paymentNumber: { $in: teacherPhones } }
+                ]
+            }).select('tutorNumber paymentNumber').lean()
+            : [];
+
+        const dueNormalizedSet = new Set(
+            paymentsWithDue.flatMap(p => {
+                const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
+                const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
+                const res = [];
+                if (tDigits.length >= 10) res.push(tDigits.slice(-10));
+                if (pDigits.length >= 10) res.push(pDigits.slice(-10));
+                return res;
+            })
+        );
+
         const data = tuitionApplies.map(apply => {
-            const escapedPhone = escapeRegex(apply.phone);
-            const hasDue = dueTutorSet.has(escapedPhone) || duePaymentSet.has(escapedPhone);
+            const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
+            const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
+            const hasDue = last10 ? dueNormalizedSet.has(last10) : false;
             return {
                 ...apply,
                 hasDue

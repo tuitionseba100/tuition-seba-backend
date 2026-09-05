@@ -187,7 +187,8 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         const data = await RegTeacher.find(filter)
             .sort({ createdAt: -1 })
             .skip((page - 1) * limit)
-            .limit(limit);
+            .limit(limit)
+            .lean();
 
         res.json({
             data,
