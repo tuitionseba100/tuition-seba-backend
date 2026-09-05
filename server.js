@@ -115,6 +115,8 @@ io.on('connection', (socket) => {
             console.log(`${role || 'Member'} (${name}) joined room: ${phone}`);
 
             if (role === 'agent') {
+                if (!socket.agentRooms) socket.agentRooms = new Set();
+                socket.agentRooms.add(phone);
                 if (!activeAgents[phone]) activeAgents[phone] = 0;
                 activeAgents[phone]++;
                 io.to(phone).emit('agent_status', { agentOnline: true });
@@ -181,10 +183,11 @@ io.on('connection', (socket) => {
         try {
             socket.leave(phone);
             if (role === 'agent') {
+                if (socket.agentRooms) socket.agentRooms.delete(phone);
                 if (activeAgents[phone]) {
                     activeAgents[phone]--;
                     if (activeAgents[phone] <= 0) {
-                        activeAgents[phone] = 0;
+                        delete activeAgents[phone];
                         io.to(phone).emit('agent_status', { agentOnline: false });
                     }
                 }
@@ -196,6 +199,18 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
+        if (socket.agentRooms && socket.agentRooms.size > 0) {
+            for (const phone of socket.agentRooms) {
+                if (activeAgents[phone]) {
+                    activeAgents[phone]--;
+                    if (activeAgents[phone] <= 0) {
+                        delete activeAgents[phone];
+                        io.to(phone).emit('agent_status', { agentOnline: false });
+                    }
+                }
+            }
+            socket.agentRooms.clear();
+        }
         console.log(`User disconnected: ${socket.id}`);
     });
 

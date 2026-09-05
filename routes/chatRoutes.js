@@ -31,7 +31,8 @@ router.get('/history/:phone', async (req, res) => {
 
         const messages = await ChatMessage.find(query)
             .sort({ createdAt: -1 })
-            .limit(limit);
+            .limit(limit)
+            .lean();
         
         // Reverse to return in chronological order
         res.json(messages.reverse());
@@ -56,7 +57,7 @@ router.get('/sessions', async (req, res) => {
                 ]
             };
         }
-        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 });
+        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 }).lean();
         res.json(sessions);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
