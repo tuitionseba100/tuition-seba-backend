@@ -10,6 +10,7 @@ const serviceChargeSchema = new mongoose.Schema({
     comment: { type: String },
     date: { type: Date },
     nextPaymentDate: { type: Date },
+    nextComment: { type: String },
     createdAt: { type: Date, default: Date.now },
     modifiedAt: { type: Date },
     createdBy: { type: String },

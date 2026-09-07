@@ -6,7 +6,7 @@ const { logActivity, getDifferences } = require('../utils/activityLogger');
 
 router.get('/all', async (req, res) => {
     try {
-        const { page = 1, limit = 50, tuitionCode, phone, toBePaidToday } = req.query;
+        const { page = 1, limit = 50, tuitionCode, phone, status, toBePaidToday } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
         const query = {};
@@ -15,6 +15,9 @@ router.get('/all', async (req, res) => {
         }
         if (phone) {
             query.personalPhone = { $regex: phone, $options: 'i' };
+        }
+        if (status) {
+            query.status = status;
         }
         if (toBePaidToday === 'true') {
             const bdNow = moment.tz("Asia/Dhaka");
@@ -78,7 +81,7 @@ router.get('/summary', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, status } = req.body;
+        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -104,6 +107,7 @@ router.post('/add', async (req, res) => {
             comment,
             date: date && date !== "" ? new Date(date) : new Date(),
             nextPaymentDate: nextPaymentDate && nextPaymentDate !== "" ? new Date(nextPaymentDate) : null,
+            nextComment: nextComment || req.body.nextCommentDate || '',
             createdBy: activeUser,
             status: status || 'pending'
         });
@@ -123,7 +127,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, status } = req.body;
+        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -157,6 +161,7 @@ router.put('/edit/:id', async (req, res) => {
                 comment,
                 date: date && date !== "" ? new Date(date) : new Date(),
                 nextPaymentDate: nextPaymentDate && nextPaymentDate !== "" ? new Date(nextPaymentDate) : null,
+                nextComment: nextComment !== undefined ? nextComment : (req.body.nextCommentDate !== undefined ? req.body.nextCommentDate : oldData.nextComment),
                 modifiedAt: Date.now(),
                 updatedBy: activeUser,
                 status
