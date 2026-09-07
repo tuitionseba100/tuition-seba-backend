@@ -9,6 +9,7 @@ const serviceChargeSchema = new mongoose.Schema({
     amount: { type: Number },
     comment: { type: String },
     date: { type: Date },
+    nextPaymentDate: { type: Date },
     createdAt: { type: Date, default: Date.now },
     modifiedAt: { type: Date },
     createdBy: { type: String },

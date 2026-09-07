@@ -6,7 +6,7 @@ const { logActivity, getDifferences } = require('../utils/activityLogger');
 
 router.get('/all', async (req, res) => {
     try {
-        const { page = 1, limit = 50, tuitionCode, phone } = req.query;
+        const { page = 1, limit = 50, tuitionCode, phone, toBePaidToday } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
         const query = {};
@@ -16,9 +16,15 @@ router.get('/all', async (req, res) => {
         if (phone) {
             query.personalPhone = { $regex: phone, $options: 'i' };
         }
+        if (toBePaidToday === 'true') {
+            const bdNow = moment.tz("Asia/Dhaka");
+            const todayStart = bdNow.clone().startOf('day').toDate();
+            const todayEnd = bdNow.clone().endOf('day').toDate();
+            query.nextPaymentDate = { $gte: todayStart, $lte: todayEnd };
+        }
 
         const data = await ServiceCharge.find(query)
-            .sort({ date: -1, modifiedAt: -1 })
+            .sort(toBePaidToday === 'true' ? { nextPaymentDate: 1, date: -1 } : { date: -1, modifiedAt: -1 })
             .skip(skip)
             .limit(parseInt(limit))
             .lean();
@@ -54,11 +60,16 @@ router.get('/summary', async (req, res) => {
         const monthAgg = await ServiceCharge.aggregate([{ $match: monthMatch }, { $group: { _id: null, total: { $sum: "$amount" } } }]);
         const totalAgg = await ServiceCharge.aggregate([{ $match: { status: { $nin: ['pending', 'cancelled'] } } }, { $group: { _id: null, total: { $sum: "$amount" } } }]);
 
+        const toBePaidTodayCount = await ServiceCharge.countDocuments({
+            nextPaymentDate: { $gte: todayStart, $lte: todayEnd }
+        });
+
         res.json({
             today: todayAgg.length ? todayAgg[0].total : 0,
             week: weekAgg.length ? weekAgg[0].total : 0,
             month: monthAgg.length ? monthAgg[0].total : 0,
-            total: totalAgg.length ? totalAgg[0].total : 0
+            total: totalAgg.length ? totalAgg[0].total : 0,
+            toBePaidTodayCount: toBePaidTodayCount || 0
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -67,7 +78,7 @@ router.get('/summary', async (req, res) => {
 
 router.post('/add', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, status } = req.body;
+        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -92,6 +103,7 @@ router.post('/add', async (req, res) => {
             amount: parseFloat(amount) || 0,
             comment,
             date: date && date !== "" ? new Date(date) : new Date(),
+            nextPaymentDate: nextPaymentDate && nextPaymentDate !== "" ? new Date(nextPaymentDate) : null,
             createdBy: activeUser,
             status: status || 'pending'
         });
@@ -111,7 +123,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, status } = req.body;
+        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -144,6 +156,7 @@ router.put('/edit/:id', async (req, res) => {
                 amount: parseFloat(amount) || 0,
                 comment,
                 date: date && date !== "" ? new Date(date) : new Date(),
+                nextPaymentDate: nextPaymentDate && nextPaymentDate !== "" ? new Date(nextPaymentDate) : null,
                 modifiedAt: Date.now(),
                 updatedBy: activeUser,
                 status
