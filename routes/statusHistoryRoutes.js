@@ -94,52 +94,52 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             // Verified only
             StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'verified'
+                newStatus: { $in: ['verified', 'Verified'] }
             })),
             // After confirmation
             StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'after confirmation'
+                newStatus: { $in: ['after confirmation', 'After Confirmation'] }
             })),
             // After salary
             StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: 'after salary'
+                newStatus: { $in: ['after salary', 'After Salary'] }
             })),
             // 30% advance
             StatusHistory.countDocuments(buildFilter({
                 module: 'RegTeacher',
-                newStatus: '30% advance'
+                newStatus: { $in: ['30% advance', '30% Advance'] }
             })),
             // Tuition status changes to 'confirm' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'Tuition',
-                newStatus: 'confirm'
+                newStatus: { $in: ['confirm', 'Confirm'] }
             })),
             // Tuition status changes to 'cancel' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'Tuition',
-                newStatus: 'cancel'
+                newStatus: { $in: ['cancel', 'Cancel'] }
             })),
             // Tuition status changes to 'suspended' or 'suspend' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'Tuition',
-                newStatus: { $in: ['suspended', 'suspend'] }
+                newStatus: { $in: ['suspended', 'suspend', 'Suspended', 'Suspend'] }
             })),
             // TuitionApply status changed to 'selected' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'TuitionApply',
-                newStatus: 'selected'
+                newStatus: { $in: ['selected', 'Selected'] }
             })),
             // TuitionApply status changed to 'confirmed' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'TuitionApply',
-                newStatus: 'confirmed'
+                newStatus: { $in: ['confirmed', 'Confirmed'] }
             })),
             // TuitionApply status changed to 'cancelled by teacher' today
             StatusHistory.countDocuments(buildFilter({
                 module: 'TuitionApply',
-                newStatus: 'cancelled by teacher'
+                newStatus: { $in: ['cancelled by teacher', 'Cancelled by Teacher', 'Cancelled By Teacher'] }
             })),
             // Tuitions created today from activity log
             ActivityLog.countDocuments(buildActivityFilter({
@@ -153,11 +153,13 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             }))
         ]);
 
+        const verifiedCombinedCount = verifiedOnlyCount + afterConfirmationCount;
+
         res.json({
             date: nowBD.format("YYYY-MM-DD"),
-            verifiedTeachersCount: verifiedOnlyCount + afterConfirmationCount + afterSalaryCount + advance30Count,
+            verifiedTeachersCount: verifiedCombinedCount + afterSalaryCount + advance30Count,
             verifiedBreakdown: {
-                verified: verifiedOnlyCount,
+                verified: verifiedCombinedCount,
                 afterConfirmation: afterConfirmationCount,
                 afterSalary: afterSalaryCount,
                 advance30: advance30Count
@@ -243,7 +245,7 @@ router.get('/list', superadminOnly, async (req, res) => {
         }
 
         if (newStatus) {
-            shFilter.newStatus = newStatus;
+            shFilter.newStatus = new RegExp(`^${newStatus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
         }
 
         const isSHStatus = !newStatus || (newStatus !== 'created' && newStatus !== 'deleted');
@@ -375,7 +377,7 @@ router.get('/export-csv', superadminOnly, async (req, res) => {
         }
 
         if (newStatus) {
-            shFilter.newStatus = newStatus;
+            shFilter.newStatus = new RegExp(`^${newStatus.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
         }
 
         const isSHStatus = !newStatus || (newStatus !== 'created' && newStatus !== 'deleted');
