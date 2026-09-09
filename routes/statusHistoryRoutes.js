@@ -153,13 +153,11 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             }))
         ]);
 
-        const verifiedCombinedCount = verifiedOnlyCount + afterConfirmationCount;
-
         res.json({
             date: nowBD.format("YYYY-MM-DD"),
-            verifiedTeachersCount: verifiedCombinedCount + afterSalaryCount + advance30Count,
+            verifiedTeachersCount: verifiedOnlyCount + afterConfirmationCount + afterSalaryCount + advance30Count,
             verifiedBreakdown: {
-                verified: verifiedCombinedCount,
+                verified: verifiedOnlyCount,
                 afterConfirmation: afterConfirmationCount,
                 afterSalary: afterSalaryCount,
                 advance30: advance30Count
