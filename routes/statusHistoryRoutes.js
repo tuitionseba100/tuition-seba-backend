@@ -87,6 +87,7 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             suspendedTuitionsCount,
             applySelectedCount,
             applyConfirmedCount,
+            applyCancelledByTeacherCount,
             tuitionsCreatedTodayCount,
             tuitionsDeletedTodayCount
         ] = await Promise.all([
@@ -135,6 +136,11 @@ router.get('/today-report', superadminOnly, async (req, res) => {
                 module: 'TuitionApply',
                 newStatus: 'confirmed'
             })),
+            // TuitionApply status changed to 'cancelled by teacher' today
+            StatusHistory.countDocuments(buildFilter({
+                module: 'TuitionApply',
+                newStatus: 'cancelled by teacher'
+            })),
             // Tuitions created today from activity log
             ActivityLog.countDocuments(buildActivityFilter({
                 module: 'Tuition',
@@ -160,9 +166,11 @@ router.get('/today-report', superadminOnly, async (req, res) => {
             cancelledTuitionsCount,
             suspendedTuitionsCount,
             confirmedApplicationsCount: applySelectedCount + applyConfirmedCount,
+            applicationsSummaryCount: applySelectedCount + applyConfirmedCount + applyCancelledByTeacherCount,
             applyBreakdown: {
                 selected: applySelectedCount,
-                confirmed: applyConfirmedCount
+                confirmed: applyConfirmedCount,
+                cancelledByTeacher: applyCancelledByTeacherCount
             },
             tuitionsCreatedTodayCount,
             tuitionsDeletedTodayCount
