@@ -44,6 +44,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const serviceChargeRoutes = require('./routes/serviceChargeRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const internalChatRoutes = require('./routes/internalChatRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
 app.use('/api/activity-log', activityLogRoutes);
@@ -69,6 +70,7 @@ app.use('/api/report', reportRoutes);
 app.use('/api/serviceCharge', serviceChargeRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/internal-chat', internalChatRoutes);
+app.use('/api/upload', uploadRoutes);
 
 
 app.get('/', (req, res) => {
