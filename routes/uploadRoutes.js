@@ -81,6 +81,62 @@ router.post('/teacher-photo', upload.single('photo'), async (req, res) => {
 });
 
 /**
+ * POST /api/upload/teacher-nid
+ * Compresses any uploaded NID / Birth certificate image to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-nid', upload.single('photo'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'No image file uploaded' });
+        }
+
+        const MAX_SIZE_BYTES = 100 * 1024; // Strictly 100 KB limit
+        let targetDimension = 1200; // Allow wider dimension so NID text remains readable
+        let quality = 80;
+        let optimizedBuffer = null;
+
+        for (let attempt = 0; attempt < 5; attempt++) {
+            optimizedBuffer = await sharp(req.file.buffer)
+                .rotate()
+                .resize({
+                    width: targetDimension,
+                    height: targetDimension,
+                    fit: 'inside',
+                    withoutEnlargement: true,
+                })
+                .webp({ quality })
+                .toBuffer();
+
+            if (optimizedBuffer.length <= MAX_SIZE_BYTES) {
+                break;
+            }
+
+            quality -= 15;
+            if (quality < 25) quality = 25;
+            if (attempt >= 1) {
+                targetDimension = Math.round(targetDimension * 0.85);
+            }
+        }
+
+        const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        const key = `teachers/nid_${uniqueSuffix}.webp`;
+
+        const uploadResult = await uploadToR2(optimizedBuffer, key, 'image/webp');
+        const sizeKB = Math.round((optimizedBuffer.length / 1024) * 10) / 10;
+
+        res.json({
+            success: true,
+            url: uploadResult.url,
+            key: uploadResult.key,
+            sizeKB,
+        });
+    } catch (err) {
+        console.error('Error uploading teacher NID to R2:', err);
+        res.status(500).json({ message: err.message || 'NID image upload failed' });
+    }
+});
+
+/**
  * DELETE /api/upload/teacher-photo
  * Deletes a previously uploaded photo from Cloudflare R2
  */

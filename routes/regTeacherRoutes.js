@@ -5,6 +5,7 @@ const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
 const path = require('path');
+const { deleteFromR2 } = require('../utils/r2Storage');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -425,6 +426,15 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Record not found' });
         }
 
+        // If photo is replaced or removed, delete the old photo from R2 storage
+        if (req.body.photo !== undefined && oldTeacher.photo && oldTeacher.photo !== req.body.photo) {
+            await deleteFromR2(oldTeacher.photo);
+        }
+        // If NID/Birth photo is replaced or removed, delete the old photo from R2 storage
+        if (req.body.nidPhoto !== undefined && oldTeacher.nidPhoto && oldTeacher.nidPhoto !== req.body.nidPhoto) {
+            await deleteFromR2(oldTeacher.nidPhoto);
+        }
+
         const updatedTeacher = await RegTeacher.findByIdAndUpdate(
             req.params.id,
             req.body,
@@ -473,6 +483,11 @@ router.put('/update-status/:id', async (req, res) => {
 
 router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
+        const teacher = await RegTeacher.findById(req.params.id);
+        if (teacher) {
+            if (teacher.photo) await deleteFromR2(teacher.photo);
+            if (teacher.nidPhoto) await deleteFromR2(teacher.nidPhoto);
+        }
         await RegTeacher.findByIdAndDelete(req.params.id);
         res.status(204).send();
     } catch (err) {

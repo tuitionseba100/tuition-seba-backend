@@ -7,6 +7,7 @@ const teacherSchema = new mongoose.Schema({
     telegram: { type: String },
     alternativePhone: { type: String },
     photo: { type: String },
+    nidPhoto: { type: String },
     whatsapp: { type: String },
     email: { type: String },
     facebookLink: { type: String },
