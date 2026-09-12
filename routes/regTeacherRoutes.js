@@ -90,7 +90,7 @@ router.get('/public-teachers', async (req, res) => {
         const total = await RegTeacher.countDocuments(filter);
         const teachers = await RegTeacher.find(filter)
             .select(
-                'name photo gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow sscResult hscResult experience favoriteSubject hscGroup sscGroup school college'
+                'name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode isResultShow sscResult hscResult experience favoriteSubject hscGroup sscGroup school college'
             )
             .sort({ rating: -1, _id: -1 })
             .skip(skip)
