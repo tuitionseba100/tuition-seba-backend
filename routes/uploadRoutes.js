@@ -81,17 +81,16 @@ router.post('/teacher-photo', upload.single('photo'), async (req, res) => {
 });
 
 /**
- * POST /api/upload/teacher-nid
- * Compresses any uploaded NID / Birth certificate image to guaranteed < 100KB and uploads to Cloudflare R2
+ * Helper to compress document images (NID, SSC, HSC, University ID) to guaranteed <= 100KB and upload to R2
  */
-router.post('/teacher-nid', upload.single('photo'), async (req, res) => {
+async function processAndUploadDocument(req, res, prefix, logName) {
     try {
         if (!req.file) {
             return res.status(400).json({ message: 'No image file uploaded' });
         }
 
         const MAX_SIZE_BYTES = 100 * 1024; // Strictly 100 KB limit
-        let targetDimension = 1200; // Allow wider dimension so NID text remains readable
+        let targetDimension = 1200; // Allow wider dimension so text remains readable
         let quality = 80;
         let optimizedBuffer = null;
 
@@ -119,7 +118,7 @@ router.post('/teacher-nid', upload.single('photo'), async (req, res) => {
         }
 
         const uniqueSuffix = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-        const key = `teachers/nid_${uniqueSuffix}.webp`;
+        const key = `teachers/${prefix}_${uniqueSuffix}.webp`;
 
         const uploadResult = await uploadToR2(optimizedBuffer, key, 'image/webp');
         const sizeKB = Math.round((optimizedBuffer.length / 1024) * 10) / 10;
@@ -131,16 +130,48 @@ router.post('/teacher-nid', upload.single('photo'), async (req, res) => {
             sizeKB,
         });
     } catch (err) {
-        console.error('Error uploading teacher NID to R2:', err);
-        res.status(500).json({ message: err.message || 'NID image upload failed' });
+        console.error(`Error uploading teacher ${logName} to R2:`, err);
+        res.status(500).json({ message: err.message || `${logName} upload failed` });
     }
+}
+
+/**
+ * POST /api/upload/teacher-nid
+ * Compresses any uploaded NID / Birth certificate image to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-nid', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'nid', 'NID / Birth certificate');
 });
 
 /**
- * DELETE /api/upload/teacher-photo
- * Deletes a previously uploaded photo from Cloudflare R2
+ * POST /api/upload/teacher-ssc
+ * Compresses any uploaded SSC Marksheet to guaranteed < 100KB and uploads to Cloudflare R2
  */
-router.delete('/teacher-photo', async (req, res) => {
+router.post('/teacher-ssc', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'ssc', 'SSC Marksheet');
+});
+
+/**
+ * POST /api/upload/teacher-hsc
+ * Compresses any uploaded HSC Marksheet to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-hsc', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'hsc', 'HSC Marksheet');
+});
+
+/**
+ * POST /api/upload/teacher-uni-id
+ * Compresses any uploaded University ID / Admission Slip to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-uni-id', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'uni_id', 'University ID / Admission Slip');
+});
+
+/**
+ * DELETE /api/upload/teacher-photo & /api/upload/teacher-document
+ * Deletes a previously uploaded photo or document from Cloudflare R2
+ */
+const handleDeleteMedia = async (req, res) => {
     try {
         const { url, key } = req.body;
         if (!url && !key) {
@@ -148,11 +179,14 @@ router.delete('/teacher-photo', async (req, res) => {
         }
 
         await deleteFromR2(key || url);
-        res.json({ success: true, message: 'Photo deleted from storage' });
+        res.json({ success: true, message: 'File deleted from storage' });
     } catch (err) {
-        console.error('Error deleting photo from R2:', err);
+        console.error('Error deleting file from R2:', err);
         res.status(500).json({ message: err.message || 'Delete failed' });
     }
-});
+};
+
+router.delete('/teacher-photo', handleDeleteMedia);
+router.delete('/teacher-document', handleDeleteMedia);
 
 module.exports = router;
