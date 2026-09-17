@@ -6,6 +6,7 @@ const router = express.Router();
 const moment = require('moment-timezone');
 const path = require('path');
 const { deleteFromR2 } = require('../utils/r2Storage');
+const { sendSms } = require('../utils/smsSender');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -374,6 +375,32 @@ router.get('/check-exists-with-phone', async (req, res) => {
     }
 });
 
+async function getNextPremiumCode() {
+    const teachersWithTSF = await RegTeacher.find(
+        { premiumCode: { $regex: /^TSF\d+$/i } },
+        { premiumCode: 1 }
+    ).lean();
+
+    let maxNum = 19999;
+    for (const t of teachersWithTSF) {
+        const match = (t.premiumCode || '').match(/^TSF(\d+)$/i);
+        if (match) {
+            const num = parseInt(match[1], 10);
+            if (!isNaN(num) && num > maxNum) {
+                maxNum = num;
+            }
+        }
+    }
+
+    let nextNum = maxNum + 1;
+    let nextCode = `TSF${nextNum}`;
+    while (await RegTeacher.exists({ premiumCode: nextCode })) {
+        nextNum++;
+        nextCode = `TSF${nextNum}`;
+    }
+    return nextCode;
+}
+
 router.post('/add', async (req, res) => {
     try {
         const { phone, alternativePhone, whatsapp } = req.body;
@@ -424,15 +451,35 @@ router.post('/add', async (req, res) => {
 
         const referStatus = req.body.referPersonPhone ? 'pending' : undefined;
 
+        let assignedPremiumCode = req.body.premiumCode;
+        if (!assignedPremiumCode || String(assignedPremiumCode).trim() === '') {
+            assignedPremiumCode = await getNextPremiumCode();
+        }
+
         const newTeacher = new RegTeacher({
             ...req.body,
+            premiumCode: assignedPremiumCode,
             createdBy,
             createdAt: localTime,
-            status: 'pending',
+            status: req.body.status || 'pending',
             referStatus
         });
 
         await newTeacher.save();
+
+        // Dispatch registration SMS to teacher
+        const recipientPhone = newTeacher.phone || newTeacher.whatsapp;
+        if (recipientPhone && newTeacher.premiumCode) {
+            const smsMessage = `Dear teacher, your profile has been registered. Code: ${newTeacher.premiumCode} (keep it secret). You can now apply for tuitions. Helpline: 01633920928 -Tuition Seba Forum`;
+            sendSms({
+                phone: recipientPhone,
+                message: smsMessage,
+                premiumCode: newTeacher.premiumCode,
+                category: 'Registration',
+                sentBy: createdBy || 'system'
+            }).catch(smsErr => console.error('Auto registration SMS error:', smsErr));
+        }
+
         res.status(201).json(newTeacher);
     } catch (err) {
         res.status(500).json({ message: err.message });
