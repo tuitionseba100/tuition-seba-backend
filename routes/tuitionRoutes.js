@@ -281,7 +281,10 @@ router.get('/getTableData', async (req, res) => {
         isReviewDone,
         tuitionType,
         applyType,
-        isProposal
+        isProposal,
+        needsUpdateToday,
+        pendingPaymentCreation,
+        guardianFollowUpToday
     } = req.query;
 
     const filter = { isSoftDelete: false };
@@ -350,10 +353,47 @@ router.get('/getTableData', async (req, res) => {
         filter.applyType = applyType;
     }
 
+    if (needsUpdateToday === 'true') {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        filter.nextUpdateDate = { $gte: startUTC, $lte: endUTC };
+    }
+
+    if (pendingPaymentCreation === 'true') {
+        filter.status = 'confirm';
+        filter.isPaymentCreated = false;
+    }
+
+    if (guardianFollowUpToday === 'true') {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        filter.status = 'confirm';
+        filter.confirmationFollowUps = {
+            $elemMatch: {
+                nextFollowUpDate: { $gte: startUTC, $lte: endUTC }
+            }
+        };
+    }
+
     try {
         const total = await Tuition.countDocuments(filter);
+        const sortQuery = needsUpdateToday === 'true' ? { nextUpdateDate: 1, _id: -1 } : { _id: -1 };
         const tuitions = await Tuition.find(filter)
-            .sort({ _id: -1 })
+            .sort(sortQuery)
             .skip((page - 1) * limit)
             .limit(limit)
             .lean();
@@ -413,7 +453,10 @@ router.get('/alert-today', async (req, res) => {
             }
         }
 
-        const tuitions = await Tuition.find(filter).sort({ nextUpdateDate: 1 }).lean();
+        const tuitions = await Tuition.find(filter)
+            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated')
+            .sort({ nextUpdateDate: 1 })
+            .lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
         const pendingApplies = await TuitionApply.distinct('tuitionCode', {
@@ -436,21 +479,6 @@ router.get('/alert-today', async (req, res) => {
 router.get('/guardian-followup-today', async (req, res) => {
     try {
         const { assignedTo } = req.query;
-        const filter = {
-            status: 'confirm',
-            isSoftDelete: false
-        };
-        if (assignedTo) {
-            if (assignedTo === 'unassigned') {
-                filter.assignedTo = { $in: ['', null] };
-            } else if (assignedTo === 'assigned') {
-                filter.assignedTo = { $nin: ['', null] };
-            } else {
-                filter.assignedTo = assignedTo;
-            }
-        }
-
-        const tuitions = await Tuition.find(filter).lean();
 
         // Calculate Bangladesh Time start/end of today
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
@@ -464,6 +492,29 @@ router.get('/guardian-followup-today', async (req, res) => {
 
         const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const filter = {
+            status: 'confirm',
+            isSoftDelete: false,
+            confirmationFollowUps: {
+                $elemMatch: {
+                    nextFollowUpDate: { $gte: startUTC, $lte: endUTC }
+                }
+            }
+        };
+        if (assignedTo) {
+            if (assignedTo === 'unassigned') {
+                filter.assignedTo = { $in: ['', null] };
+            } else if (assignedTo === 'assigned') {
+                filter.assignedTo = { $nin: ['', null] };
+            } else {
+                filter.assignedTo = assignedTo;
+            }
+        }
+
+        const tuitions = await Tuition.find(filter)
+            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated')
+            .lean();
 
         // Filter tuitions where the latest follow-up has nextFollowUpDate today
         const filtered = tuitions.filter(t => {
@@ -600,7 +651,9 @@ router.get('/pending-payment-creation', async (req, res) => {
             status: 'confirm',
             isPaymentCreated: false,
             isSoftDelete: false
-        }).lean();
+        })
+        .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated')
+        .lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
         const pendingApplies = await TuitionApply.distinct('tuitionCode', {
@@ -634,7 +687,10 @@ router.get('/summary', async (req, res) => {
         isReviewDone,
         tuitionType,
         applyType,
-        isProposal
+        isProposal,
+        needsUpdateToday,
+        pendingPaymentCreation,
+        guardianFollowUpToday
     } = req.query;
 
     const filter = { isSoftDelete: { $ne: true } };
@@ -701,6 +757,42 @@ router.get('/summary', async (req, res) => {
 
     if (applyType) {
         filter.applyType = applyType;
+    }
+
+    if (needsUpdateToday === 'true') {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        filter.nextUpdateDate = { $gte: startUTC, $lte: endUTC };
+    }
+
+    if (pendingPaymentCreation === 'true') {
+        filter.status = 'confirm';
+        filter.isPaymentCreated = false;
+    }
+
+    if (guardianFollowUpToday === 'true') {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        filter.status = 'confirm';
+        filter.confirmationFollowUps = {
+            $elemMatch: {
+                nextFollowUpDate: { $gte: startUTC, $lte: endUTC }
+            }
+        };
     }
 
     try {
