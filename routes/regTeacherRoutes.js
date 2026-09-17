@@ -121,10 +121,15 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         uniCode,
         department,
         referStatus,
-        referPersonPhone = ''
+        referPersonPhone = '',
+        isInfoVerified
     } = req.query;
 
     const filter = {};
+
+    if (isInfoVerified !== undefined && isInfoVerified !== '') {
+        filter.isInfoVerified = isInfoVerified === 'true' || isInfoVerified === true;
+    }
 
     if (premiumCode) {
         filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
@@ -213,10 +218,15 @@ router.get('/summary', authMiddleware, async (req, res) => {
         uniCode,
         department,
         referStatus,
-        referPersonPhone = ''
+        referPersonPhone = '',
+        isInfoVerified
     } = req.query;
 
     const filter = {};
+
+    if (isInfoVerified !== undefined && isInfoVerified !== '') {
+        filter.isInfoVerified = isInfoVerified === 'true' || isInfoVerified === true;
+    }
 
     if (premiumCode) {
         filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
@@ -308,7 +318,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         let records = [];
         if (req.query.allData === 'true') {
             records = await RegTeacher.find(filter)
-                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status')
+                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status isInfoVerified isBiodataShow isResultShow')
                 .lean();
         }
 

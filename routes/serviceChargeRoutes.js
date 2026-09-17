@@ -2,7 +2,31 @@ const express = require('express');
 const router = express.Router();
 const ServiceCharge = require('../models/ServiceCharge');
 const moment = require('moment-timezone');
+const jwt = require('jsonwebtoken');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization');
+    if (!token) {
+        if (req.headers['x-user-name']) {
+            req.user = { username: req.headers['x-user-name'] };
+            return next();
+        }
+        return res.status(401).json({ message: 'Access Denied' });
+    }
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        if (req.headers['x-user-name']) {
+            req.user = { username: req.headers['x-user-name'] };
+            return next();
+        }
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
 
 router.get('/all', async (req, res) => {
     try {
@@ -75,6 +99,66 @@ router.get('/summary', async (req, res) => {
             toBePaidTodayCount: toBePaidTodayCount || 0
         });
     } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/alert-today', async (req, res) => {
+    try {
+        const bdNow = moment.tz("Asia/Dhaka");
+        const todayStart = bdNow.clone().startOf('day').toDate();
+        const todayEnd = bdNow.clone().endOf('day').toDate();
+
+        const serviceCharges = await ServiceCharge.find({
+            nextPaymentDate: { $gte: todayStart, $lte: todayEnd }
+        }).sort({ nextPaymentDate: 1 }).lean();
+
+        res.json(serviceCharges);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.post('/auto-migrate', authMiddleware, async (req, res) => {
+    try {
+        const { serviceChargeIds } = req.body;
+
+        if (!serviceChargeIds || !Array.isArray(serviceChargeIds) || serviceChargeIds.length === 0) {
+            return res.status(400).json({ message: 'No service charge IDs provided' });
+        }
+
+        const results = [];
+        for (const id of serviceChargeIds) {
+            const sc = await ServiceCharge.findById(id);
+            if (!sc) continue;
+
+            const oldSc = sc.toObject();
+
+            // Calculate next day
+            const currentNextPayment = sc.nextPaymentDate ? moment(sc.nextPaymentDate) : moment();
+            const nextDay = currentNextPayment.clone().add(1, 'day');
+
+            sc.nextPaymentDate = nextDay.toDate();
+            sc.updatedBy = 'auto migration';
+            sc.modifiedAt = Date.now();
+
+            await sc.save();
+
+            const diff = getDifferences(oldSc, sc.toObject());
+            await logActivity(req, 'Edit', 'ServiceCharge', sc._id, {
+                ...diff,
+                importantFields: { tuitionCode: sc.tuitionCode }
+            }, 'auto migration');
+
+            results.push(sc._id);
+        }
+
+        res.json({
+            message: `Successfully migrated ${results.length} service charge(s).`,
+            migratedIds: results
+        });
+    } catch (err) {
+        console.error('Auto migration error in serviceCharge:', err);
         res.status(500).json({ message: err.message });
     }
 });

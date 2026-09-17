@@ -55,6 +55,7 @@ const teacherSchema = new mongoose.Schema({
     updatedBy: { type: String },
     isBiodataShow: { type: Boolean, default: false },
     isResultShow: { type: Boolean, default: false },
+    isInfoVerified: { type: Boolean, default: false },
     referPersonPhone: { type: String },
     referStatus: { type: String },
     referComment: { type: String },
