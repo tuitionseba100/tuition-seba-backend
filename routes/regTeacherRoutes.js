@@ -128,7 +128,12 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
     const filter = {};
 
     if (isInfoVerified !== undefined && isInfoVerified !== '') {
-        filter.isInfoVerified = isInfoVerified === 'true' || isInfoVerified === true;
+        const isVerified = isInfoVerified === 'true' || isInfoVerified === true;
+        if (isVerified) {
+            filter.isInfoVerified = true;
+        } else {
+            filter.isInfoVerified = { $ne: true };
+        }
     }
 
     if (premiumCode) {
@@ -225,7 +230,12 @@ router.get('/summary', authMiddleware, async (req, res) => {
     const filter = {};
 
     if (isInfoVerified !== undefined && isInfoVerified !== '') {
-        filter.isInfoVerified = isInfoVerified === 'true' || isInfoVerified === true;
+        const isVerified = isInfoVerified === 'true' || isInfoVerified === true;
+        if (isVerified) {
+            filter.isInfoVerified = true;
+        } else {
+            filter.isInfoVerified = { $ne: true };
+        }
     }
 
     if (premiumCode) {
