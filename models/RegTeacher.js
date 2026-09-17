@@ -64,6 +64,7 @@ const teacherSchema = new mongoose.Schema({
 });
 
 // Indexes for fast verification (combines phone fields & premiumCode)
+teacherSchema.index({ premiumCode: 1 });
 teacherSchema.index({ phone: 1, premiumCode: 1 });
 teacherSchema.index({ alternativePhone: 1, premiumCode: 1 });
 teacherSchema.index({ whatsapp: 1, premiumCode: 1 });

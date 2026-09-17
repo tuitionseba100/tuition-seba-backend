@@ -375,14 +375,17 @@ router.get('/check-exists-with-phone', async (req, res) => {
 });
 
 async function getNextPremiumCode() {
-    const teachersWithTSF = await RegTeacher.find(
-        { premiumCode: { $regex: /^TSF\d+$/i } },
-        { premiumCode: 1 }
-    ).lean();
+    // 1. Fetch only the single latest TSF record sorted descending (O(1) memory & speed)
+    const latestTeacher = await RegTeacher.findOne(
+        { premiumCode: { $regex: /^TSF\d{5,}$/i } }
+    )
+        .sort({ premiumCode: -1 })
+        .select('premiumCode')
+        .lean();
 
     let maxNum = 19999;
-    for (const t of teachersWithTSF) {
-        const match = (t.premiumCode || '').match(/^TSF(\d+)$/i);
+    if (latestTeacher && latestTeacher.premiumCode) {
+        const match = latestTeacher.premiumCode.match(/^TSF(\d+)$/i);
         if (match) {
             const num = parseInt(match[1], 10);
             if (!isNaN(num) && num > maxNum) {
