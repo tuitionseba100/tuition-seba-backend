@@ -383,7 +383,7 @@ async function getNextPremiumCode() {
         .select('premiumCode')
         .lean();
 
-    let maxNum = 19999;
+    let maxNum = 30159;
     if (latestTeacher && latestTeacher.premiumCode) {
         const match = latestTeacher.premiumCode.match(/^TSF(\d+)$/i);
         if (match) {
