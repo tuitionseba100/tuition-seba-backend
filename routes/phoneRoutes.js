@@ -96,6 +96,7 @@ router.post('/add', async (req, res) => {
     const { phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, isBanned, createdBy } = req.body;
 
     try {
+        let normalizedPhone = phone;
         if (phone) {
             // Validation: Only digits and / are allowed
             if (!/^[0-9/]+$/.test(phone)) {
@@ -103,6 +104,12 @@ router.post('/add', async (req, res) => {
             }
 
             const inputNumbers = phone.split('/').map(n => n.trim()).filter(n => n);
+
+            // Check for self-duplicates in the input
+            const uniqueNumbers = new Set(inputNumbers);
+            if (uniqueNumbers.size !== inputNumbers.length) {
+                return res.status(400).json({ message: "Duplicate phone number entered in the same record." });
+            }
 
             // Validation: Each number must start with 0
             for (const num of inputNumbers) {
@@ -114,18 +121,19 @@ router.post('/add', async (req, res) => {
             if (inputNumbers.length > 0) {
                 const duplicateQuery = {
                     $or: inputNumbers.map(num => ({
-                        phone: { $regex: `(^|/)${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|/)` }
+                        phone: { $regex: `(^|[/\\s])${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([/\\s]|$)` }
                     }))
                 };
                 const existingPhone = await Phone.findOne(duplicateQuery);
                 if (existingPhone) {
-                    return res.status(400).json({ message: `Phone number ${existingPhone.phone} already exists (or contains a duplicate number)` });
+                    return res.status(400).json({ message: `Phone number '${existingPhone.phone}' already exists with duplicate number.` });
                 }
             }
+            normalizedPhone = inputNumbers.join('/');
         }
 
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, isBanned, createdBy, createdAt: localTime });
+        const newPhone = new Phone({ phone: normalizedPhone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, isBanned, createdBy, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {
@@ -137,6 +145,7 @@ router.post('/add', async (req, res) => {
 router.put('/edit/:id', async (req, res) => {
     try {
         const { phone } = req.body;
+        let normalizedPhone = phone;
         if (phone) {
             // Validation: Only digits and / are allowed
             if (!/^[0-9/]+$/.test(phone)) {
@@ -144,6 +153,12 @@ router.put('/edit/:id', async (req, res) => {
             }
 
             const inputNumbers = phone.split('/').map(n => n.trim()).filter(n => n);
+
+            // Check for self-duplicates in the input
+            const uniqueNumbers = new Set(inputNumbers);
+            if (uniqueNumbers.size !== inputNumbers.length) {
+                return res.status(400).json({ message: "Duplicate phone number entered in the same record." });
+            }
 
             // Validation: Each number must start with 0
             for (const num of inputNumbers) {
@@ -156,17 +171,18 @@ router.put('/edit/:id', async (req, res) => {
                 const duplicateQuery = {
                     _id: { $ne: req.params.id },
                     $or: inputNumbers.map(num => ({
-                        phone: { $regex: `(^|/)${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|/)` }
+                        phone: { $regex: `(^|[/\\s])${num.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([/\\s]|$)` }
                     }))
                 };
                 const existingPhone = await Phone.findOne(duplicateQuery);
                 if (existingPhone) {
-                    return res.status(400).json({ message: `Phone number ${existingPhone.phone} already exists (or contains a duplicate number)` });
+                    return res.status(400).json({ message: `Phone number '${existingPhone.phone}' already exists with duplicate number.` });
                 }
             }
+            normalizedPhone = inputNumbers.join('/');
         }
 
-        const updatedData = await Phone.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedData = await Phone.findByIdAndUpdate(req.params.id, { ...req.body, ...(phone ? { phone: normalizedPhone } : {}) }, { new: true });
         res.json(updatedData);
     } catch (err) {
         res.status(500).json({ message: err.message });
