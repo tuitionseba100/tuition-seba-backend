@@ -168,8 +168,8 @@ router.post('/add', async (req, res) => {
         const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
-        if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
-            return res.status(400).json({ message: "Status is required and must be one of: pending, completed, cancelled." });
+        if (status && !['pending', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ message: "Status must be one of: pending, completed, cancelled." });
         }
 
         if (tuitionCode && paymentNumber) {
@@ -193,7 +193,7 @@ router.post('/add', async (req, res) => {
             nextPaymentDate: nextPaymentDate && nextPaymentDate !== "" ? new Date(nextPaymentDate) : null,
             nextComment: nextComment || req.body.nextCommentDate || '',
             createdBy: activeUser,
-            status: status || 'pending'
+            status: status || ''
         });
 
         await newServiceCharge.save();
@@ -214,8 +214,8 @@ router.put('/edit/:id', async (req, res) => {
         const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
-        if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
-            return res.status(400).json({ message: "Status is required and must be one of: pending, completed, cancelled." });
+        if (status && !['pending', 'completed', 'cancelled'].includes(status)) {
+            return res.status(400).json({ message: "Status must be one of: pending, completed, cancelled." });
         }
 
         const oldData = await ServiceCharge.findById(req.params.id).lean();
@@ -248,7 +248,7 @@ router.put('/edit/:id', async (req, res) => {
                 nextComment: nextComment !== undefined ? nextComment : (req.body.nextCommentDate !== undefined ? req.body.nextCommentDate : oldData.nextComment),
                 modifiedAt: Date.now(),
                 updatedBy: activeUser,
-                status
+                status: status || ''
             },
             { new: true }
         );
