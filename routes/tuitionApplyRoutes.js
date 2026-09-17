@@ -72,7 +72,7 @@ router.get('/getTableData', async (req, res) => {
                         { tutorNumber: { $in: pagePhones } },
                         { paymentNumber: { $in: pagePhones } }
                     ]
-                }).select('tutorNumber paymentNumber').lean()
+                }).select('tutorNumber paymentNumber duePayment').lean()
                 : [],
             tuitionCodes.length > 0
                 ? Tuition.find({ tuitionCode: { $in: tuitionCodes } })
@@ -81,16 +81,22 @@ router.get('/getTableData', async (req, res) => {
                 : []
         ]);
 
-        const dueNormalizedSet = new Set(
-            paymentsWithDue.flatMap(p => {
+        const dueAmountMap = new Map();
+        paymentsWithDue.forEach(p => {
+            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
+            const val = parseFloat(rawDue) || 0;
+            if (val > 0) {
                 const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
                 const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const res = [];
-                if (tDigits.length >= 10) res.push(tDigits.slice(-10));
-                if (pDigits.length >= 10) res.push(pDigits.slice(-10));
-                return res;
-            })
-        );
+                const seenKeys = new Set();
+                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
+                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
+
+                seenKeys.forEach(k => {
+                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                });
+            }
+        });
 
         const tuitionStatusMap = new Map();
         tuitions.forEach(t => {
@@ -102,10 +108,12 @@ router.get('/getTableData', async (req, res) => {
         const data = applyList.map(apply => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const hasDue = last10 ? dueNormalizedSet.has(last10) : false;
+            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const hasDue = dueAmount > 0;
             return {
                 ...apply,
                 hasDue,
+                dueAmount,
                 tuitionStatus: apply.tuitionCode ? (tuitionStatusMap.get(apply.tuitionCode.toString()) || '') : ''
             };
         });
@@ -545,27 +553,35 @@ router.get('/appliedListByTuitionId', async (req, res) => {
                     { tutorNumber: { $in: modalPhones } },
                     { paymentNumber: { $in: modalPhones } }
                 ]
-            }).select('tutorNumber paymentNumber').lean()
+            }).select('tutorNumber paymentNumber duePayment').lean()
             : [];
 
-        const dueNormalizedSet = new Set(
-            paymentsWithDue.flatMap(p => {
+        const dueAmountMap = new Map();
+        paymentsWithDue.forEach(p => {
+            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
+            const val = parseFloat(rawDue) || 0;
+            if (val > 0) {
                 const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
                 const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const res = [];
-                if (tDigits.length >= 10) res.push(tDigits.slice(-10));
-                if (pDigits.length >= 10) res.push(pDigits.slice(-10));
-                return res;
-            })
-        );
+                const seenKeys = new Set();
+                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
+                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
+
+                seenKeys.forEach(k => {
+                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                });
+            }
+        });
 
         const data = appliedList.map(apply => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const hasDue = last10 ? dueNormalizedSet.has(last10) : false;
+            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const hasDue = dueAmount > 0;
             return {
                 ...apply,
-                hasDue
+                hasDue,
+                dueAmount
             };
         });
 
@@ -663,27 +679,35 @@ router.get('/byPremiumCode', async (req, res) => {
                     { tutorNumber: { $in: teacherPhones } },
                     { paymentNumber: { $in: teacherPhones } }
                 ]
-            }).select('tutorNumber paymentNumber').lean()
+            }).select('tutorNumber paymentNumber duePayment').lean()
             : [];
 
-        const dueNormalizedSet = new Set(
-            paymentsWithDue.flatMap(p => {
+        const dueAmountMap = new Map();
+        paymentsWithDue.forEach(p => {
+            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
+            const val = parseFloat(rawDue) || 0;
+            if (val > 0) {
                 const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
                 const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const res = [];
-                if (tDigits.length >= 10) res.push(tDigits.slice(-10));
-                if (pDigits.length >= 10) res.push(pDigits.slice(-10));
-                return res;
-            })
-        );
+                const seenKeys = new Set();
+                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
+                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
+
+                seenKeys.forEach(k => {
+                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                });
+            }
+        });
 
         const data = tuitionApplies.map(apply => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const hasDue = last10 ? dueNormalizedSet.has(last10) : false;
+            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const hasDue = dueAmount > 0;
             return {
                 ...apply,
-                hasDue
+                hasDue,
+                dueAmount
             };
         });
 
