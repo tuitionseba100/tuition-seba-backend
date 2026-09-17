@@ -424,7 +424,8 @@ router.get('/getTableData', async (req, res) => {
         paymentNumber = '',
         paymentStatus = '',
         paymentType = '',
-        assignedTo = ''
+        assignedTo = '',
+        dueToday = ''
     } = req.query;
 
     const filter = {};
@@ -458,10 +459,19 @@ router.get('/getTableData', async (req, res) => {
         }
     }
 
+    if (dueToday === 'true') {
+        const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
+        const startSearch = startOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+        const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+
+        filter.duePayDate = { $gte: new Date(startSearch), $lte: new Date(endSearch) };
+    }
+
     try {
         const total = await Payment.countDocuments(filter);
         const payments = await Payment.find(filter)
-            .sort({ _id: -1 })
+            .sort(dueToday === 'true' ? { duePayDate: 1, _id: -1 } : { _id: -1 })
             .skip((page - 1) * limit)
             .limit(limit)
             .lean();
