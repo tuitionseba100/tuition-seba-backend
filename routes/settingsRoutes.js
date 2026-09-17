@@ -44,7 +44,7 @@ router.get('/:key', authMiddleware, async (req, res) => {
 });
 
 // Update or create a setting
-router.post('/', authMiddleware, superadminMiddleware, async (req, res) => {
+router.post('/', authMiddleware, async (req, res) => {
     const { key, value, submodule, mode } = req.body;
     try {
         let updateData = { value, submodule };
