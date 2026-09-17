@@ -280,11 +280,15 @@ router.post('/add', async (req, res) => {
         let isSpam = false;
         let isBest = false;
         let isExpress = false;
+        let isBanned = false;
 
         for (const entry of phoneList) {
-            const normalizedDbPhone = normalizePhone(entry.phone);
+            const entryPhones = (entry.phone || '').split('/').map(p => normalizePhone(p));
 
-            if (normalizedDbPhone === normalizedInputPhone) {
+            if (entryPhones.includes(normalizedInputPhone)) {
+                if (entry.isBanned) {
+                    isBanned = true;
+                }
                 if (entry.isSpam) {
                     isSpam = true;
                 } else if (entry.isExpress) {
@@ -370,6 +374,7 @@ router.post('/add', async (req, res) => {
             commentForTeacher: autoCommentForTeacher,
             appliedAt: localTime,
             status: autoStatus,
+            isBanned,
             isSpam,
             isBest,
             isExpress,
@@ -411,11 +416,15 @@ router.post('/add-web', async (req, res) => {
         let isSpam = false;
         let isBest = false;
         let isExpress = false;
+        let isBanned = false;
 
         for (const entry of phoneList) {
-            const normalizedDbPhone = normalizePhone(entry.phone);
+            const entryPhones = (entry.phone || '').split('/').map(p => normalizePhone(p));
 
-            if (normalizedDbPhone === normalizedInputPhone) {
+            if (entryPhones.includes(normalizedInputPhone)) {
+                if (entry.isBanned) {
+                    isBanned = true;
+                }
                 if (entry.isSpam) {
                     isSpam = true;
                 } else if (entry.isExpress) {
@@ -500,6 +509,7 @@ router.post('/add-web', async (req, res) => {
             commentForTeacher: autoCommentForTeacher,
             appliedAt: localTime,
             status: autoStatus,
+            isBanned,
             isSpam,
             isBest,
             isExpress,
@@ -524,7 +534,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher regTeacherStatus'
+            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
         const modalPhones = [...new Set(appliedList.flatMap(a => getPhoneVariations(a.phone)))];
@@ -637,7 +647,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isSpam isBest isExpress regTeacherStatus'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isBanned isSpam isBest isExpress regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
         if (tuitionApplies.length === 0) {
@@ -701,11 +711,15 @@ router.put('/edit/:id', async (req, res) => {
             let isSpam = false;
             let isBest = false;
             let isExpress = false;
+            let isBanned = false;
 
             for (const entry of phoneList) {
-                const normalizedDbPhone = normalizePhone(entry.phone);
+                const entryPhones = (entry.phone || '').split('/').map(p => normalizePhone(p));
 
-                if (normalizedDbPhone === normalizedInputPhone) {
+                if (entryPhones.includes(normalizedInputPhone)) {
+                    if (entry.isBanned) {
+                        isBanned = true;
+                    }
                     if (entry.isSpam) {
                         isSpam = true;
                     } else if (entry.isExpress) {
@@ -717,6 +731,7 @@ router.put('/edit/:id', async (req, res) => {
                 }
             }
 
+            updatePayload.isBanned = isBanned;
             updatePayload.isSpam = isSpam;
             updatePayload.isBest = isBest;
             updatePayload.isExpress = isExpress;
@@ -821,6 +836,7 @@ router.get('/exportData', async (req, res) => {
                     ),
                     escapeCsvField(doc.comment),
                     escapeCsvField(doc.commentForTeacher),
+                    escapeCsvField(doc.isBanned ? 'Yes' : 'No'),
                     escapeCsvField(doc.isSpam ? 'Yes' : 'No'),
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')
@@ -854,7 +870,7 @@ router.get('/exportAll', async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Tuition ID,Premium Code,Reg Teacher Status,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Spam,Is Best,Is Express\n';
+        const header = 'Tuition Code,Tuition ID,Premium Code,Reg Teacher Status,Name,Phone,Institute,Academic Year,Department,Address,Status,Applied At,Comment,Comment For Teacher,Is Banned,Is Spam,Is Best,Is Express\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -897,6 +913,7 @@ router.get('/exportAll', async (req, res) => {
                         : ''),
                     escapeCsvField(doc.comment || ''),
                     escapeCsvField(doc.commentForTeacher || ''),
+                    escapeCsvField(doc.isBanned ? 'Yes' : 'No'),
                     escapeCsvField(doc.isSpam ? 'Yes' : 'No'),
                     escapeCsvField(doc.isBest ? 'Yes' : 'No'),
                     escapeCsvField(doc.isExpress ? 'Yes' : 'No')

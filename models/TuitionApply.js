@@ -19,6 +19,7 @@ const tuitionApplySchema = new mongoose.Schema({
     isSpam: { type: Boolean, default: false },
     isBest: { type: Boolean, default: false },
     isExpress: { type: Boolean, default: false },
+    isBanned: { type: Boolean, default: false },
     hasDue: { type: Boolean, default: false },
     isAppApply: { type: Boolean, default: false },
     regTeacherStatus: { type: String, default: '' },
