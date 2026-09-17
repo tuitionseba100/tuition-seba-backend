@@ -20,6 +20,8 @@ router.get('/all', async (req, res) => {
             query.isExpress = true;
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
+        } else if (type === 'banned') {
+            query.isBanned = true;
         }
 
         const totalRecords = await Phone.countDocuments(query);
@@ -46,13 +48,15 @@ router.get('/summary', async (req, res) => {
         const best = await Phone.countDocuments({ isBest: true });
         const express = await Phone.countDocuments({ isExpress: true });
         const bestGuardian = await Phone.countDocuments({ isBestGuardian: true });
+        const banned = await Phone.countDocuments({ isBanned: true });
 
         res.json({
             total,
             spam,
             best,
             express,
-            bestGuardian
+            bestGuardian,
+            banned
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -76,6 +80,8 @@ router.get('/export', async (req, res) => {
             query.isExpress = true;
         } else if (type === 'bestGuardian') {
             query.isBestGuardian = true;
+        } else if (type === 'banned') {
+            query.isBanned = true;
         }
 
         const data = await Phone.find(query).sort({ createdAt: -1 });
@@ -87,7 +93,7 @@ router.get('/export', async (req, res) => {
 
 //add
 router.post('/add', async (req, res) => {
-    const { phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, createdBy } = req.body;
+    const { phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, isBanned, createdBy } = req.body;
 
     try {
         if (phone) {
@@ -119,7 +125,7 @@ router.post('/add', async (req, res) => {
         }
 
         const localTime = moment().utcOffset(6 * 60).format("YYYY-MM-DD HH:mm:ss");
-        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, createdBy, createdAt: localTime });
+        const newPhone = new Phone({ phone, note, isActive, isBest, isSpam, isExpress, isBestGuardian, isBanned, createdBy, createdAt: localTime });
         await newPhone.save();
         res.status(201).json(newPhone);
     } catch (err) {

@@ -9,6 +9,7 @@ const phoneSchema = new mongoose.Schema({
     isExpress: { type: Boolean, default: false },
     isBest: { type: Boolean, default: false },
     isBestGuardian: { type: Boolean, default: false },
+    isBanned: { type: Boolean, default: false },
     createdBy: { type: String },
     updatedBy: { type: String },
 });
