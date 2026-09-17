@@ -82,6 +82,7 @@ router.get('/getTableData', async (req, res) => {
         ]);
 
         const dueAmountMap = new Map();
+        const dueCountMap = new Map();
         paymentsWithDue.forEach(p => {
             const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
             const val = parseFloat(rawDue) || 0;
@@ -94,6 +95,7 @@ router.get('/getTableData', async (req, res) => {
 
                 seenKeys.forEach(k => {
                     dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
                 });
             }
         });
@@ -109,11 +111,13 @@ router.get('/getTableData', async (req, res) => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
             const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
             const hasDue = dueAmount > 0;
             return {
                 ...apply,
                 hasDue,
                 dueAmount,
+                dueCount,
                 tuitionStatus: apply.tuitionCode ? (tuitionStatusMap.get(apply.tuitionCode.toString()) || '') : ''
             };
         });
@@ -557,6 +561,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
             : [];
 
         const dueAmountMap = new Map();
+        const dueCountMap = new Map();
         paymentsWithDue.forEach(p => {
             const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
             const val = parseFloat(rawDue) || 0;
@@ -569,6 +574,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
 
                 seenKeys.forEach(k => {
                     dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
                 });
             }
         });
@@ -577,11 +583,13 @@ router.get('/appliedListByTuitionId', async (req, res) => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
             const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
             const hasDue = dueAmount > 0;
             return {
                 ...apply,
                 hasDue,
-                dueAmount
+                dueAmount,
+                dueCount
             };
         });
 
@@ -683,6 +691,7 @@ router.get('/byPremiumCode', async (req, res) => {
             : [];
 
         const dueAmountMap = new Map();
+        const dueCountMap = new Map();
         paymentsWithDue.forEach(p => {
             const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
             const val = parseFloat(rawDue) || 0;
@@ -695,6 +704,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
                 seenKeys.forEach(k => {
                     dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
+                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
                 });
             }
         });
@@ -703,11 +713,13 @@ router.get('/byPremiumCode', async (req, res) => {
             const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
             const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
             const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
+            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
             const hasDue = dueAmount > 0;
             return {
                 ...apply,
                 hasDue,
-                dueAmount
+                dueAmount,
+                dueCount
             };
         });
 
