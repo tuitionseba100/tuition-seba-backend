@@ -6,7 +6,6 @@ const router = express.Router();
 const moment = require('moment-timezone');
 const path = require('path');
 const { deleteFromR2 } = require('../utils/r2Storage');
-const { sendSms } = require('../utils/smsSender');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -466,19 +465,6 @@ router.post('/add', async (req, res) => {
         });
 
         await newTeacher.save();
-
-        // Dispatch registration SMS to teacher
-        const recipientPhone = newTeacher.phone || newTeacher.whatsapp;
-        if (recipientPhone && newTeacher.premiumCode) {
-            const smsMessage = `Dear teacher, your profile has been registered. Code: ${newTeacher.premiumCode} (keep it secret). You can now apply for tuitions. Helpline: 01633920928 -Tuition Seba Forum`;
-            sendSms({
-                phone: recipientPhone,
-                message: smsMessage,
-                premiumCode: newTeacher.premiumCode,
-                category: 'Registration',
-                sentBy: createdBy || 'system'
-            }).catch(smsErr => console.error('Auto registration SMS error:', smsErr));
-        }
 
         res.status(201).json(newTeacher);
     } catch (err) {
