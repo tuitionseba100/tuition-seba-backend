@@ -144,6 +144,22 @@ router.post('/teacher-nid', upload.single('photo'), (req, res) => {
 });
 
 /**
+ * POST /api/upload/teacher-nid-front
+ * Compresses uploaded NID Front image to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-nid-front', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'nid_front', 'NID Front');
+});
+
+/**
+ * POST /api/upload/teacher-nid-back
+ * Compresses uploaded NID Back image to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-nid-back', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'nid_back', 'NID Back');
+});
+
+/**
  * POST /api/upload/teacher-ssc
  * Compresses any uploaded SSC Marksheet to guaranteed < 100KB and uploads to Cloudflare R2
  */
@@ -165,6 +181,30 @@ router.post('/teacher-hsc', upload.single('photo'), (req, res) => {
  */
 router.post('/teacher-uni-id', upload.single('photo'), (req, res) => {
     processAndUploadDocument(req, res, 'uni_id', 'University ID / Admission Slip');
+});
+
+/**
+ * POST /api/upload/teacher-other-1
+ * Compresses any uploaded Additional Certificate / Document 1 to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-other-1', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'other1', 'Other Certificate 1');
+});
+
+/**
+ * POST /api/upload/teacher-other-2
+ * Compresses any uploaded Additional Certificate / Document 2 to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-other-2', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'other2', 'Other Certificate 2');
+});
+
+/**
+ * POST /api/upload/teacher-other-3
+ * Compresses any uploaded Additional Certificate / Document 3 to guaranteed < 100KB and uploads to Cloudflare R2
+ */
+router.post('/teacher-other-3', upload.single('photo'), (req, res) => {
+    processAndUploadDocument(req, res, 'other3', 'Other Certificate 3');
 });
 
 /**

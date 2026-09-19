@@ -486,9 +486,17 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         if (req.body.photo !== undefined && oldTeacher.photo && oldTeacher.photo !== req.body.photo) {
             await deleteFromR2(oldTeacher.photo);
         }
-        // If NID/Birth photo is replaced or removed, delete the old photo from R2 storage
+        // If legacy NID/Birth photo is replaced or removed, delete the old photo from R2 storage
         if (req.body.nidPhoto !== undefined && oldTeacher.nidPhoto && oldTeacher.nidPhoto !== req.body.nidPhoto) {
             await deleteFromR2(oldTeacher.nidPhoto);
+        }
+        // If NID Front is replaced or removed, delete old document from R2 storage
+        if (req.body.nidFront !== undefined && oldTeacher.nidFront && oldTeacher.nidFront !== req.body.nidFront) {
+            await deleteFromR2(oldTeacher.nidFront);
+        }
+        // If NID Back is replaced or removed, delete old document from R2 storage
+        if (req.body.nidBack !== undefined && oldTeacher.nidBack && oldTeacher.nidBack !== req.body.nidBack) {
+            await deleteFromR2(oldTeacher.nidBack);
         }
         // If SSC Marksheet is replaced or removed, delete old document from R2 storage
         if (req.body.sscMarksheet !== undefined && oldTeacher.sscMarksheet && oldTeacher.sscMarksheet !== req.body.sscMarksheet) {
@@ -501,6 +509,18 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         // If University ID / Admission Slip is replaced or removed, delete old document from R2 storage
         if (req.body.universityIdCard !== undefined && oldTeacher.universityIdCard && oldTeacher.universityIdCard !== req.body.universityIdCard) {
             await deleteFromR2(oldTeacher.universityIdCard);
+        }
+        // If Other Document 1 is replaced or removed, delete old document from R2 storage
+        if (req.body.otherDoc1 !== undefined && oldTeacher.otherDoc1 && oldTeacher.otherDoc1 !== req.body.otherDoc1) {
+            await deleteFromR2(oldTeacher.otherDoc1);
+        }
+        // If Other Document 2 is replaced or removed, delete old document from R2 storage
+        if (req.body.otherDoc2 !== undefined && oldTeacher.otherDoc2 && oldTeacher.otherDoc2 !== req.body.otherDoc2) {
+            await deleteFromR2(oldTeacher.otherDoc2);
+        }
+        // If Other Document 3 is replaced or removed, delete old document from R2 storage
+        if (req.body.otherDoc3 !== undefined && oldTeacher.otherDoc3 && oldTeacher.otherDoc3 !== req.body.otherDoc3) {
+            await deleteFromR2(oldTeacher.otherDoc3);
         }
 
         const updatedTeacher = await RegTeacher.findByIdAndUpdate(
@@ -555,9 +575,14 @@ router.delete('/delete/:id', authMiddleware, async (req, res) => {
         if (teacher) {
             if (teacher.photo) await deleteFromR2(teacher.photo);
             if (teacher.nidPhoto) await deleteFromR2(teacher.nidPhoto);
+            if (teacher.nidFront) await deleteFromR2(teacher.nidFront);
+            if (teacher.nidBack) await deleteFromR2(teacher.nidBack);
             if (teacher.sscMarksheet) await deleteFromR2(teacher.sscMarksheet);
             if (teacher.hscMarksheet) await deleteFromR2(teacher.hscMarksheet);
             if (teacher.universityIdCard) await deleteFromR2(teacher.universityIdCard);
+            if (teacher.otherDoc1) await deleteFromR2(teacher.otherDoc1);
+            if (teacher.otherDoc2) await deleteFromR2(teacher.otherDoc2);
+            if (teacher.otherDoc3) await deleteFromR2(teacher.otherDoc3);
         }
         await RegTeacher.findByIdAndDelete(req.params.id);
         res.status(204).send();
