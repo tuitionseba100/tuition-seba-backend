@@ -23,6 +23,41 @@ const superadminMiddleware = (req, res, next) => {
     next();
 };
 
+// In-memory RAM cache for public settings (0 DB query overhead for visitors)
+let cachedPublicSettings = null;
+let lastCacheTime = 0;
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes in-memory refresh
+
+const getPublicSettingsData = async () => {
+    const now = Date.now();
+    if (cachedPublicSettings && (now - lastCacheTime < CACHE_TTL_MS)) {
+        return cachedPublicSettings;
+    }
+
+    try {
+        const setting = await Settings.findOne({ key: 'whatsapp_number' }).lean();
+        cachedPublicSettings = {
+            whatsapp_number: setting && setting.value ? String(setting.value).trim() : '+8801633920928'
+        };
+        lastCacheTime = now;
+        return cachedPublicSettings;
+    } catch (err) {
+        console.error('Error reading public settings from DB:', err);
+        return cachedPublicSettings || { whatsapp_number: '+8801633920928' };
+    }
+};
+
+// Public endpoint - Zero auth required, served from RAM with Cache-Control headers
+router.get('/public', async (req, res) => {
+    try {
+        const data = await getPublicSettingsData();
+        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ message: err.message, whatsapp_number: '+8801633920928' });
+    }
+});
+
 // Get all settings
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -69,6 +104,18 @@ router.post('/', authMiddleware, async (req, res) => {
             updateData,
             { upsert: true, new: true }
         );
+
+        // Instantly invalidate in-memory RAM cache when settings are saved
+        if (key === 'whatsapp_number') {
+            cachedPublicSettings = {
+                whatsapp_number: value ? String(value).trim() : '+8801633920928'
+            };
+            lastCacheTime = Date.now();
+        } else {
+            cachedPublicSettings = null;
+            lastCacheTime = 0;
+        }
+
         res.json(setting);
     } catch (err) {
         res.status(500).json({ message: err.message });
