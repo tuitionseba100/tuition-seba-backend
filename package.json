@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node --max-old-space-size=450 server.js"
+    "start": "node --max-old-space-size=380 server.js"
   },
   "keywords": [],
   "author": "",

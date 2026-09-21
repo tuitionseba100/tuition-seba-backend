@@ -1,6 +1,11 @@
 const express = require('express');
 const multer = require('multer');
 const sharp = require('sharp');
+
+// Disable Sharp internal caching & limit worker concurrency to prevent OOM on 512MB instances
+sharp.cache(false);
+sharp.concurrency(1);
+
 const { uploadToR2, deleteFromR2 } = require('../utils/r2Storage');
 
 const router = express.Router();
@@ -9,7 +14,7 @@ const router = express.Router();
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 15 * 1024 * 1024, // Accept up to 15MB incoming, backend will compress under 100KB
+        fileSize: 8 * 1024 * 1024, // Accept up to 8MB incoming, backend will compress under 100KB
     },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {

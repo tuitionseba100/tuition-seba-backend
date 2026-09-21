@@ -75,15 +75,20 @@ app.get('/', (req, res) => {
     res.send('Welcome to TuitionSeba API!');
 });
 
+// Lightweight health check for Render / load balancers
+app.get('/healthz', (req, res) => {
+    res.status(200).json({ status: 'ok', uptime: Math.floor(process.uptime()) });
+});
+
 const PORT = process.env.PORT || 10000;
 const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
 // Render Load Balancer connection timeout fix
-// This prevents the "2 requests work, 1 fails" random drop issue
+// Note: headersTimeout MUST be strictly greater than keepAliveTimeout in Node.js
 server.keepAliveTimeout = 120 * 1000;
-server.headersTimeout = 120 * 1000;
+server.headersTimeout = 125 * 1000;
 
 // Setup Socket.io Server integrated directly
 const { Server } = require('socket.io');
@@ -291,5 +296,14 @@ io.on('connection', (socket) => {
             console.error('Socket internal_typing error:', err);
         }
     });
+});
+
+// Process-level error handling to prevent silent container crashes
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Promise Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception thrown:', err);
 });
 
