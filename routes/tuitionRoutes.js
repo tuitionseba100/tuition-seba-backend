@@ -865,6 +865,98 @@ router.get('/summary', async (req, res) => {
     }
 });
 
+async function getNextTuitionCode(baseCode = null) {
+    if (baseCode && String(baseCode).trim()) {
+        let rootCode = String(baseCode).trim();
+        const rootMatch = rootCode.match(/^(.+?)(?:\s*\([A-Za-z]+\))?$/);
+        if (rootMatch) {
+            rootCode = rootMatch[1].trim();
+        }
+
+        const escapedRoot = escapeRegex(rootCode);
+        const existingMatches = await Tuition.find({
+            tuitionCode: { $regex: new RegExp(`^${escapedRoot}(\\s*\\([A-Za-z]+\\))?$`, 'i') }
+        }).select('tuitionCode').lean();
+
+        const usedLetters = new Set();
+        existingMatches.forEach(t => {
+            if (t.tuitionCode) {
+                const m = t.tuitionCode.match(/\(([A-Za-z]+)\)\s*$/);
+                if (m) {
+                    usedLetters.add(m[1].toUpperCase());
+                }
+            }
+        });
+
+        const getLetterFromIndex = (idx) => {
+            if (idx < 26) {
+                return String.fromCharCode(65 + idx);
+            }
+            const first = String.fromCharCode(65 + Math.floor(idx / 26) - 1);
+            const second = String.fromCharCode(65 + (idx % 26));
+            return `${first}${second}`;
+        };
+
+        let letterIndex = 0;
+        let candidateLetter = getLetterFromIndex(letterIndex);
+        while (usedLetters.has(candidateLetter)) {
+            letterIndex++;
+            candidateLetter = getLetterFromIndex(letterIndex);
+        }
+
+        let candidateCode = `${rootCode} (${candidateLetter})`;
+        while (await Tuition.exists({ tuitionCode: candidateCode })) {
+            letterIndex++;
+            candidateLetter = getLetterFromIndex(letterIndex);
+            candidateCode = `${rootCode} (${candidateLetter})`;
+        }
+        return candidateCode;
+    }
+
+    // Fresh tuition code generation (start from 16432)
+    const latestTuitions = await Tuition.find(
+        { tuitionCode: { $regex: /^\d+$/ } }
+    )
+        .sort({ tuitionCode: -1 })
+        .select('tuitionCode')
+        .limit(20)
+        .lean();
+
+    let maxNum = 16431; // Starting base: next will be 16432
+    if (latestTuitions && latestTuitions.length > 0) {
+        for (const t of latestTuitions) {
+            if (t.tuitionCode) {
+                const match = t.tuitionCode.match(/^(\d+)$/);
+                if (match) {
+                    const num = parseInt(match[1], 10);
+                    if (!isNaN(num) && num > maxNum) {
+                        maxNum = num;
+                    }
+                }
+            }
+        }
+    }
+
+    let nextNum = maxNum + 1;
+    let nextCode = String(nextNum);
+    while (await Tuition.exists({ tuitionCode: nextCode })) {
+        nextNum++;
+        nextCode = String(nextNum);
+    }
+    return nextCode;
+}
+
+router.get('/next-code', async (req, res) => {
+    try {
+        const { baseCode, copyFrom } = req.query;
+        const targetBase = baseCode || copyFrom || null;
+        const nextCode = await getNextTuitionCode(targetBase);
+        res.json({ success: true, nextCode });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.post('/add', async (req, res) => {
     const {
         tuitionCode,
@@ -920,9 +1012,22 @@ router.post('/add', async (req, res) => {
             return res.status(400).json({ message: 'Guardian number is required' });
         }
 
-        const existingTuition = await Tuition.findOne({ tuitionCode });
-        if (existingTuition) {
-            return res.status(400).json({ message: 'Tuition code already exists' });
+        const targetBase = req.body.copyFromCode || req.body.baseCode || null;
+
+        const isPlaceholder = !tuitionCode || 
+            String(tuitionCode).includes('Auto-Assigned') || 
+            String(tuitionCode).includes('Copy of') || 
+            String(tuitionCode).trim() === '';
+
+        let finalTuitionCode = isPlaceholder ? null : String(tuitionCode).trim();
+
+        if (!finalTuitionCode) {
+            finalTuitionCode = await getNextTuitionCode(targetBase);
+        } else {
+            const isTaken = await Tuition.exists({ tuitionCode: finalTuitionCode });
+            if (isTaken) {
+                finalTuitionCode = await getNextTuitionCode(targetBase || finalTuitionCode);
+            }
         }
 
         let isSpamGuardian = false;
@@ -982,7 +1087,7 @@ router.post('/add', async (req, res) => {
         const isPublishBool = isPublish === undefined ? true : (String(isPublish) === 'true' || isPublish === true);
 
         const newTuition = new Tuition({
-            tuitionCode,
+            tuitionCode: finalTuitionCode,
             isPublish: isPublishBool,
             lastPublishedDate: isPublishBool ? new Date() : null,
             wantedTeacher,
@@ -1062,15 +1167,7 @@ router.post('/add', async (req, res) => {
 router.put('/edit/:id', async (req, res) => {
     try {
         delete req.body.confirmationFollowUps;
-        if (req.body.tuitionCode) {
-            const duplicateTuition = await Tuition.findOne({
-                tuitionCode: req.body.tuitionCode,
-                _id: { $ne: req.params.id }
-            });
-            if (duplicateTuition) {
-                return res.status(400).json({ message: 'Tuition code already exists' });
-            }
-        }
+        delete req.body.tuitionCode; // Permanent immutable identifier: cannot be changed via edit
 
         if (req.body.guardianNumber) {
             const inputNumbers = req.body.guardianNumber.split('/').map(n => n.trim()).filter(n => n);
