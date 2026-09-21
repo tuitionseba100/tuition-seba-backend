@@ -26,7 +26,7 @@ const superadminMiddleware = (req, res, next) => {
 // In-memory RAM cache for public settings (0 DB query overhead for visitors)
 let cachedPublicSettings = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes in-memory refresh
+const CACHE_TTL_MS = 30 * 1000; // 30 seconds in-memory refresh
 
 const getPublicSettingsData = async () => {
     const now = Date.now();
@@ -47,11 +47,13 @@ const getPublicSettingsData = async () => {
     }
 };
 
-// Public endpoint - Zero auth required, served from RAM with Cache-Control headers
+// Public endpoint - Zero auth required, served from RAM with no-cache headers
 router.get('/public', async (req, res) => {
     try {
         const data = await getPublicSettingsData();
-        res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
         res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message, whatsapp_number: '+8801633920928' });
