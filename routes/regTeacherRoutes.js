@@ -29,6 +29,44 @@ router.get('/all', authMiddleware, async (req, res) => {
     }
 });
 
+router.get('/search-teachers', authMiddleware, async (req, res) => {
+    try {
+        const q = (req.query.q || '').toString().trim();
+        if (!q) {
+            const topTeachers = await RegTeacher.find(
+                { premiumCode: { $exists: true, $ne: null, $ne: '' } },
+                'premiumCode name phone whatsapp alternativePhone'
+            ).sort({ _id: -1 }).limit(15).lean();
+            return res.json(topTeachers);
+        }
+
+        const cleanDigits = q.replace(/\D/g, '');
+        const orConditions = [
+            { premiumCode: new RegExp(escapeRegex(q), 'i') },
+            { name: new RegExp(escapeRegex(q), 'i') }
+        ];
+
+        if (cleanDigits.length >= 4) {
+            const lastDigits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
+            // Match digits even if DB contains dashes, spaces or other formatting
+            const flexiblePhonePattern = lastDigits.split('').map(d => escapeRegex(d)).join('\\D*');
+            const phoneRegex = new RegExp(flexiblePhonePattern);
+            orConditions.push({ phone: phoneRegex });
+            orConditions.push({ whatsapp: phoneRegex });
+            orConditions.push({ alternativePhone: phoneRegex });
+        }
+
+        const teachers = await RegTeacher.find(
+            { $or: orConditions },
+            'premiumCode name phone whatsapp alternativePhone'
+        ).limit(20).lean();
+
+        res.json(teachers);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }

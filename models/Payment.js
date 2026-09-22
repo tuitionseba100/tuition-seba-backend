@@ -45,11 +45,13 @@ const paymentSchema = new mongoose.Schema({
     installmentComment2: { type: String },
     installmentComment3: { type: String },
     installmentComment4: { type: String },
+    premiumCode: { type: String },
     isVerified: { type: Boolean, default: false },
     verifiedBy: { type: String }
 });
 
 paymentSchema.index({ tutorNumber: 1, duePayment: 1 });
+paymentSchema.index({ premiumCode: 1, duePayment: 1 });
 paymentSchema.index({ paymentNumber: 1, duePayment: 1 });
 paymentSchema.index({ tuitionCode: 1 });
 

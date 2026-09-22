@@ -92,6 +92,7 @@ router.post('/add', async (req, res) => {
     const {
         tuitionCode,
         tuitionId,
+        premiumCode,
         paymentReceivedDate,
         paymentReceivedDate2,
         paymentReceivedDate3,
@@ -133,6 +134,10 @@ router.post('/add', async (req, res) => {
         installmentComment3,
         installmentComment4
     } = req.body;
+
+    if (!premiumCode || !premiumCode.toString().trim()) {
+        return res.status(400).json({ message: 'Teacher Code (premiumCode) is required.' });
+    }
 
     try {
         // Auto-assign logic for new payment
@@ -208,7 +213,8 @@ router.post('/add', async (req, res) => {
             installmentComment,
             installmentComment2,
             installmentComment3,
-            installmentComment4
+            installmentComment4,
+            premiumCode: req.body.premiumCode || ''
         });
 
         await newPayment.save();
@@ -224,6 +230,10 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
+        if (req.body.premiumCode !== undefined && (!req.body.premiumCode || !req.body.premiumCode.toString().trim())) {
+            return res.status(400).json({ message: 'Teacher Code (premiumCode) is required.' });
+        }
+
         const oldPayment = await Payment.findById(req.params.id).lean();
         if (!oldPayment) {
             return res.status(404).json({ message: 'Payment not found' });

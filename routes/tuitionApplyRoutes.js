@@ -32,6 +32,199 @@ function getPhoneVariations(phone) {
     return Array.from(variations);
 }
 
+/**
+ * Helper to enrich TuitionApply records with hasDue, dueAmount, and dueCount.
+ * Cross-references teacher's identity (premiumCode) and contact numbers (phone, whatsapp, alternativePhone)
+ * from RegTeacher, and checks Payment due records by both premiumCode and tutorNumber.
+ */
+async function enrichAppliesWithDue(applyList) {
+    if (!Array.isArray(applyList) || applyList.length === 0) {
+        return [];
+    }
+
+    const to10Digits = (num) => {
+        if (!num) return '';
+        const d = num.toString().replace(/\D/g, '');
+        return d.length >= 10 ? d.slice(-10) : '';
+    };
+
+    // 1. Gather all direct phones and premiumCodes from the apply list
+    const applyPhones = applyList.map(a => a.phone).filter(Boolean);
+    const applyCodes = applyList.map(a => a.premiumCode ? a.premiumCode.toString().trim() : '').filter(Boolean);
+
+    const applyPhoneVariations = [...new Set(applyPhones.flatMap(p => getPhoneVariations(p)))];
+    const uniqueApplyCodes = [...new Set(applyCodes)];
+
+    // 2. Query RegTeacher to find any linked profiles
+    const teacherQuery = [];
+    if (applyPhoneVariations.length > 0) {
+        teacherQuery.push({ phone: { $in: applyPhoneVariations } });
+        teacherQuery.push({ whatsapp: { $in: applyPhoneVariations } });
+        teacherQuery.push({ alternativePhone: { $in: applyPhoneVariations } });
+    }
+    if (uniqueApplyCodes.length > 0) {
+        teacherQuery.push({ premiumCode: { $in: uniqueApplyCodes } });
+    }
+
+    const regTeachers = teacherQuery.length > 0
+        ? await RegTeacher.find({ $or: teacherQuery })
+            .select('phone whatsapp alternativePhone premiumCode')
+            .lean()
+        : [];
+
+    // 3. Index regTeachers by premiumCode and 10-digit phones for fast lookup
+    const teachersByCode = new Map();
+    const teachersByPhone10 = new Map();
+
+    regTeachers.forEach(t => {
+        if (t.premiumCode) {
+            teachersByCode.set(t.premiumCode.toString().trim(), t);
+        }
+        const tNumbers = [t.phone, t.whatsapp, t.alternativePhone];
+        tNumbers.forEach(num => {
+            const last10 = to10Digits(num);
+            if (last10) {
+                if (!teachersByPhone10.has(last10)) {
+                    teachersByPhone10.set(last10, []);
+                }
+                teachersByPhone10.get(last10).push(t);
+            }
+        });
+    });
+
+    // 4. Map each apply item to its set of 10-digit phone keys AND set of premiumCodes
+    const applyPhoneSets = [];
+    const applyCodeSets = [];
+
+    applyList.forEach(apply => {
+        const phoneSet = new Set();
+        const codeSet = new Set();
+
+        const apply10 = to10Digits(apply.phone);
+        if (apply10) phoneSet.add(apply10);
+
+        const pCode = apply.premiumCode ? apply.premiumCode.toString().trim() : '';
+        if (pCode) codeSet.add(pCode);
+
+        // Linked teacher by premiumCode
+        if (pCode && teachersByCode.has(pCode)) {
+            const t = teachersByCode.get(pCode);
+            [t.phone, t.whatsapp, t.alternativePhone].forEach(num => {
+                const k = to10Digits(num);
+                if (k) phoneSet.add(k);
+            });
+            if (t.premiumCode) codeSet.add(t.premiumCode.toString().trim());
+        }
+
+        // Linked teachers by apply phone
+        if (apply10 && teachersByPhone10.has(apply10)) {
+            const matchedTeachers = teachersByPhone10.get(apply10);
+            matchedTeachers.forEach(t => {
+                [t.phone, t.whatsapp, t.alternativePhone].forEach(num => {
+                    const k = to10Digits(num);
+                    if (k) phoneSet.add(k);
+                });
+                if (t.premiumCode) codeSet.add(t.premiumCode.toString().trim());
+            });
+        }
+
+        applyPhoneSets.push(phoneSet);
+        applyCodeSets.push(codeSet);
+    });
+
+    // 5. Collect all unique 10-digit keys and premiumCodes to query Payment
+    const all10DigitKeys = [...new Set(applyPhoneSets.flatMap(s => Array.from(s)))];
+    const allPaymentQueryPhones = [...new Set(all10DigitKeys.flatMap(k => getPhoneVariations(k)))];
+    const allPaymentQueryCodes = [...new Set(applyCodeSets.flatMap(s => Array.from(s)))];
+
+    const paymentOr = [];
+    if (allPaymentQueryPhones.length > 0) {
+        paymentOr.push({ tutorNumber: { $in: allPaymentQueryPhones } });
+    }
+    if (allPaymentQueryCodes.length > 0) {
+        paymentOr.push({ premiumCode: { $in: allPaymentQueryCodes } });
+    }
+
+    // 6. Query Payment collection for active dues (by premiumCode OR tutorNumber)
+    const paymentsWithDue = paymentOr.length > 0
+        ? await Payment.find({
+            duePayment: { $nin: [null, undefined, '', '0'] },
+            $or: paymentOr
+        }).select('tutorNumber premiumCode duePayment').lean()
+        : [];
+
+    // 7. Map each payment to its 10-digit tutorNumber and premiumCode
+    const phoneToPaymentsMap = new Map();
+    const codeToPaymentsMap = new Map();
+
+    paymentsWithDue.forEach(p => {
+        const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
+        const val = parseFloat(rawDue) || 0;
+        if (val > 0) {
+            const paymentId = p._id.toString();
+
+            const k = to10Digits(p.tutorNumber);
+            if (k) {
+                if (!phoneToPaymentsMap.has(k)) {
+                    phoneToPaymentsMap.set(k, []);
+                }
+                phoneToPaymentsMap.get(k).push({ id: paymentId, val });
+            }
+
+            if (p.premiumCode) {
+                const c = p.premiumCode.toString().trim();
+                if (c) {
+                    if (!codeToPaymentsMap.has(c)) {
+                        codeToPaymentsMap.set(c, []);
+                    }
+                    codeToPaymentsMap.get(c).push({ id: paymentId, val });
+                }
+            }
+        }
+    });
+
+    // 8. Calculate dueAmount and dueCount per application (deduplicating payments by payment id)
+    return applyList.map((apply, idx) => {
+        const phoneSet = applyPhoneSets[idx];
+        const codeSet = applyCodeSets[idx];
+        const matchedPaymentsMap = new Map();
+
+        phoneSet.forEach(k => {
+            if (phoneToPaymentsMap.has(k)) {
+                phoneToPaymentsMap.get(k).forEach(item => {
+                    if (!matchedPaymentsMap.has(item.id)) {
+                        matchedPaymentsMap.set(item.id, item.val);
+                    }
+                });
+            }
+        });
+
+        codeSet.forEach(c => {
+            if (codeToPaymentsMap.has(c)) {
+                codeToPaymentsMap.get(c).forEach(item => {
+                    if (!matchedPaymentsMap.has(item.id)) {
+                        matchedPaymentsMap.set(item.id, item.val);
+                    }
+                });
+            }
+        });
+
+        let dueAmount = 0;
+        matchedPaymentsMap.forEach(val => {
+            dueAmount += val;
+        });
+        const dueCount = matchedPaymentsMap.size;
+        const hasDue = dueAmount > 0;
+
+        return {
+            ...apply,
+            hasDue,
+            dueAmount,
+            dueCount
+        };
+    });
+}
+
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
@@ -61,44 +254,16 @@ router.get('/getTableData', async (req, res) => {
                 .lean()
         ]);
 
-        const pagePhones = [...new Set(applyList.flatMap(a => getPhoneVariations(a.phone)))];
         const tuitionCodes = [...new Set(applyList.map(a => a.tuitionCode).filter(Boolean))];
 
-        const [paymentsWithDue, tuitions] = await Promise.all([
-            pagePhones.length > 0
-                ? Payment.find({
-                    duePayment: { $nin: [null, undefined, '', '0'] },
-                    $or: [
-                        { tutorNumber: { $in: pagePhones } },
-                        { paymentNumber: { $in: pagePhones } }
-                    ]
-                }).select('tutorNumber paymentNumber duePayment').lean()
-                : [],
+        const [enrichedApplies, tuitions] = await Promise.all([
+            enrichAppliesWithDue(applyList),
             tuitionCodes.length > 0
                 ? Tuition.find({ tuitionCode: { $in: tuitionCodes } })
                     .select('tuitionCode status')
                     .lean()
                 : []
         ]);
-
-        const dueAmountMap = new Map();
-        const dueCountMap = new Map();
-        paymentsWithDue.forEach(p => {
-            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
-            const val = parseFloat(rawDue) || 0;
-            if (val > 0) {
-                const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
-                const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const seenKeys = new Set();
-                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
-                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
-
-                seenKeys.forEach(k => {
-                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
-                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
-                });
-            }
-        });
 
         const tuitionStatusMap = new Map();
         tuitions.forEach(t => {
@@ -107,20 +272,10 @@ router.get('/getTableData', async (req, res) => {
             }
         });
 
-        const data = applyList.map(apply => {
-            const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
-            const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
-            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
-            const hasDue = dueAmount > 0;
-            return {
-                ...apply,
-                hasDue,
-                dueAmount,
-                dueCount,
-                tuitionStatus: apply.tuitionCode ? (tuitionStatusMap.get(apply.tuitionCode.toString()) || '') : ''
-            };
-        });
+        const data = enrichedApplies.map(apply => ({
+            ...apply,
+            tuitionStatus: apply.tuitionCode ? (tuitionStatusMap.get(apply.tuitionCode.toString()) || '') : ''
+        }));
 
         res.json({
             data,
@@ -549,50 +704,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
             'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
-        const modalPhones = [...new Set(appliedList.flatMap(a => getPhoneVariations(a.phone)))];
-        const paymentsWithDue = modalPhones.length > 0
-            ? await Payment.find({
-                duePayment: { $nin: [null, undefined, '', '0'] },
-                $or: [
-                    { tutorNumber: { $in: modalPhones } },
-                    { paymentNumber: { $in: modalPhones } }
-                ]
-            }).select('tutorNumber paymentNumber duePayment').lean()
-            : [];
-
-        const dueAmountMap = new Map();
-        const dueCountMap = new Map();
-        paymentsWithDue.forEach(p => {
-            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
-            const val = parseFloat(rawDue) || 0;
-            if (val > 0) {
-                const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
-                const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const seenKeys = new Set();
-                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
-                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
-
-                seenKeys.forEach(k => {
-                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
-                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
-                });
-            }
-        });
-
-        const data = appliedList.map(apply => {
-            const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
-            const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
-            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
-            const hasDue = dueAmount > 0;
-            return {
-                ...apply,
-                hasDue,
-                dueAmount,
-                dueCount
-            };
-        });
-
+        const data = await enrichAppliesWithDue(appliedList);
         res.json(data);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -678,51 +790,7 @@ router.get('/byPremiumCode', async (req, res) => {
             return res.status(404).json({ message: 'No applications found for this premium code' });
         }
 
-        const teacherPhones = [...new Set(tuitionApplies.flatMap(a => getPhoneVariations(a.phone)))];
-
-        const paymentsWithDue = teacherPhones.length > 0
-            ? await Payment.find({
-                duePayment: { $nin: [null, undefined, '', '0'] },
-                $or: [
-                    { tutorNumber: { $in: teacherPhones } },
-                    { paymentNumber: { $in: teacherPhones } }
-                ]
-            }).select('tutorNumber paymentNumber duePayment').lean()
-            : [];
-
-        const dueAmountMap = new Map();
-        const dueCountMap = new Map();
-        paymentsWithDue.forEach(p => {
-            const rawDue = (p.duePayment || '').toString().replace(/,/g, '').trim();
-            const val = parseFloat(rawDue) || 0;
-            if (val > 0) {
-                const tDigits = (p.tutorNumber || '').toString().replace(/\D/g, '');
-                const pDigits = (p.paymentNumber || '').toString().replace(/\D/g, '');
-                const seenKeys = new Set();
-                if (tDigits.length >= 10) seenKeys.add(tDigits.slice(-10));
-                if (pDigits.length >= 10) seenKeys.add(pDigits.slice(-10));
-
-                seenKeys.forEach(k => {
-                    dueAmountMap.set(k, (dueAmountMap.get(k) || 0) + val);
-                    dueCountMap.set(k, (dueCountMap.get(k) || 0) + 1);
-                });
-            }
-        });
-
-        const data = tuitionApplies.map(apply => {
-            const applyDigits = (apply.phone || '').toString().replace(/\D/g, '');
-            const last10 = applyDigits.length >= 10 ? applyDigits.slice(-10) : '';
-            const dueAmount = last10 ? (dueAmountMap.get(last10) || 0) : 0;
-            const dueCount = last10 ? (dueCountMap.get(last10) || 0) : 0;
-            const hasDue = dueAmount > 0;
-            return {
-                ...apply,
-                hasDue,
-                dueAmount,
-                dueCount
-            };
-        });
-
+        const data = await enrichAppliesWithDue(tuitionApplies);
         res.json(data);
     } catch (err) {
         console.error('Error fetching tuition applies by premium code:', err);
