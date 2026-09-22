@@ -332,7 +332,7 @@ router.get('/exportData', async (req, res) => {
         );
 
         const header =
-            'Tuition Code,Payment Status,Payment Received Date 1,Payment Received Date 2,Payment Received Date 3,Payment Received Date 4,Due Payment Date,Payment Type 1,Payment Type 2,Payment Type 3,Payment Type 4,Tutor Name,Tutor Number,Payment Number 1,Payment Number 2,Payment Number 3,Payment Number 4,Transaction ID,Received TK 1,Received TK 2,Received TK 3,Received TK 4,Due Payment,Total Received TK,Tuition Salary,Total Payment TK,Discount,Comment,Comment 1,Comment 2,Comment 3,Reference,Assigned To,Created By,Updated By,Created At\n';
+            'Tuition Code,Tuition ID,Teacher Code,Tutor Name,Tutor Number,Payment Status,Tuition Salary,Total Payment TK,Discount,Total Received TK,Due Payment,Due Payment Date,Next Due Pay Date Comment,Previous Follow Up Date,Follow Up Note,Payment Received Date 1,Payment Type 1,Payment Number 1,Received TK 1,1st Inst Comment,Payment Received Date 2,Payment Type 2,Payment Number 2,Received TK 2,2nd Inst Comment,Payment Received Date 3,Payment Type 3,Payment Number 3,Received TK 3,3rd Inst Comment,Payment Received Date 4,Payment Type 4,Payment Number 4,Received TK 4,4th Inst Comment,Transaction ID,Note,Note 1,Note 2,Note 3,Reference,Assigned To,Is Verified,Verified By,Created By,Updated By,Created At\n';
 
         res.write(header);
 
@@ -348,6 +348,17 @@ router.get('/exportData', async (req, res) => {
             return field;
         };
 
+        const formatExportDate = (val) => {
+            if (!val) return '';
+            try {
+                const d = new Date(val);
+                if (isNaN(d.getTime())) return String(val);
+                return d.toISOString().replace('T', ' ').slice(0, 19);
+            } catch {
+                return String(val);
+            }
+        };
+
         while (true) {
             const batch = await Payment.find(filter)
                 .skip(skip)
@@ -359,48 +370,49 @@ router.get('/exportData', async (req, res) => {
             for (const doc of batch) {
                 const row = [
                     escapeCsvField(doc.tuitionCode),
-                    escapeCsvField(doc.paymentStatus),
-                    escapeCsvField(doc.paymentReceivedDate
-                        ? doc.paymentReceivedDate.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.paymentReceivedDate2
-                        ? doc.paymentReceivedDate2.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.paymentReceivedDate3
-                        ? doc.paymentReceivedDate3.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.paymentReceivedDate4
-                        ? doc.paymentReceivedDate4.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.duePayDate
-                        ? doc.duePayDate.toISOString().replace('T', ' ').slice(0, 19)
-                        : ''),
-                    escapeCsvField(doc.paymentType),
-                    escapeCsvField(doc.paymentType2),
-                    escapeCsvField(doc.paymentType3),
-                    escapeCsvField(doc.paymentType4),
+                    escapeCsvField(doc.tuitionId),
+                    escapeCsvField(doc.premiumCode),
                     escapeCsvField(doc.tutorName),
                     escapeCsvField(doc.tutorNumber),
-                    escapeCsvField(doc.paymentNumber),
-                    escapeCsvField(doc.paymentNumber2),
-                    escapeCsvField(doc.paymentNumber3),
-                    escapeCsvField(doc.paymentNumber4),
-                    escapeCsvField(doc.transactionId),
-                    escapeCsvField(doc.receivedTk),
-                    escapeCsvField(doc.receivedTk2),
-                    escapeCsvField(doc.receivedTk3),
-                    escapeCsvField(doc.receivedTk4),
-                    escapeCsvField(doc.duePayment),
-                    escapeCsvField(doc.totalReceivedTk),
+                    escapeCsvField(doc.paymentStatus),
                     escapeCsvField(doc.tuitionSalary),
                     escapeCsvField(doc.totalPaymentTk),
                     escapeCsvField(doc.discount),
+                    escapeCsvField(doc.totalReceivedTk),
+                    escapeCsvField(doc.duePayment),
+                    escapeCsvField(formatExportDate(doc.duePayDate)),
+                    escapeCsvField(doc.duePayDateComment),
+                    escapeCsvField(formatExportDate(doc.followUpDate)),
+                    escapeCsvField(doc.followUpComment),
+                    escapeCsvField(formatExportDate(doc.paymentReceivedDate)),
+                    escapeCsvField(doc.paymentType),
+                    escapeCsvField(doc.paymentNumber),
+                    escapeCsvField(doc.receivedTk),
+                    escapeCsvField(doc.installmentComment),
+                    escapeCsvField(formatExportDate(doc.paymentReceivedDate2)),
+                    escapeCsvField(doc.paymentType2),
+                    escapeCsvField(doc.paymentNumber2),
+                    escapeCsvField(doc.receivedTk2),
+                    escapeCsvField(doc.installmentComment2),
+                    escapeCsvField(formatExportDate(doc.paymentReceivedDate3)),
+                    escapeCsvField(doc.paymentType3),
+                    escapeCsvField(doc.paymentNumber3),
+                    escapeCsvField(doc.receivedTk3),
+                    escapeCsvField(doc.installmentComment3),
+                    escapeCsvField(formatExportDate(doc.paymentReceivedDate4)),
+                    escapeCsvField(doc.paymentType4),
+                    escapeCsvField(doc.paymentNumber4),
+                    escapeCsvField(doc.receivedTk4),
+                    escapeCsvField(doc.installmentComment4),
+                    escapeCsvField(doc.transactionId),
                     escapeCsvField(doc.comment),
                     escapeCsvField(doc.comment1),
                     escapeCsvField(doc.comment2),
                     escapeCsvField(doc.comment3),
                     escapeCsvField(doc.reference),
                     escapeCsvField(doc.assignedTo),
+                    escapeCsvField(doc.isVerified ? 'Yes' : 'No'),
+                    escapeCsvField(doc.verifiedBy),
                     escapeCsvField(doc.createdBy),
                     escapeCsvField(doc.updatedBy),
                     escapeCsvField(doc.createdAt)
