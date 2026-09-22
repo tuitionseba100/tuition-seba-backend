@@ -442,6 +442,7 @@ router.get('/getTableData', async (req, res) => {
 
     const {
         tuitionCode = '',
+        premiumCode = '',
         tutorNumber = '',
         paymentNumber = '',
         paymentStatus = '',
@@ -454,6 +455,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
     }
 
     if (tutorNumber) {
@@ -512,6 +517,7 @@ router.get('/getTableData', async (req, res) => {
 router.get('/summary', async (req, res) => {
     const {
         tuitionCode = '',
+        premiumCode = '',
         tutorNumber = '',
         paymentNumber = '',
         paymentStatus = '',
@@ -523,6 +529,10 @@ router.get('/summary', async (req, res) => {
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
     }
 
     if (tutorNumber) {
