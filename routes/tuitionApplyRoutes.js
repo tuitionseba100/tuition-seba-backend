@@ -2,6 +2,7 @@ const express = require('express');
 const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
+const ServiceCharge = require('../models/ServiceCharge');
 const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
@@ -33,9 +34,9 @@ function getPhoneVariations(phone) {
 }
 
 /**
- * Helper to enrich TuitionApply records with hasDue, dueAmount, and dueCount.
+ * Helper to enrich TuitionApply records with Payment due and Service Charge due.
  * Cross-references teacher's identity (premiumCode) and contact numbers (phone, whatsapp, alternativePhone)
- * from RegTeacher, and checks Payment due records by both premiumCode and tutorNumber.
+ * from RegTeacher, and checks Payment dues and Service Charge pending dues by both premiumCode/teacherCode and phone numbers.
  */
 async function enrichAppliesWithDue(applyList) {
     if (!Array.isArray(applyList) || applyList.length === 0) {
@@ -132,7 +133,7 @@ async function enrichAppliesWithDue(applyList) {
         applyCodeSets.push(codeSet);
     });
 
-    // 5. Collect all unique 10-digit keys and premiumCodes to query Payment
+    // 5. Collect all unique 10-digit keys and premiumCodes to query Payment & ServiceCharge
     const all10DigitKeys = [...new Set(applyPhoneSets.flatMap(s => Array.from(s)))];
     const allPaymentQueryPhones = [...new Set(all10DigitKeys.flatMap(k => getPhoneVariations(k)))];
     const allPaymentQueryCodes = [...new Set(applyCodeSets.flatMap(s => Array.from(s)))];
@@ -145,13 +146,31 @@ async function enrichAppliesWithDue(applyList) {
         paymentOr.push({ premiumCode: { $in: allPaymentQueryCodes } });
     }
 
-    // 6. Query Payment collection for active dues (by premiumCode OR tutorNumber)
-    const paymentsWithDue = paymentOr.length > 0
-        ? await Payment.find({
-            duePayment: { $nin: [null, undefined, '', '0'] },
-            $or: paymentOr
-        }).select('tutorNumber premiumCode duePayment').lean()
-        : [];
+    const scOr = [];
+    if (allPaymentQueryCodes.length > 0) {
+        scOr.push({ teacherCode: { $in: allPaymentQueryCodes } });
+    }
+    if (allPaymentQueryPhones.length > 0) {
+        scOr.push({ personalPhone: { $in: allPaymentQueryPhones } });
+        scOr.push({ paymentNumber: { $in: allPaymentQueryPhones } });
+    }
+
+    // 6. Query Payment and ServiceCharge collections for active dues
+    const [paymentsWithDue, scsWithDue] = await Promise.all([
+        paymentOr.length > 0
+            ? Payment.find({
+                duePayment: { $nin: [null, undefined, '', '0'] },
+                $or: paymentOr
+            }).select('tutorNumber premiumCode duePayment').lean()
+            : [],
+        scOr.length > 0
+            ? ServiceCharge.find({
+                status: 'pending',
+                amount: { $gt: 0 },
+                $or: scOr
+            }).select('teacherCode personalPhone paymentNumber amount').lean()
+            : []
+    ]);
 
     // 7. Map each payment to its 10-digit tutorNumber and premiumCode
     const phoneToPaymentsMap = new Map();
@@ -183,25 +202,56 @@ async function enrichAppliesWithDue(applyList) {
         }
     });
 
-    // 8. Calculate dueAmount and dueCount per application (deduplicating payments by payment id)
+    // Map each Service Charge to its 10-digit phones and teacherCode
+    const phoneToScMap = new Map();
+    const codeToScMap = new Map();
+
+    scsWithDue.forEach(sc => {
+        const val = parseFloat(sc.amount) || 0;
+        if (val > 0) {
+            const scId = sc._id.toString();
+
+            if (sc.teacherCode) {
+                const c = sc.teacherCode.toString().trim();
+                if (c) {
+                    if (!codeToScMap.has(c)) {
+                        codeToScMap.set(c, []);
+                    }
+                    codeToScMap.get(c).push({ id: scId, val });
+                }
+            }
+
+            [sc.personalPhone, sc.paymentNumber].forEach(ph => {
+                const k = to10Digits(ph);
+                if (k) {
+                    if (!phoneToScMap.has(k)) {
+                        phoneToScMap.set(k, []);
+                    }
+                    phoneToScMap.get(k).push({ id: scId, val });
+                }
+            });
+        }
+    });
+
+    // 8. Calculate dueAmount, dueCount, scDueAmount, and scDueCount per application
     return applyList.map((apply, idx) => {
         const phoneSet = applyPhoneSets[idx];
         const codeSet = applyCodeSets[idx];
-        const matchedPaymentsMap = new Map();
 
-        phoneSet.forEach(k => {
-            if (phoneToPaymentsMap.has(k)) {
-                phoneToPaymentsMap.get(k).forEach(item => {
+        // --- Payment Dues ---
+        const matchedPaymentsMap = new Map();
+        codeSet.forEach(c => {
+            if (codeToPaymentsMap.has(c)) {
+                codeToPaymentsMap.get(c).forEach(item => {
                     if (!matchedPaymentsMap.has(item.id)) {
                         matchedPaymentsMap.set(item.id, item.val);
                     }
                 });
             }
         });
-
-        codeSet.forEach(c => {
-            if (codeToPaymentsMap.has(c)) {
-                codeToPaymentsMap.get(c).forEach(item => {
+        phoneSet.forEach(k => {
+            if (phoneToPaymentsMap.has(k)) {
+                phoneToPaymentsMap.get(k).forEach(item => {
                     if (!matchedPaymentsMap.has(item.id)) {
                         matchedPaymentsMap.set(item.id, item.val);
                     }
@@ -216,11 +266,44 @@ async function enrichAppliesWithDue(applyList) {
         const dueCount = matchedPaymentsMap.size;
         const hasDue = dueAmount > 0;
 
+        // --- Service Charge Dues ---
+        const matchedScMap = new Map();
+        // Check teacher code first
+        codeSet.forEach(c => {
+            if (codeToScMap.has(c)) {
+                codeToScMap.get(c).forEach(item => {
+                    if (!matchedScMap.has(item.id)) {
+                        matchedScMap.set(item.id, item.val);
+                    }
+                });
+            }
+        });
+        // Check phone numbers as well (deduplicating by sc id)
+        phoneSet.forEach(k => {
+            if (phoneToScMap.has(k)) {
+                phoneToScMap.get(k).forEach(item => {
+                    if (!matchedScMap.has(item.id)) {
+                        matchedScMap.set(item.id, item.val);
+                    }
+                });
+            }
+        });
+
+        let scDueAmount = 0;
+        matchedScMap.forEach(val => {
+            scDueAmount += val;
+        });
+        const scDueCount = matchedScMap.size;
+        const hasScDue = scDueAmount > 0;
+
         return {
             ...apply,
             hasDue,
             dueAmount,
-            dueCount
+            dueCount,
+            hasScDue,
+            scDueAmount,
+            scDueCount
         };
     });
 }
