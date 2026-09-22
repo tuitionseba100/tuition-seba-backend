@@ -311,12 +311,16 @@ async function enrichAppliesWithDue(applyList) {
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
-    const { tuitionCode = '', phone = '', status } = req.query;
+    const { tuitionCode = '', premiumCode = '', phone = '', status } = req.query;
 
     const filter = {};
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
     }
 
     if (phone) {
@@ -372,12 +376,16 @@ router.get('/getTableData', async (req, res) => {
 });
 
 router.get('/summary', async (req, res) => {
-    const { tuitionCode = '', phone = '', status } = req.query;
+    const { tuitionCode = '', premiumCode = '', phone = '', status } = req.query;
 
     const filter = {};
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
+    }
+
+    if (premiumCode) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
     }
 
     if (phone) {
