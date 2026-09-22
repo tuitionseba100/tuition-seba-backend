@@ -1,9 +1,40 @@
 const express = require('express');
 const RefundPayment = require('../models/RefundPayment');
 const ServiceCharge = require('../models/ServiceCharge');
+const RegTeacher = require('../models/RegTeacher');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
+
+function escapeRegex(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function findTeacherCodeByPhone(phoneStr) {
+    if (!phoneStr) return '';
+    try {
+        const cleanDigits = phoneStr.toString().replace(/\D/g, '');
+        if (cleanDigits.length < 4) return '';
+
+        const lastDigits = cleanDigits.length >= 10 ? cleanDigits.slice(-10) : cleanDigits;
+        const flexiblePhonePattern = lastDigits.split('').map(d => escapeRegex(d)).join('\\D*');
+        const phoneRegex = new RegExp(flexiblePhonePattern);
+
+        const teacher = await RegTeacher.findOne({
+            $or: [
+                { phone: phoneRegex },
+                { whatsapp: phoneRegex },
+                { alternativePhone: phoneRegex }
+            ],
+            premiumCode: { $exists: true, $ne: null, $ne: '' }
+        }, 'premiumCode').lean();
+
+        return teacher ? (teacher.premiumCode || '') : '';
+    } catch (err) {
+        console.error('Error finding teacher code by phone in refund service charge:', err);
+        return '';
+    }
+}
 
 router.get('/all', async (req, res) => {
     try {
@@ -232,9 +263,11 @@ router.post('/add', async (req, res) => {
         const activeUser = req.headers['x-user-name'] || 'Teacher';
 
         if (isServiceChargeApplicable) {
+            const resolvedTeacherCode = await findTeacherCodeByPhone(newApply.personalPhone || newApply.paymentNumber);
             const newServiceCharge = new ServiceCharge({
                 referenceId: newApply._id,
                 tuitionCode: newApply.tuitionCode,
+                teacherCode: resolvedTeacherCode,
                 name: newApply.name,
                 paymentNumber: newApply.paymentNumber,
                 personalPhone: newApply.personalPhone,
@@ -288,8 +321,10 @@ router.put('/edit/:id', async (req, res) => {
         const activeUser = req.headers['x-user-name'] || 'Teacher';
 
         if (isServiceChargeApplicable) {
+            const resolvedTeacherCode = await findTeacherCodeByPhone(updatedData.personalPhone || updatedData.paymentNumber);
             const scData = {
                 tuitionCode: updatedData.tuitionCode,
+                teacherCode: resolvedTeacherCode,
                 name: updatedData.name,
                 paymentNumber: updatedData.paymentNumber,
                 personalPhone: updatedData.personalPhone,

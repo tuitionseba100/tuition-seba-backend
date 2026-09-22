@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const serviceChargeSchema = new mongoose.Schema({
     referenceId: { type: mongoose.Schema.Types.ObjectId, ref: 'RefundPayment' },
     tuitionCode: { type: String },
+    teacherCode: { type: String },
     name: { type: String },
     paymentNumber: { type: String },
     personalPhone: { type: String },

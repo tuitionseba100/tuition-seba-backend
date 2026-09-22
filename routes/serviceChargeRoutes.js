@@ -30,12 +30,15 @@ const authMiddleware = (req, res, next) => {
 
 router.get('/all', async (req, res) => {
     try {
-        const { page = 1, limit = 50, tuitionCode, phone, status, toBePaidToday } = req.query;
+        const { page = 1, limit = 50, tuitionCode, teacherCode, phone, status, toBePaidToday } = req.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
         const query = {};
         if (tuitionCode) {
             query.tuitionCode = { $regex: tuitionCode, $options: 'i' };
+        }
+        if (teacherCode) {
+            query.teacherCode = { $regex: teacherCode, $options: 'i' };
         }
         if (phone) {
             query.personalPhone = { $regex: phone, $options: 'i' };
@@ -165,7 +168,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
 
 router.post('/add', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
+        const { tuitionCode, teacherCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -184,6 +187,7 @@ router.post('/add', async (req, res) => {
 
         const newServiceCharge = new ServiceCharge({
             tuitionCode,
+            teacherCode: teacherCode || '',
             name,
             paymentNumber,
             personalPhone,
@@ -200,7 +204,7 @@ router.post('/add', async (req, res) => {
 
         await logActivity(req, 'Create', 'ServiceCharge', newServiceCharge._id, {
             after: newServiceCharge,
-            importantFields: { tuitionCode: newServiceCharge.tuitionCode }
+            importantFields: { tuitionCode: newServiceCharge.tuitionCode, teacherCode: newServiceCharge.teacherCode }
         }, activeUser);
 
         res.status(201).json(newServiceCharge);
@@ -211,7 +215,7 @@ router.post('/add', async (req, res) => {
 
 router.put('/edit/:id', async (req, res) => {
     try {
-        const { tuitionCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
+        const { tuitionCode, teacherCode, name, paymentNumber, personalPhone, amount, comment, date, nextPaymentDate, nextComment, status } = req.body;
         const activeUser = req.headers['x-user-name'] || 'Admin';
 
         if (!status || !['pending', 'completed', 'cancelled'].includes(status)) {
@@ -238,6 +242,7 @@ router.put('/edit/:id', async (req, res) => {
             req.params.id,
             {
                 tuitionCode,
+                teacherCode: teacherCode !== undefined ? teacherCode : oldData.teacherCode,
                 name,
                 paymentNumber,
                 personalPhone,
@@ -256,7 +261,7 @@ router.put('/edit/:id', async (req, res) => {
         const diff = getDifferences(oldData, updatedServiceCharge.toObject());
         await logActivity(req, 'Edit', 'ServiceCharge', updatedServiceCharge._id, {
             ...diff,
-            importantFields: { tuitionCode: updatedServiceCharge.tuitionCode }
+            importantFields: { tuitionCode: updatedServiceCharge.tuitionCode, teacherCode: updatedServiceCharge.teacherCode }
         }, activeUser);
 
         res.json(updatedServiceCharge);
