@@ -198,4 +198,29 @@ router.delete('/delete/:id', async (req, res) => {
     }
 });
 
+// Follow-up today alert
+router.get('/alert-today', async (req, res) => {
+    try {
+        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
+        const todayBD = new Date(nowBD);
+
+        const startOfDayBD = new Date(todayBD);
+        startOfDayBD.setHours(0, 0, 0, 0);
+
+        const endOfDayBD = new Date(todayBD);
+        endOfDayBD.setHours(23, 59, 59, 999);
+
+        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+
+        const data = await Phone.find({
+            nextFollowUpDate: { $gte: startUTC, $lte: endUTC }
+        }).sort({ nextFollowUpDate: 1 }).lean();
+
+        res.json(data);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 module.exports = router;

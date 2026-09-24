@@ -12,6 +12,10 @@ const phoneSchema = new mongoose.Schema({
     isBanned: { type: Boolean, default: false },
     createdBy: { type: String },
     updatedBy: { type: String },
+    lastFollowUpDate: { type: Date },
+    lastFollowUpComment: { type: String },
+    nextFollowUpDate: { type: Date },
+    nextFollowUpComment: { type: String },
 });
 
 const Phone = mongoose.model('Phone', phoneSchema);
