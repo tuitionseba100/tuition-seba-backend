@@ -6,6 +6,19 @@ const router = express.Router();
 const moment = require('moment-timezone');
 const path = require('path');
 const { deleteFromR2 } = require('../utils/r2Storage');
+const rateLimit = require('express-rate-limit');
+
+// Protects against brute-force enumeration of premiumCode + phone combos.
+// PremiumCodes are sequential (TSF30160, TSF30161...) making them trivially guessable
+// without this limit. 20 attempts per 15 min is generous for any real user.
+const checkApplyLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: 20,
+    skipSuccessfulRequests: false,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many verification attempts. Please try again after 15 minutes.' }
+});
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -637,7 +650,7 @@ const convertNormal = (str) => {
     return phone;
 };
 
-router.post('/check-apply-possible', async (req, res) => {
+router.post('/check-apply-possible', checkApplyLimiter, async (req, res) => {
     const { premiumCode, phone } = req.body;
 
     if (!premiumCode || !phone) {
