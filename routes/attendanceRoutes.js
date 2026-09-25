@@ -80,9 +80,9 @@ router.get('/', authMiddleware, async (req, res) => {
         let attendance;
 
         if (role === 'superadmin') {
-            attendance = await Attendance.find();
+            attendance = await Attendance.find().sort({ startTime: -1 }).lean();
         } else {
-            attendance = await Attendance.find({ userId });
+            attendance = await Attendance.find({ userId }).sort({ startTime: -1 }).lean();
         }
 
         res.json(attendance);
@@ -149,7 +149,7 @@ router.get('/is-day-started', authMiddleware, async (req, res) => {
     try {
         const { userId } = req.user;
 
-        const existingRecord = await Attendance.findOne({ userId, endTime: null });
+        const existingRecord = await Attendance.findOne({ userId, endTime: null }).select('_id').lean();
 
         if (existingRecord) {
             return res.json({ isDayStarted: true, message: 'Day already started' });
