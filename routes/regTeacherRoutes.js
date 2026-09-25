@@ -666,13 +666,29 @@ router.post('/check-apply-possible', async (req, res) => {
             });
         }
 
+        // Only return the fields the frontend needs — never expose NID, all phone numbers, bank details, etc.
+        const safeTeacherData = {
+            name: teacher.name || '',
+            phone: inputPhone,
+            currentArea: teacher.currentArea || '',
+            fullAddress: teacher.fullAddress || '',
+            university: teacher.university || '',
+            honorsUniversity: teacher.honorsUniversity || '',
+            mastersUniversity: teacher.mastersUniversity || '',
+            department: teacher.department || '',
+            honorsDept: teacher.honorsDept || '',
+            mastersDept: teacher.mastersDept || '',
+            academicYear: teacher.academicYear || '',
+            status: teacher.status || '',
+        };
+
         res.json({
             success: true,
             message: "OK, matched",
             data: {
                 premiumCode: teacher.premiumCode,
                 phone: inputPhone,
-                data: teacher
+                data: safeTeacherData
             }
         });
     } catch (err) {
