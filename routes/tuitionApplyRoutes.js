@@ -9,6 +9,16 @@ const moment = require('moment-timezone');
 const RegTeacher = require('../models/RegTeacher');
 const Phone = require('../models/Phone');
 const Tuition = require('../models/Tuition');
+const rateLimit = require('express-rate-limit');
+
+// 40 tuition applications per IP per hour — teachers can apply to many tuitions in one session.
+const applyLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 40,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many applications from this IP. Please try again later.' }
+});
 
 function escapeRegex(str) {
     if (typeof str !== 'string') {
@@ -648,7 +658,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.post('/add-web', async (req, res) => {
+router.post('/add-web', applyLimiter, async (req, res) => {
     const {
         premiumCode,
         tuitionCode,

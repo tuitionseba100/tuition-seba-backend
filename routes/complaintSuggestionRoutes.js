@@ -3,6 +3,16 @@ const router = express.Router();
 const ComplaintSuggestion = require('../models/ComplaintSuggestion');
 const Phone = require('../models/Phone');
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+// 5 complaint/suggestion submissions per IP per hour
+const submitLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many submissions from this IP. Please try again later.' }
+});
 
 // Helper to normalize phone number digits
 const normalizePhone = (num) => {
@@ -48,7 +58,7 @@ const superadminMiddleware = (req, res, next) => {
 };
 
 // POST /submit (Public submission endpoint)
-router.post('/submit', async (req, res) => {
+router.post('/submit', submitLimiter, async (req, res) => {
     try {
         const { type, category, name, phone, teacherCode, description } = req.body;
 

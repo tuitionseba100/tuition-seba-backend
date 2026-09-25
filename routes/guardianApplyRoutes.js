@@ -4,6 +4,16 @@ const Phone = require('../models/Phone');
 const Tuition = require('../models/Tuition');
 const moment = require('moment-timezone');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
+
+// 10 guardian applications per IP per hour — ample for any real user, blocks bots
+const submitLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 10,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many submissions from this IP. Please try again later.' }
+});
 
 const normalizePhone = (num) => {
     if (!num) return '';
@@ -159,7 +169,7 @@ router.get('/summary', async (req, res) => {
     }
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', submitLimiter, async (req, res) => {
     const {
         name,
         createdBy,
