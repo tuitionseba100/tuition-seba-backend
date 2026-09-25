@@ -4,6 +4,17 @@ const LoginHistory = require('../models/LoginHistory');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+// Max 10 login attempts per IP per 15 minutes, then blocked for 1 hour
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 10,
+    skipSuccessfulRequests: true,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many login attempts. Please try again after 15 minutes.' }
+});
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -33,9 +44,10 @@ router.post('/register', authMiddleware, async (req, res) => {
     const { username, password, role, name, permissions, autoLock } = req.body;
 
     try {
+        const hashedPassword = await bcrypt.hash(password, 12);
         const newUser = new User({
             username,
-            password,
+            password: hashedPassword,
             role,
             name,
             permissions: permissions || [],
@@ -48,12 +60,34 @@ router.post('/register', authMiddleware, async (req, res) => {
     }
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
     const { username, password } = req.body;
 
     try {
         const user = await User.findOne({ username });
-        if (!user || user.password !== password) {
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Check password — supports both bcrypt hashes and legacy plain-text passwords.
+        // If the stored value is not a bcrypt hash, fall back to plain-text comparison
+        // and immediately rehash the password so the account auto-migrates on first login.
+        const isBcryptHash = user.password.startsWith('$2');
+        let passwordValid = false;
+
+        if (isBcryptHash) {
+            passwordValid = await bcrypt.compare(password, user.password);
+        } else {
+            // Legacy plain-text comparison
+            passwordValid = user.password === password;
+            if (passwordValid) {
+                // Auto-migrate: rehash and save so future logins use bcrypt
+                user.password = await bcrypt.hash(password, 12);
+                await user.save();
+            }
+        }
+
+        if (!passwordValid) {
             return res.status(400).json({ message: 'Invalid credentials' });
         }
 
@@ -132,8 +166,8 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Update user details
-        if (password) user.password = password;
+        // Update user details — always hash new passwords
+        if (password) user.password = await bcrypt.hash(password, 12);
         if (role) user.role = role;
         if (name) user.name = name;
         if (permissions !== undefined) user.permissions = permissions;
