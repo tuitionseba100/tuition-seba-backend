@@ -7,6 +7,12 @@ const moment = require('moment-timezone');
 const path = require('path');
 const { deleteFromR2 } = require('../utils/r2Storage');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
+
+// Must match the secret in chatRoutes.js
+const CHAT_TOKEN_SECRET = 'tsf-chat-hmac-secret-2025';
+const generateChatToken = (phone) =>
+    crypto.createHmac('sha256', CHAT_TOKEN_SECRET).update(phone).digest('hex');
 
 // Protects against brute-force enumeration of premiumCode + phone combos.
 // PremiumCodes are sequential (TSF30160, TSF30161...) making them trivially guessable
@@ -701,7 +707,8 @@ router.post('/check-apply-possible', checkApplyLimiter, async (req, res) => {
             data: {
                 premiumCode: teacher.premiumCode,
                 phone: inputPhone,
-                data: safeTeacherData
+                data: safeTeacherData,
+                chatToken: generateChatToken(inputPhone)
             }
         });
     } catch (err) {

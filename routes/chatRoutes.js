@@ -4,6 +4,15 @@ const ChatMessage = require('../models/ChatMessage');
 const RegTeacher = require('../models/RegTeacher');
 const ChatSession = require('../models/ChatSession');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+
+const CHAT_TOKEN_SECRET = 'tsf-chat-hmac-secret-2025';
+
+// Generate a deterministic token tied to a specific phone number.
+// Anyone who calls check-apply-possible and receives this token proves
+// they own the phone — so they may fetch that phone's chat history.
+const generateChatToken = (phone) =>
+    crypto.createHmac('sha256', CHAT_TOKEN_SECRET).update(phone).digest('hex');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -19,12 +28,34 @@ const authMiddleware = (req, res, next) => {
 };
 
 // Fetch past messages for a chat session (with pagination)
+// Auth: Admin JWT (Authorization header) OR chatToken query param from check-apply-possible
 router.get('/history/:phone', async (req, res) => {
     try {
+        const adminToken = req.header('Authorization');
+        const chatToken = req.query.chatToken;
+        const phone = req.params.phone;
+
+        if (adminToken) {
+            // Admin path — verify JWT
+            try {
+                jwt.verify(adminToken, 'mahedi1000abcdefgh100');
+            } catch {
+                return res.status(401).json({ message: 'Invalid admin token' });
+            }
+        } else if (chatToken) {
+            // Public user path — verify HMAC matches this phone
+            const expected = generateChatToken(phone);
+            if (chatToken !== expected) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        } else {
+            return res.status(401).json({ message: 'Authentication required' });
+        }
+
         const limit = parseInt(req.query.limit) || 20;
         const before = req.query.before;
-        
-        const query = { phone: req.params.phone };
+
+        const query = { phone };
         if (before) {
             query.createdAt = { $lt: new Date(before) };
         }
@@ -33,7 +64,7 @@ router.get('/history/:phone', async (req, res) => {
             .sort({ createdAt: -1 })
             .limit(limit)
             .lean();
-        
+
         // Reverse to return in chronological order
         res.json(messages.reverse());
     } catch (error) {
