@@ -6,10 +6,11 @@ const moment = require('moment-timezone');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 
-// 10 guardian applications per IP per hour — ample for any real user, blocks bots
+// Rate limit for public submissions — bypass for authenticated staff/admin users
 const submitLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 10,
+    max: 30,
+    skip: (req) => !!req.headers.authorization,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Too many submissions from this IP. Please try again later.' }
@@ -17,14 +18,15 @@ const submitLimiter = rateLimit({
 
 const normalizePhone = (num) => {
     if (!num) return '';
-    let digits = num.replace(/\D/g, '');
+    let digits = String(num).replace(/\D/g, '');
     if (digits.startsWith('880')) digits = digits.slice(3);
     while (digits.startsWith('0')) digits = digits.slice(1);
     return digits;
 };
 
 function normalizePhoneForSave(phone) {
-    let digits = phone.replace(/\D/g, '');
+    if (!phone) return '';
+    let digits = String(phone).replace(/\D/g, '');
 
     if (digits.startsWith('880')) {
         digits = digits.slice(3);

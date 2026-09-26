@@ -5,10 +5,11 @@ const Phone = require('../models/Phone');
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
 
-// 5 complaint/suggestion submissions per IP per hour
+// Complaint/suggestion submissions per IP per hour
 const submitLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 5,
+    max: 20,
+    skip: (req) => !!req.headers.authorization,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Too many submissions from this IP. Please try again later.' }

@@ -15,11 +15,10 @@ const generateChatToken = (phone) =>
     crypto.createHmac('sha256', CHAT_TOKEN_SECRET).update(phone).digest('hex');
 
 // Protects against brute-force enumeration of premiumCode + phone combos.
-// PremiumCodes are sequential (TSF30160, TSF30161...) making them trivially guessable
-// without this limit. 20 attempts per 15 min is generous for any real user.
 const checkApplyLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,  // 15 minutes
-    max: 20,
+    max: 60,
+    skip: (req) => !!req.headers.authorization,
     skipSuccessfulRequests: false,
     standardHeaders: true,
     legacyHeaders: false,

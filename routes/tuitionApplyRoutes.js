@@ -11,10 +11,11 @@ const Phone = require('../models/Phone');
 const Tuition = require('../models/Tuition');
 const rateLimit = require('express-rate-limit');
 
-// 40 tuition applications per IP per hour — teachers can apply to many tuitions in one session.
+// 60 tuition applications per IP per hour — teachers can apply to many tuitions in one session.
 const applyLimiter = rateLimit({
     windowMs: 60 * 60 * 1000,
-    max: 40,
+    max: 60,
+    skip: (req) => !!req.headers.authorization,
     standardHeaders: true,
     legacyHeaders: false,
     message: { message: 'Too many applications from this IP. Please try again later.' }
