@@ -74,18 +74,140 @@ router.put('/end', authMiddleware, async (req, res) => {
     }
 });
 
+const moment = require('moment-timezone');
+
+const getDateRange = (filter, customYear) => {
+    const tz = 'Asia/Dhaka';
+    const now = moment.tz(tz);
+    const year = customYear ? parseInt(customYear) : now.year();
+
+    if (!filter || filter === 'today') {
+        return {
+            $gte: now.clone().startOf('day').toDate(),
+            $lte: now.clone().endOf('day').toDate()
+        };
+    } else if (filter === 'last7days') {
+        return {
+            $gte: now.clone().subtract(6, 'days').startOf('day').toDate(),
+            $lte: now.clone().endOf('day').toDate()
+        };
+    } else if (filter === 'runningMonth') {
+        return {
+            $gte: now.clone().startOf('month').toDate(),
+            $lte: now.clone().endOf('day').toDate()
+        };
+    } else if (filter === 'lastMonth') {
+        const lastMonth = now.clone().subtract(1, 'month');
+        return {
+            $gte: lastMonth.clone().startOf('month').toDate(),
+            $lte: lastMonth.clone().endOf('month').toDate()
+        };
+    } else if (filter === 'all') {
+        return null;
+    } else {
+        // Specific month name (e.g., 'january', 'february'...)
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const mIndex = monthNames.indexOf(String(filter).toLowerCase());
+        if (mIndex !== -1) {
+            const start = moment.tz({ year, month: mIndex, day: 1 }, tz).startOf('day').toDate();
+            const end = moment.tz({ year, month: mIndex, day: 1 }, tz).endOf('month').toDate();
+            return { $gte: start, $lte: end };
+        }
+    }
+    return null;
+};
+
 router.get('/', authMiddleware, async (req, res) => {
     try {
         const { userId, role } = req.user;
-        let attendance;
+        const { filter = 'today', userFilter, year } = req.query;
+
+        const query = {};
 
         if (role === 'superadmin') {
-            attendance = await Attendance.find().sort({ startTime: -1 }).lean();
+            if (userFilter) {
+                query.userId = userFilter;
+            }
         } else {
-            attendance = await Attendance.find({ userId }).sort({ startTime: -1 }).lean();
+            query.userId = userId;
         }
 
+        const dateRange = getDateRange(filter, year);
+        if (dateRange) {
+            query.startTime = dateRange;
+        }
+
+        const attendance = await Attendance.find(query).sort({ startTime: -1 }).lean();
         res.json(attendance);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.get('/summary', authMiddleware, async (req, res) => {
+    try {
+        const { userId, role } = req.user;
+        const { filter = 'today', userFilter, year } = req.query;
+
+        const query = {};
+        if (role === 'superadmin') {
+            if (userFilter) {
+                query.userId = userFilter;
+            }
+        } else {
+            query.userId = userId;
+        }
+
+        const dateRange = getDateRange(filter, year);
+        if (dateRange) {
+            query.startTime = dateRange;
+        }
+
+        const records = await Attendance.find(query).sort({ startTime: -1 }).lean();
+
+        const summaryMap = {};
+
+        records.forEach(entry => {
+            const uName = entry.userName || 'Unknown';
+            if (!summaryMap[uName]) {
+                summaryMap[uName] = {
+                    name: entry.name || uName,
+                    userName: uName,
+                    totalSessions: 0,
+                    runningSessions: 0,
+                    totalHours: 0,
+                    presentDays: new Set()
+                };
+            }
+
+            summaryMap[uName].totalSessions += 1;
+
+            if (!entry.endTime) {
+                summaryMap[uName].runningSessions += 1;
+            } else if (entry.startTime) {
+                const duration = (new Date(entry.endTime) - new Date(entry.startTime)) / 3600000;
+                summaryMap[uName].totalHours += duration;
+            }
+
+            const sessionDate = moment(entry.startTime).tz('Asia/Dhaka').format('YYYY-MM-DD');
+            summaryMap[uName].presentDays.add(sessionDate);
+        });
+
+        const summaries = Object.values(summaryMap).map(s => {
+            const daysCount = s.presentDays.size;
+            return {
+                name: s.name,
+                userName: s.userName,
+                totalSessions: s.totalSessions,
+                runningSessions: s.runningSessions,
+                totalDaysPresent: daysCount,
+                avgHours: s.totalSessions > 0 ? (s.totalHours / s.totalSessions).toFixed(1) : '0.0',
+                avgHoursPerDay: daysCount > 0 ? (s.totalHours / daysCount).toFixed(1) : '0.0',
+                totalHours: s.totalHours.toFixed(1)
+            };
+        });
+
+        res.json(summaries);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
