@@ -22,6 +22,10 @@ const expenseSchema = new mongoose.Schema({
     },
     updatedBy: {
         type: String
+    },
+    salaryUser: {
+        type: String,
+        default: ''
     }
 }, { timestamps: true });
 
