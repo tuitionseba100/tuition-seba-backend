@@ -2,8 +2,9 @@ const express = require('express');
 const router = express.Router();
 const Attendance = require('../models/Attendance');
 const jwt = require('jsonwebtoken');
-const User = require('../models/User')
-
+const User = require('../models/User');
+const Expense = require('../models/Expense');
+const moment = require('moment-timezone');
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -173,6 +174,20 @@ router.get('/summary', authMiddleware, async (req, res) => {
             if (u._id) userMap[u._id.toString()] = u;
         });
 
+        // Fetch Salary expenses for this period to calculate Paid amount per user
+        const expQuery = { category: 'Salary' };
+        if (dateRange) {
+            expQuery.date = dateRange;
+        }
+        const salaryExpenses = await Expense.find(expQuery).lean();
+        const paidMap = {};
+        salaryExpenses.forEach(exp => {
+            if (exp.salaryUser) {
+                const uKey = exp.salaryUser.toLowerCase().trim();
+                paidMap[uKey] = (paidMap[uKey] || 0) + (Number(exp.amount) || 0);
+            }
+        });
+
         const summaryMap = {};
 
         records.forEach(entry => {
@@ -211,6 +226,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
             const userObj = userMap[s.userId ? s.userId.toString() : ''] || userMap[s.userName ? s.userName.toLowerCase() : ''];
             const perHourTk = userObj && (userObj.perHourTk || userObj.salary) ? Number(userObj.perHourTk || userObj.salary) : null;
             const runningMonthSalary = (perHourTk && perHourTk > 0) ? Math.round(perHourTk * s.totalHours) : null;
+            const paid = paidMap[s.userName ? s.userName.toLowerCase().trim() : ''] || 0;
+            const due = runningMonthSalary !== null ? Math.max(0, runningMonthSalary - paid) : null;
 
             return {
                 userId: s.userId,
@@ -223,7 +240,9 @@ router.get('/summary', authMiddleware, async (req, res) => {
                 avgHoursPerDay: daysCount > 0 ? (s.totalHours / daysCount).toFixed(1) : '0.0',
                 totalHours: s.totalHours.toFixed(1),
                 perHourTk: perHourTk,
-                runningMonthSalary: runningMonthSalary
+                runningMonthSalary: runningMonthSalary,
+                paid: paid,
+                due: due
             };
         });
 
