@@ -41,7 +41,7 @@ router.get('/users', authMiddleware, async (req, res) => {
 
 // Register user
 router.post('/register', authMiddleware, async (req, res) => {
-    const { username, password, role, name, permissions, autoLock, salary } = req.body;
+    const { username, password, role, name, permissions, autoLock, perHourTk } = req.body;
 
     try {
         const hashedPassword = await bcrypt.hash(password, 12);
@@ -52,7 +52,7 @@ router.post('/register', authMiddleware, async (req, res) => {
             name,
             permissions: permissions || [],
             autoLock: autoLock || false,
-            salary: salary !== undefined && salary !== null ? Number(salary) : 0
+            perHourTk: perHourTk !== undefined && perHourTk !== null ? Number(perHourTk) : 0
         });
         await newUser.save();
         res.status(201).json({ message: 'User registered successfully' });
@@ -159,7 +159,7 @@ router.put('/approve/:id', authMiddleware, async (req, res) => {
 
 // Edit user details (does not touch password)
 router.put('/edit/:id', authMiddleware, async (req, res) => {
-    const { role, name, permissions, autoLock, salary } = req.body;
+    const { role, name, permissions, autoLock, perHourTk } = req.body;
 
     try {
         const user = await User.findById(req.params.id);
@@ -171,7 +171,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         if (name) user.name = name;
         if (permissions !== undefined) user.permissions = permissions;
         if (autoLock !== undefined) user.autoLock = autoLock;
-        if (salary !== undefined) user.salary = Number(salary);
+        if (perHourTk !== undefined) user.perHourTk = Number(perHourTk);
 
         await user.save();
 

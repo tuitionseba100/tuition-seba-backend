@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema({
     permissions: { type: [String], default: [] },
     isLocked: { type: Boolean, default: false },
     autoLock: { type: Boolean, default: false },
-    salary: { type: Number, default: 0 }
+    perHourTk: { type: Number, default: 0 }
 }, { timestamps: true });
 
 const User = mongoose.model('User', userSchema);
