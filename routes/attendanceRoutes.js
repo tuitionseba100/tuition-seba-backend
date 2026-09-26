@@ -147,7 +147,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/summary', authMiddleware, async (req, res) => {
     try {
         const { userId, role } = req.user;
-        const { filter = 'today', userFilter, year } = req.query;
+        const { filter = 'runningMonth', userFilter, year } = req.query;
 
         const query = {};
         if (role === 'superadmin') {
@@ -158,7 +158,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
             query.userId = userId;
         }
 
-        const dateRange = getDateRange(filter, year);
+        const dateRange = getDateRange(filter || 'runningMonth', year);
         if (dateRange) {
             query.startTime = dateRange;
         }
