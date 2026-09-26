@@ -157,22 +157,14 @@ router.put('/approve/:id', authMiddleware, async (req, res) => {
     }
 });
 
-// Edit user
+// Edit user details (does not touch password)
 router.put('/edit/:id', authMiddleware, async (req, res) => {
-    const { username, password, role, name, permissions, autoLock, salary } = req.body;
+    const { role, name, permissions, autoLock, salary } = req.body;
 
     try {
         const user = await User.findById(req.params.id);
         if (!user) {
             return res.status(404).json({ message: 'User not found' });
-        }
-
-        // Only hash and update password if a new password string was provided
-        if (password && typeof password === 'string' && password.trim() !== '') {
-            // Prevent re-hashing if it is already the current bcrypt hash
-            if (password !== user.password) {
-                user.password = await bcrypt.hash(password, 12);
-            }
         }
 
         if (role) user.role = role;
@@ -184,6 +176,33 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         await user.save();
 
         res.json({ message: 'User updated successfully', user });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Change user password
+router.put('/change-password/:id', authMiddleware, async (req, res) => {
+    const { newPassword } = req.body;
+
+    if (!newPassword || typeof newPassword !== 'string' || !newPassword.trim()) {
+        return res.status(400).json({ message: 'New password is required' });
+    }
+
+    if (newPassword.trim().length < 4) {
+        return res.status(400).json({ message: 'Password must be at least 4 characters long' });
+    }
+
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        user.password = await bcrypt.hash(newPassword.trim(), 12);
+        await user.save();
+
+        res.json({ message: 'Password changed successfully' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
