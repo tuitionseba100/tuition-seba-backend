@@ -75,8 +75,6 @@ router.put('/end', authMiddleware, async (req, res) => {
     }
 });
 
-const moment = require('moment-timezone');
-
 const getDateRange = (filter, customYear) => {
     const tz = 'Asia/Dhaka';
     const now = moment.tz(tz);
