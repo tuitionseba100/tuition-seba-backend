@@ -165,12 +165,21 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         const records = await Attendance.find(query).sort({ startTime: -1 }).lean();
 
+        // Fetch users to get their perHourTk rate
+        const userList = await User.find().select('username name perHourTk salary').lean();
+        const userMap = {};
+        userList.forEach(u => {
+            if (u.username) userMap[u.username.toLowerCase()] = u;
+            if (u._id) userMap[u._id.toString()] = u;
+        });
+
         const summaryMap = {};
 
         records.forEach(entry => {
             const uName = entry.userName || 'Unknown';
             if (!summaryMap[uName]) {
                 summaryMap[uName] = {
+                    userId: entry.userId,
                     name: entry.name || uName,
                     userName: uName,
                     totalSessions: 0,
@@ -178,6 +187,10 @@ router.get('/summary', authMiddleware, async (req, res) => {
                     totalHours: 0,
                     presentDays: new Set()
                 };
+            }
+
+            if (!summaryMap[uName].userId && entry.userId) {
+                summaryMap[uName].userId = entry.userId;
             }
 
             summaryMap[uName].totalSessions += 1;
@@ -195,7 +208,12 @@ router.get('/summary', authMiddleware, async (req, res) => {
 
         const summaries = Object.values(summaryMap).map(s => {
             const daysCount = s.presentDays.size;
+            const userObj = userMap[s.userId ? s.userId.toString() : ''] || userMap[s.userName ? s.userName.toLowerCase() : ''];
+            const perHourTk = userObj && (userObj.perHourTk || userObj.salary) ? Number(userObj.perHourTk || userObj.salary) : null;
+            const runningMonthSalary = (perHourTk && perHourTk > 0) ? Math.round(perHourTk * s.totalHours) : null;
+
             return {
+                userId: s.userId,
                 name: s.name,
                 userName: s.userName,
                 totalSessions: s.totalSessions,
@@ -203,7 +221,9 @@ router.get('/summary', authMiddleware, async (req, res) => {
                 totalDaysPresent: daysCount,
                 avgHours: s.totalSessions > 0 ? (s.totalHours / s.totalSessions).toFixed(1) : '0.0',
                 avgHoursPerDay: daysCount > 0 ? (s.totalHours / daysCount).toFixed(1) : '0.0',
-                totalHours: s.totalHours.toFixed(1)
+                totalHours: s.totalHours.toFixed(1),
+                perHourTk: perHourTk,
+                runningMonthSalary: runningMonthSalary
             };
         });
 
