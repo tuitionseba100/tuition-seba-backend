@@ -167,8 +167,14 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Update user details — always hash new passwords
-        if (password) user.password = await bcrypt.hash(password, 12);
+        // Only hash and update password if a new password string was provided
+        if (password && typeof password === 'string' && password.trim() !== '') {
+            // Prevent re-hashing if it is already the current bcrypt hash
+            if (password !== user.password) {
+                user.password = await bcrypt.hash(password, 12);
+            }
+        }
+
         if (role) user.role = role;
         if (name) user.name = name;
         if (permissions !== undefined) user.permissions = permissions;
