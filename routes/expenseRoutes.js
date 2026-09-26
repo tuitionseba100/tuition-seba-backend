@@ -38,7 +38,7 @@ router.post('/add', authMiddleware, async (req, res) => {
 // Get Expenses with Filters (Paginated)
 router.get('/all', authMiddleware, async (req, res) => {
     try {
-        const { startDate, endDate, category, page = 1, limit = 20 } = req.query;
+        const { startDate, endDate, category, salaryUser, page = 1, limit = 20 } = req.query;
         let query = {};
 
         if (startDate || endDate) {
@@ -56,6 +56,7 @@ router.get('/all', authMiddleware, async (req, res) => {
         }
 
         if (category) query.category = category;
+        if (salaryUser) query.salaryUser = { $regex: new RegExp(`^${salaryUser}$`, 'i') };
 
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
@@ -74,6 +75,37 @@ router.get('/all', authMiddleware, async (req, res) => {
             currentPage: pageNum,
             totalPages,
             totalCount
+        });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Get Salary History for a specific employee
+router.get('/salary-history/:username', authMiddleware, async (req, res) => {
+    try {
+        const { username } = req.params;
+        const requestedUser = req.user;
+
+        // Non-superadmin can only see their own salary history
+        if (requestedUser && requestedUser.role !== 'superadmin') {
+            if (requestedUser.username && requestedUser.username.toLowerCase() !== username.toLowerCase()) {
+                return res.status(403).json({ message: 'Unauthorized to view other employee salary history' });
+            }
+        }
+
+        const history = await Expense.find({
+            category: 'Salary',
+            salaryUser: { $regex: new RegExp(`^${username}$`, 'i') }
+        }).sort({ date: -1 });
+
+        const totalPaid = history.reduce((sum, item) => sum + (item.amount || 0), 0);
+
+        res.json({
+            username,
+            totalPaid,
+            count: history.length,
+            history
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
