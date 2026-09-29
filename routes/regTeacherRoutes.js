@@ -367,7 +367,9 @@ router.get('/summary', authMiddleware, async (req, res) => {
             under_review: 0,
             pending_payment: 0,
             rejected: 0,
-            verified: 0
+            verified: 0,
+            premium: 0,
+            elite: 0
         };
 
         let total = 0;
@@ -379,6 +381,8 @@ router.get('/summary', authMiddleware, async (req, res) => {
             else if (stat === 'pending payment') counts.pending_payment = item.count;
             else if (stat === 'rejected') counts.rejected = item.count;
             else if (stat === 'verified') counts.verified = item.count;
+            else if (stat === 'premium') counts.premium = item.count;
+            else if (stat === 'elite') counts.elite = item.count;
         });
 
         let records = [];

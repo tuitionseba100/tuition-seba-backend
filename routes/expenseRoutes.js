@@ -66,7 +66,7 @@ router.get('/all', authMiddleware, async (req, res) => {
             .sort({ date: -1 })
             .skip(skip)
             .limit(limitNum);
-            
+
         const totalCount = await Expense.countDocuments(query);
         const totalPages = Math.ceil(totalCount / limitNum);
 
