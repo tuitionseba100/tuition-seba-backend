@@ -35,15 +35,39 @@ const getPublicSettingsData = async () => {
     }
 
     try {
-        const setting = await Settings.findOne({ key: 'whatsapp_number' }).lean();
+        const [wpSetting, noticeSetting] = await Promise.all([
+            Settings.findOne({ key: 'whatsapp_number' }).lean(),
+            Settings.findOne({ key: 'public_notice' }).lean()
+        ]);
+
         cachedPublicSettings = {
-            whatsapp_number: setting && setting.value ? String(setting.value).trim() : '+8801633920928'
+            whatsapp_number: wpSetting && wpSetting.value ? String(wpSetting.value).trim() : '+8801633920928',
+            public_notice: noticeSetting && noticeSetting.value ? noticeSetting.value : {
+                enabled: false,
+                text: '',
+                link: '',
+                bgColor: '#002B5B',
+                textColor: '#ffffff',
+                badgeText: 'বিজ্ঞপ্তি',
+                speed: 6
+            }
         };
         lastCacheTime = now;
         return cachedPublicSettings;
     } catch (err) {
         console.error('Error reading public settings from DB:', err);
-        return cachedPublicSettings || { whatsapp_number: '+8801633920928' };
+        return cachedPublicSettings || {
+            whatsapp_number: '+8801633920928',
+            public_notice: {
+                enabled: false,
+                text: '',
+                link: '',
+                bgColor: '#002B5B',
+                textColor: '#ffffff',
+                badgeText: 'বিজ্ঞপ্তি',
+                speed: 6
+            }
+        };
     }
 };
 
@@ -54,7 +78,11 @@ router.get('/public', async (req, res) => {
         res.set('Cache-Control', 'public, max-age=300, stale-while-revalidate=86400');
         res.json(data);
     } catch (err) {
-        res.status(500).json({ message: err.message, whatsapp_number: '+8801633920928' });
+        res.status(500).json({
+            message: err.message,
+            whatsapp_number: '+8801633920928',
+            public_notice: { enabled: false, text: '' }
+        });
     }
 });
 
@@ -105,16 +133,9 @@ router.post('/', authMiddleware, async (req, res) => {
             { upsert: true, new: true }
         );
 
-        // Instantly invalidate in-memory RAM cache when settings are saved
-        if (key === 'whatsapp_number') {
-            cachedPublicSettings = {
-                whatsapp_number: value ? String(value).trim() : '+8801633920928'
-            };
-            lastCacheTime = Date.now();
-        } else {
-            cachedPublicSettings = null;
-            lastCacheTime = 0;
-        }
+        // Instantly invalidate in-memory RAM cache when any setting is saved
+        cachedPublicSettings = null;
+        lastCacheTime = 0;
 
         res.json(setting);
     } catch (err) {
