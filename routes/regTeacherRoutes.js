@@ -529,7 +529,11 @@ router.post('/add', async (req, res) => {
 
         await newTeacher.save();
 
-        res.status(201).json(newTeacher);
+        res.status(201).json({
+            success: true,
+            message: 'Teacher registered successfully',
+            premiumCode: newTeacher.premiumCode
+        });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -599,7 +603,7 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
     }
 });
 
-router.put('/update-status/:id', async (req, res) => {
+router.put('/update-status/:id', authMiddleware, async (req, res) => {
     const { status, comment } = req.body;
 
     if (!status) {
