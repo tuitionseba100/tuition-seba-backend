@@ -918,13 +918,19 @@ async function getNextTuitionCode(baseCode = null, { peekOnly = false } = {}) {
 
     // Auto-initialize if not set in Settings yet
     if (!settingDoc || typeof settingDoc.value !== 'number') {
-        const agg = await Tuition.aggregate([
-            { $match: { tuitionCode: { $regex: /^\d+$/ } } },
-            { $project: { num: { $toInt: '$tuitionCode' } } },
-            { $sort: { num: -1 } },
-            { $limit: 1 }
-        ]);
-        const currentMax = (agg.length > 0 && agg[0].num >= 16431) ? agg[0].num : 16431;
+        const recentTuitions = await Tuition.find({ tuitionCode: { $regex: /^\d+$/ } })
+            .sort({ _id: -1 })
+            .select('tuitionCode')
+            .limit(30)
+            .lean();
+
+        let currentMax = 16431;
+        for (const t of recentTuitions) {
+            const num = parseInt(t.tuitionCode, 10);
+            if (!isNaN(num) && num < 100000 && num > currentMax) {
+                currentMax = num;
+            }
+        }
 
         settingDoc = await Settings.findOneAndUpdate(
             { key: 'last_tuition_code' },
