@@ -18,5 +18,7 @@ const phoneSchema = new mongoose.Schema({
     nextFollowUpComment: { type: String },
 });
 
+phoneSchema.index({ phone: 1 });
+
 const Phone = mongoose.model('Phone', phoneSchema);
 module.exports = Phone;

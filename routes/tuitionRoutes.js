@@ -865,7 +865,7 @@ router.get('/summary', async (req, res) => {
     }
 });
 
-async function getNextTuitionCode(baseCode = null) {
+async function getNextTuitionCode(baseCode = null, { peekOnly = false } = {}) {
     if (baseCode && String(baseCode).trim()) {
         let rootCode = String(baseCode).trim();
         const rootMatch = rootCode.match(/^(.+?)(?:\s*\([A-Za-z]+\))?$/);
@@ -913,44 +913,58 @@ async function getNextTuitionCode(baseCode = null) {
         return candidateCode;
     }
 
-    // Fresh tuition code generation (start from 16432)
-    const latestTuitions = await Tuition.find(
-        { tuitionCode: { $regex: /^\d+$/ } }
-    )
-        .sort({ tuitionCode: -1 })
-        .select('tuitionCode')
-        .limit(20)
-        .lean();
+    // Fresh tuition code generation using atomic counter in Settings
+    let settingDoc = await Settings.findOne({ key: 'last_tuition_code' });
 
-    let maxNum = 16431; // Starting base: next will be 16432
-    if (latestTuitions && latestTuitions.length > 0) {
-        for (const t of latestTuitions) {
-            if (t.tuitionCode) {
-                const match = t.tuitionCode.match(/^(\d+)$/);
-                if (match) {
-                    const num = parseInt(match[1], 10);
-                    if (!isNaN(num) && num > maxNum) {
-                        maxNum = num;
-                    }
-                }
-            }
-        }
+    // Auto-initialize if not set in Settings yet
+    if (!settingDoc || typeof settingDoc.value !== 'number') {
+        const agg = await Tuition.aggregate([
+            { $match: { tuitionCode: { $regex: /^\d+$/ } } },
+            { $project: { num: { $toInt: '$tuitionCode' } } },
+            { $sort: { num: -1 } },
+            { $limit: 1 }
+        ]);
+        const currentMax = (agg.length > 0 && agg[0].num >= 16431) ? agg[0].num : 16431;
+
+        settingDoc = await Settings.findOneAndUpdate(
+            { key: 'last_tuition_code' },
+            { $set: { value: currentMax } },
+            { upsert: true, new: true }
+        );
     }
 
-    let nextNum = maxNum + 1;
-    let nextCode = String(nextNum);
-    while (await Tuition.exists({ tuitionCode: nextCode })) {
-        nextNum++;
-        nextCode = String(nextNum);
+    // For previewing without saving (e.g. GET /api/tuition/next-code)
+    if (peekOnly) {
+        return String(settingDoc.value + 1);
     }
-    return nextCode;
+
+    // Atomic increment (runs in ~1-2ms)
+    const updatedCounter = await Settings.findOneAndUpdate(
+        { key: 'last_tuition_code' },
+        { $inc: { value: 1 } },
+        { new: true }
+    );
+
+    let candidateCode = String(updatedCounter.value);
+
+    // Failsafe in case a legacy record already claimed this number
+    while (await Tuition.exists({ tuitionCode: candidateCode })) {
+        const next = await Settings.findOneAndUpdate(
+            { key: 'last_tuition_code' },
+            { $inc: { value: 1 } },
+            { new: true }
+        );
+        candidateCode = String(next.value);
+    }
+
+    return candidateCode;
 }
 
 router.get('/next-code', async (req, res) => {
     try {
         const { baseCode, copyFrom } = req.query;
         const targetBase = baseCode || copyFrom || null;
-        const nextCode = await getNextTuitionCode(targetBase);
+        const nextCode = await getNextTuitionCode(targetBase, { peekOnly: true });
         res.json({ success: true, nextCode });
     } catch (err) {
         res.status(500).json({ message: err.message });
