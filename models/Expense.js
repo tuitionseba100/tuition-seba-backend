@@ -26,6 +26,10 @@ const expenseSchema = new mongoose.Schema({
     salaryUser: {
         type: String,
         default: ''
+    },
+    salaryMonth: {
+        type: String,
+        default: ''
     }
 }, { timestamps: true });
 

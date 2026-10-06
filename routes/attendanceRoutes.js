@@ -173,10 +173,42 @@ router.get('/summary', authMiddleware, async (req, res) => {
         });
 
         // Fetch Salary expenses for this period to calculate Paid amount per user
-        const expQuery = { category: 'Salary' };
-        if (dateRange) {
+        const tz = 'Asia/Dhaka';
+        const now = moment.tz(tz);
+        const currentYear = year ? parseInt(year) : now.year();
+
+        let targetSalaryMonth = null;
+        if (filter === 'runningMonth') {
+            targetSalaryMonth = now.clone().format('YYYY-MM');
+        } else if (filter === 'lastMonth') {
+            targetSalaryMonth = now.clone().subtract(1, 'month').format('YYYY-MM');
+        } else {
+            const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+            const mIndex = monthNames.indexOf(String(filter).toLowerCase());
+            if (mIndex !== -1) {
+                targetSalaryMonth = moment.tz({ year: currentYear, month: mIndex, day: 1 }, tz).format('YYYY-MM');
+            }
+        }
+
+        let expQuery = { category: 'Salary' };
+        if (targetSalaryMonth) {
+            if (dateRange) {
+                expQuery.$or = [
+                    { salaryMonth: targetSalaryMonth },
+                    {
+                        $and: [
+                            { $or: [{ salaryMonth: { $exists: false } }, { salaryMonth: '' }, { salaryMonth: null }] },
+                            { date: dateRange }
+                        ]
+                    }
+                ];
+            } else {
+                expQuery.salaryMonth = targetSalaryMonth;
+            }
+        } else if (dateRange) {
             expQuery.date = dateRange;
         }
+
         const salaryExpenses = await Expense.find(expQuery).lean();
         const paidMap = {};
         salaryExpenses.forEach(exp => {

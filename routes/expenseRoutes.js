@@ -19,14 +19,15 @@ const authMiddleware = (req, res, next) => {
 // Add Expense
 router.post('/add', authMiddleware, async (req, res) => {
     try {
-        const { amount, category, note, date, createdBy, salaryUser } = req.body;
+        const { amount, category, note, date, createdBy, salaryUser, salaryMonth } = req.body;
         const newExpense = new Expense({
             amount,
             category,
             note,
             date: date || new Date(),
             createdBy,
-            salaryUser: category === 'Salary' ? (salaryUser || '') : ''
+            salaryUser: category === 'Salary' ? (salaryUser || '') : '',
+            salaryMonth: category === 'Salary' ? (salaryMonth || '') : ''
         });
         const savedExpense = await newExpense.save();
         res.status(201).json(savedExpense);
