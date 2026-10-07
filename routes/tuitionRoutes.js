@@ -279,6 +279,7 @@ router.get('/getTableData', async (req, res) => {
         assignedTo,
         type,
         isReviewDone,
+        isPaymentCreated,
         tuitionType,
         applyType,
         isProposal,
@@ -297,6 +298,10 @@ router.get('/getTableData', async (req, res) => {
 
     if (isReviewDone === 'true' || isReviewDone === 'false') {
         filter.isReviewDone = isReviewDone === 'true';
+    }
+
+    if (isPaymentCreated === 'true' || isPaymentCreated === 'false') {
+        filter.isPaymentCreated = isPaymentCreated === 'true';
     }
 
     if (tuitionCode) {
@@ -685,6 +690,7 @@ router.get('/summary', async (req, res) => {
         assignedTo,
         type,
         isReviewDone,
+        isPaymentCreated,
         tuitionType,
         applyType,
         isProposal,
@@ -703,6 +709,10 @@ router.get('/summary', async (req, res) => {
 
     if (isReviewDone === 'true' || isReviewDone === 'false') {
         filter.isReviewDone = isReviewDone === 'true';
+    }
+
+    if (isPaymentCreated === 'true' || isPaymentCreated === 'false') {
+        filter.isPaymentCreated = isPaymentCreated === 'true';
     }
 
     if (tuitionCode) {
