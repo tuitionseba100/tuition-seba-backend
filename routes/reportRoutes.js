@@ -154,4 +154,136 @@ router.get('/marketing', authMiddleware, async (req, res) => {
     }
 });
 
+// GET /api/report/expense-by-category
+router.get('/expense-by-category', authMiddleware, async (req, res) => {
+    try {
+        const { startDate, endDate, category } = req.query;
+        let matchStage = {};
+
+        if (startDate || endDate) {
+            matchStage.date = {};
+            if (startDate) {
+                const s = new Date(startDate);
+                s.setHours(0, 0, 0, 0);
+                matchStage.date.$gte = s;
+            }
+            if (endDate) {
+                const e = new Date(endDate);
+                e.setHours(23, 59, 59, 999);
+                matchStage.date.$lte = e;
+            }
+        }
+
+        if (category && category !== 'all') {
+            matchStage.category = category;
+        }
+
+        const [categoriesBreakdown, dateTimeline, distinctCategories] = await Promise.all([
+            Expense.aggregate([
+                { $match: matchStage },
+                {
+                    $group: {
+                        _id: { $ifNull: ["$category", "Uncategorized"] },
+                        totalAmount: { $sum: "$amount" },
+                        count: { $sum: 1 },
+                        avgAmount: { $avg: "$amount" },
+                        minAmount: { $min: "$amount" },
+                        maxAmount: { $max: "$amount" }
+                    }
+                },
+                { $sort: { totalAmount: -1 } }
+            ]),
+            Expense.aggregate([
+                { $match: matchStage },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: "%Y-%m-%d", date: "$date" } },
+                        totalAmount: { $sum: "$amount" },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ]),
+            Expense.distinct('category')
+        ]);
+
+        const totalExpense = categoriesBreakdown.reduce((sum, item) => sum + (item.totalAmount || 0), 0);
+        const totalCount = categoriesBreakdown.reduce((sum, item) => sum + (item.count || 0), 0);
+        const avgPerTransaction = totalCount > 0 ? Math.round(totalExpense / totalCount) : 0;
+
+        const summary = categoriesBreakdown.map(item => ({
+            category: item._id,
+            totalAmount: item.totalAmount || 0,
+            count: item.count || 0,
+            avgAmount: Math.round(item.avgAmount || 0),
+            minAmount: item.minAmount || 0,
+            maxAmount: item.maxAmount || 0,
+            percentage: totalExpense > 0 ? parseFloat(((item.totalAmount / totalExpense) * 100).toFixed(1)) : 0
+        }));
+
+        res.json({
+            summary,
+            timeline: dateTimeline.map(d => ({ date: d._id, totalAmount: d.totalAmount, count: d.count })),
+            totalExpense,
+            totalCount,
+            avgPerTransaction,
+            topCategory: summary.length > 0 ? summary[0].category : 'N/A',
+            distinctCategories: (distinctCategories || []).filter(Boolean).sort()
+        });
+    } catch (err) {
+        console.error('Expense by category report error:', err);
+        res.status(500).json({ error: 'Failed to generate expense by category report' });
+    }
+});
+
+// GET /api/report/expense-category-items
+router.get('/expense-category-items', authMiddleware, async (req, res) => {
+    try {
+        const { category, startDate, endDate, page = 1, limit = 20 } = req.query;
+        let query = {};
+
+        if (category && category !== 'all') {
+            query.category = category;
+        }
+
+        if (startDate || endDate) {
+            query.date = {};
+            if (startDate) {
+                const s = new Date(startDate);
+                s.setHours(0, 0, 0, 0);
+                query.date.$gte = s;
+            }
+            if (endDate) {
+                const e = new Date(endDate);
+                e.setHours(23, 59, 59, 999);
+                query.date.$lte = e;
+            }
+        }
+
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        const [items, totalCount, totalSum] = await Promise.all([
+            Expense.find(query).sort({ date: -1 }).skip(skip).limit(limitNum).lean(),
+            Expense.countDocuments(query),
+            Expense.aggregate([
+                { $match: query },
+                { $group: { _id: null, total: { $sum: "$amount" } } }
+            ])
+        ]);
+
+        res.json({
+            items,
+            currentPage: pageNum,
+            totalPages: Math.ceil(totalCount / limitNum) || 1,
+            totalCount,
+            totalAmount: totalSum.length > 0 ? totalSum[0].total : 0
+        });
+    } catch (err) {
+        console.error('Expense category items error:', err);
+        res.status(500).json({ error: 'Failed to fetch category expense items' });
+    }
+});
+
 module.exports = router;
