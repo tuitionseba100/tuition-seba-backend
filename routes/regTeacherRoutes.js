@@ -38,14 +38,6 @@ const authMiddleware = (req, res, next) => {
     }
 };
 
-router.get('/all', authMiddleware, async (req, res) => {
-    try {
-        const allTeachers = await RegTeacher.find();
-        res.json(allTeachers);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 router.get('/search-teachers', authMiddleware, async (req, res) => {
     try {

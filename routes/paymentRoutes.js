@@ -54,15 +54,6 @@ const getLeastAssignedPaymentUser = async (userList) => {
 };
 
 
-router.get('/all', authMiddleware, async (req, res) => {
-    try {
-        const payments = await Payment.find();
-        res.json(payments);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
 router.put('/verify-all', authMiddleware, async (req, res) => {
     if (req.user.role !== 'superadmin') return res.status(403).json({ message: 'Forbidden' });
     try {
