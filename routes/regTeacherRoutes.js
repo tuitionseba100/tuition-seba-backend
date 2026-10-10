@@ -230,7 +230,11 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
     }
 
     if (uniCode) {
-        filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+        if (uniCode === 'Not Assigned') {
+            filter.uniCode = { $in: [null, ''] };
+        } else {
+            filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+        }
     }
 
     if (referStatus) {
@@ -332,7 +336,11 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 
     if (uniCode) {
-        filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+        if (uniCode === 'Not Assigned') {
+            filter.uniCode = { $in: [null, ''] };
+        } else {
+            filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+        }
     }
 
     if (referStatus) {
