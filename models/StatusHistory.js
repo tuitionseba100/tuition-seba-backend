@@ -24,6 +24,14 @@ const statusHistorySchema = new mongoose.Schema({
         type: String, 
         required: true 
     },
+    subStatus: {
+        type: String,
+        default: ''
+    },
+    comment: {
+        type: String,
+        default: ''
+    },
     timestamp: { 
         type: Date, 
         default: Date.now 

@@ -10,12 +10,15 @@ const StatusHistory = require('../models/StatusHistory');
  * @param {string} [tuitionCode] - Optional code for quick lookup.
  * @param {string} [overrideUser] - Override performer of the action.
  */
-const logStatusChange = async (req, moduleName, resourceId, oldStatus, newStatus, tuitionCode = null, overrideUser = null) => {
+const logStatusChange = async (req, moduleName, resourceId, oldStatus, newStatus, tuitionCode = null, overrideUser = null, comment = '', subStatus = '') => {
     try {
-        // Only log if the status actually changed
-        if (oldStatus === newStatus) return;
+        // Log if status changed OR if a transition comment/subStatus is provided
+        if (oldStatus === newStatus && !comment && !subStatus) return;
 
-        const changedBy = overrideUser || req.headers['x-user-name'] || 'System';
+        const changedBy = overrideUser || 
+            (req && req.headers ? req.headers['x-user-name'] : null) || 
+            (req && req.user ? (req.user.username || req.user.name) : null) || 
+            'System';
 
         const history = new StatusHistory({
             module: moduleName,
@@ -23,10 +26,13 @@ const logStatusChange = async (req, moduleName, resourceId, oldStatus, newStatus
             tuitionCode,
             oldStatus,
             newStatus,
+            subStatus: subStatus || '',
+            comment: comment || '',
             changedBy
         });
 
         await history.save();
+        return history;
     } catch (err) {
         console.error('Error logging status change:', err);
     }
