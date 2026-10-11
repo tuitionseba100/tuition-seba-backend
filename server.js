@@ -45,10 +45,8 @@ const serviceChargeRoutes = require('./routes/serviceChargeRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const internalChatRoutes = require('./routes/internalChatRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
-const tuitionProcessRoutes = require('./routes/tuitionProcessRoutes');
 
 app.use('/api/tuition', tuitionRoutes);
-app.use('/api/tuition-process', tuitionProcessRoutes);
 app.use('/api/activity-log', activityLogRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/payment', paymentRoutes);

@@ -61,11 +61,6 @@ const tuitionSchema = new mongoose.Schema({
         createdBy: { type: String },
         createdAt: { type: Date, default: Date.now }
     }],
-    subStatus: { type: String, default: '' },
-    lastActionName: { type: String, default: '' },
-    lastActionAt: { type: Date },
-    lastActionBy: { type: String, default: '' },
-    cancelReasonStructured: { type: String, default: '' },
 }, {
     timestamps: true
 });
