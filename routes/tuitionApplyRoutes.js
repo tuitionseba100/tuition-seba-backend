@@ -803,7 +803,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply comment updatedBy agentComment commentForTeacher regTeacherStatus'
+            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply isCvSent comment updatedBy agentComment commentForTeacher regTeacherStatus'
         ).sort({ appliedAt: -1 }).lean();
 
         const data = await enrichAppliesWithDue(appliedList);
@@ -885,7 +885,7 @@ router.get('/byPremiumCode', async (req, res) => {
 
         const tuitionApplies = await TuitionApply.find(
             { premiumCode },
-            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isBanned isSpam isBest isExpress regTeacherStatus'
+            'premiumCode tuitionCode name phone status appliedAt commentForTeacher isAppApply isBanned isSpam isBest isExpress regTeacherStatus isCvSent'
         ).sort({ appliedAt: -1 }).lean();
 
         if (tuitionApplies.length === 0) {
@@ -896,6 +896,27 @@ router.get('/byPremiumCode', async (req, res) => {
         res.json(data);
     } catch (err) {
         console.error('Error fetching tuition applies by premium code:', err);
+        res.status(500).json({ message: err.message });
+    }
+});
+
+router.put('/toggle-cv-sent/:id', async (req, res) => {
+    try {
+        const apply = await TuitionApply.findById(req.params.id);
+        if (!apply) {
+            return res.status(404).json({ message: 'Tuition application record not found' });
+        }
+
+        if (typeof req.body.isCvSent === 'boolean') {
+            apply.isCvSent = req.body.isCvSent;
+        } else {
+            apply.isCvSent = !apply.isCvSent;
+        }
+
+        await apply.save();
+        res.json({ success: true, isCvSent: apply.isCvSent, record: apply });
+    } catch (err) {
+        console.error('Error toggling isCvSent:', err);
         res.status(500).json({ message: err.message });
     }
 });

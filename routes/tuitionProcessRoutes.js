@@ -221,6 +221,13 @@ router.post('/status-change/:tuitionId', authMiddleware, async (req, res) => {
             };
         }
 
+        // Special handling for Demo Class Failed
+        if (status?.toLowerCase() === 'demo class failed') {
+            if (tuition.tutorNumber) {
+                updateFields.comment1 = `Failed Tutor: ${tuition.tutorNumber} - ${comment || 'Demo class failed'}`;
+            }
+        }
+
         // Special handling for Back to Available (Demo Failed)
         if (status?.toLowerCase() === 'available' && (oldStatus?.toLowerCase().includes('demo') || oldStatus?.toLowerCase() === 'given number')) {
             if (tuition.tutorNumber) {

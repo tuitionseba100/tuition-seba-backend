@@ -1314,7 +1314,19 @@ router.put('/edit/:id', async (req, res) => {
         });
 
         if (updatedTuition && req.body.status && oldTuition.status !== req.body.status) {
-            await logStatusChange(req, 'Tuition', updatedTuition._id, oldTuition.status, req.body.status, updatedTuition.tuitionCode || null);
+            const editComment = req.body.lastUpdateComment || req.body.tuitionCancelReason || req.body.agentComment || '';
+            const editUser = req.body.updatedBy || null;
+            await logStatusChange(
+                req,
+                'Tuition',
+                updatedTuition._id,
+                oldTuition.status,
+                req.body.status,
+                updatedTuition.tuitionCode || null,
+                editUser,
+                editComment,
+                req.body.subStatus || ''
+            );
         }
 
         // Log isPublish change history

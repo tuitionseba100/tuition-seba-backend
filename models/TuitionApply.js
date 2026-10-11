@@ -22,6 +22,7 @@ const tuitionApplySchema = new mongoose.Schema({
     isBanned: { type: Boolean, default: false },
     hasDue: { type: Boolean, default: false },
     isAppApply: { type: Boolean, default: false },
+    isCvSent: { type: Boolean, default: false },
     regTeacherStatus: { type: String, default: '' },
     appliedAt: { type: Date, default: Date.now }
 });
