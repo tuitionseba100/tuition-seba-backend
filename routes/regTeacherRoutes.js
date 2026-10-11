@@ -39,6 +39,24 @@ const authMiddleware = (req, res, next) => {
 };
 
 
+router.get('/byPremiumCode/:premiumCode', authMiddleware, async (req, res) => {
+    try {
+        const { premiumCode } = req.params;
+        if (!premiumCode) {
+            return res.status(400).json({ message: 'Premium code is required' });
+        }
+        const teacher = await RegTeacher.findOne({
+            premiumCode: new RegExp(`^${escapeRegex(premiumCode.trim())}$`, 'i')
+        }).lean();
+        if (!teacher) {
+            return res.status(404).json({ message: 'Teacher not found' });
+        }
+        res.json(teacher);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/search-teachers', authMiddleware, async (req, res) => {
     try {
         const q = (req.query.q || '').toString().trim();
