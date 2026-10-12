@@ -206,7 +206,7 @@ router.post('/status-change/:tuitionId', authMiddleware, async (req, res) => {
         // Special handling for Cancel
         if (status?.toLowerCase() === 'cancel') {
             if (cancelReason) {
-                updateFields.tuitionCancelReason = cancelReason;
+                updateFields.cancellationReason = cancelReason;
             }
             const sevenDaysLater = new Date();
             sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);

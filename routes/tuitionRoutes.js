@@ -459,7 +459,7 @@ router.get('/alert-today', async (req, res) => {
         }
 
         const tuitions = await Tuition.find(filter)
-            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo previousAssignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated createdBy updatedBy isSpamGuardian isBestGuardian tuitionCancelReason')
+            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo previousAssignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated createdBy updatedBy isSpamGuardian isBestGuardian tuitionCancelReason cancellationReason')
             .sort({ nextUpdateDate: 1 })
             .lean();
 
@@ -1022,6 +1022,7 @@ router.post('/add', async (req, res) => {
         comment2,
         tuitionCancelReason,
         tuitionCancelReasonPublic,
+        cancellationReason,
         guardianBehavior,
         isPaymentCreated,
         assignedTo,
@@ -1151,6 +1152,7 @@ router.post('/add', async (req, res) => {
             comment2,
             tuitionCancelReason,
             tuitionCancelReasonPublic,
+            cancellationReason,
             guardianBehavior,
             isPaymentCreated,
             assignedTo: finalAssignedTo,
