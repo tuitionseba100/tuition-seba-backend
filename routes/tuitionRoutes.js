@@ -459,7 +459,7 @@ router.get('/alert-today', async (req, res) => {
         }
 
         const tuitions = await Tuition.find(filter)
-            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo previousAssignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated createdBy updatedBy isSpamGuardian isBestGuardian tuitionCancelReason cancellationReason')
+            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo previousAssignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated createdBy updatedBy isSpamGuardian isBestGuardian tuitionCancelReason cancellationReason statusChangedAt')
             .sort({ nextUpdateDate: 1 })
             .lean();
 
@@ -1136,6 +1136,7 @@ router.post('/add', async (req, res) => {
             area,
             guardianNumber,
             status,
+            statusChangedAt: status ? new Date() : undefined,
             joining,
             note,
             tutorNumber,
@@ -1242,6 +1243,10 @@ router.put('/edit/:id', async (req, res) => {
         // Auto-assignment logic based on status change
         const newStatus = req.body.status ? req.body.status.toLowerCase() : null;
         const oldStatus = oldTuition.status ? oldTuition.status.toLowerCase() : null;
+
+        if (req.body.status && req.body.status !== oldTuition.status) {
+            req.body.statusChangedAt = new Date();
+        }
 
         if (newStatus && newStatus !== oldStatus) {
             // 1. Confirm -> TSF

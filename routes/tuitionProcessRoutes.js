@@ -248,6 +248,10 @@ router.post('/status-change/:tuitionId', authMiddleware, async (req, res) => {
             }
         }
 
+        if (status && status !== oldStatus) {
+            updateFields.statusChangedAt = new Date();
+        }
+
         const updatedTuition = await Tuition.findByIdAndUpdate(tuitionId, updateFields, { new: true });
 
         // IMPORTANT: Save comment and subStatus in StatusHistory!
