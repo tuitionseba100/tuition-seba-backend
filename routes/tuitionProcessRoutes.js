@@ -72,7 +72,16 @@ router.get('/:tuitionId', authMiddleware, async (req, res) => {
 
         const cvSentEvents = statusHistory.filter(h => 
             h.newStatus?.toLowerCase() === 'cv sent' || 
-            h.subStatus?.toLowerCase() === 'call guardian to check if liked any cv'
+            h.newStatus?.toLowerCase() === 'cv sent - check if liked' ||
+            h.newStatus?.toLowerCase() === 'cv sent - liked' ||
+            h.subStatus?.toLowerCase() === 'call guardian to check if liked any cv' ||
+            h.subStatus?.toLowerCase() === 'cv sent - liked'
+        );
+
+        const cvLikedEvents = statusHistory.filter(h => 
+            h.newStatus?.toLowerCase() === 'cv sent - liked' ||
+            h.subStatus?.toLowerCase() === 'cv sent - liked' ||
+            h.subStatus?.toLowerCase() === 'guardian_liked_cv'
         );
 
         const contactSharedEvents = statusHistory.filter(h => 
@@ -139,6 +148,7 @@ router.get('/:tuitionId', authMiddleware, async (req, res) => {
                 hasApplicants: applicants.length > 0,
                 isProposal: !!tuition.isProposal,
                 isCvSent: tuition.status?.toLowerCase() === 'cv sent' || cvSentEvents.length > 0,
+                isCvLiked: tuition.status?.toLowerCase() === 'cv sent - liked' || cvLikedEvents.length > 0,
                 isContactShared: tuition.status?.toLowerCase() === 'given number' || contactSharedEvents.length > 0,
                 hasDemoRun: hasDemoClassHistory,
                 isBackAvailable: backAvailableEvents.length > 0,
