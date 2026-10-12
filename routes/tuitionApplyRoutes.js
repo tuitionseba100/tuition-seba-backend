@@ -339,7 +339,7 @@ router.get('/getTableData', async (req, res) => {
     }
 
     if (status) {
-        filter.status = status;
+        filter.status = new RegExp(`^${escapeRegex(status)}$`, 'i');
     }
 
     try {
@@ -404,7 +404,7 @@ router.get('/summary', async (req, res) => {
     }
 
     if (status) {
-        filter.status = status;
+        filter.status = new RegExp(`^${escapeRegex(status)}$`, 'i');
     }
 
     try {
@@ -1006,7 +1006,7 @@ router.get('/exportData', async (req, res) => {
         // Build filter based on status
         const filter = {};
         if (status && status !== 'all') {
-            filter.status = status;
+            filter.status = new RegExp(`^${escapeRegex(status)}$`, 'i');
         }
 
         // Set headers for CSV download
