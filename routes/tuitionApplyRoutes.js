@@ -759,6 +759,9 @@ router.post('/add-web', applyLimiter, async (req, res) => {
         if (status && status.toLowerCase() === 'cv sent') {
             autoStatus = 'CV Sent';
             autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+        } else if (status && status.toLowerCase() === 'cv sent - liked') {
+            autoStatus = 'CV Sent - Liked';
+            autoCommentForTeacher = 'অভিভাবক আপনার সিভি পছন্দ করেছেন, দ্রুত যোগাযোগ করুন Whatsapp +8801577665717';
         }
 
         let finalRegTeacherStatus = regTeacherStatus;
@@ -969,9 +972,11 @@ router.put('/edit/:id', async (req, res) => {
             updatePayload.isExpress = isExpress;
         }
 
-        // Auto-update commentForTeacher when status is updated to 'CV Sent'
+        // Auto-update commentForTeacher when status is updated to 'CV Sent' or 'CV Sent - Liked'
         if (req.body.status && req.body.status.toLowerCase() === 'cv sent') {
             updatePayload.commentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+        } else if (req.body.status && req.body.status.toLowerCase() === 'cv sent - liked') {
+            updatePayload.commentForTeacher = 'অভিভাবক আপনার সিভি পছন্দ করেছেন, দ্রুত যোগাযোগ করুন Whatsapp +8801577665717';
         }
 
         const updatedData = await TuitionApply.findByIdAndUpdate(
