@@ -144,7 +144,7 @@ router.get('/:tuitionId', authMiddleware, async (req, res) => {
                 isBackAvailable: backAvailableEvents.length > 0,
                 isConfirmed: tuition.status?.toLowerCase() === 'confirm' || confirmEvents.length > 0,
                 isRequestForPayment: tuition.status?.toLowerCase() === 'request for payment' || requestPaymentEvents.length > 0,
-                isPaymentCompleted: payment && (payment.paymentStatus?.toLowerCase() === 'paid' || (Number(payment.receivedTk || 0) >= Number(payment.totalPaymentTk || 0) && Number(payment.totalPaymentTk || 0) > 0)),
+                isPaymentCompleted: (payment && (payment.paymentStatus?.toLowerCase() === 'paid' || (Number(payment.receivedTk || 0) >= Number(payment.totalPaymentTk || 0) && Number(payment.totalPaymentTk || 0) > 0))) || tuition.status?.toLowerCase() === 'payment completed' || tuition.status?.toLowerCase() === 'payment complete',
                 isCancelled: tuition.status?.toLowerCase() === 'cancel',
                 lastAction
             }
