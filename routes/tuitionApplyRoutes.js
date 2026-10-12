@@ -756,6 +756,11 @@ router.post('/add-web', applyLimiter, async (req, res) => {
             console.error('Error fetching tuition for auto feedback:', tErr);
         }
 
+        if (status && status.toLowerCase() === 'cv sent') {
+            autoStatus = 'CV Sent';
+            autoCommentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
+        }
+
         let finalRegTeacherStatus = regTeacherStatus;
         if (!finalRegTeacherStatus && premiumCode) {
             const t = await RegTeacher.findOne({ premiumCode }).lean();
@@ -962,6 +967,11 @@ router.put('/edit/:id', async (req, res) => {
             updatePayload.isSpam = isSpam;
             updatePayload.isBest = isBest;
             updatePayload.isExpress = isExpress;
+        }
+
+        // Auto-update commentForTeacher when status is updated to 'CV Sent'
+        if (req.body.status && req.body.status.toLowerCase() === 'cv sent') {
+            updatePayload.commentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
         }
 
         const updatedData = await TuitionApply.findByIdAndUpdate(
