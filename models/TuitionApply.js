@@ -24,7 +24,12 @@ const tuitionApplySchema = new mongoose.Schema({
     isAppApply: { type: Boolean, default: false },
     isCvSent: { type: Boolean, default: false },
     regTeacherStatus: { type: String, default: '' },
-    appliedAt: { type: Date, default: Date.now }
+    appliedAt: { type: Date, default: Date.now },
+    followUpDate: { type: Date },
+    followUpComment: { type: String },
+    isFollowUpDone: { type: Boolean, default: false },
+    followUpTakenBy: { type: String, default: '' },
+    cancelCategory: { type: String, default: '' }
 });
 
 tuitionApplySchema.index({ tuitionCode: 1, status: 1 });
@@ -34,6 +39,7 @@ tuitionApplySchema.index({ status: 1, appliedAt: -1 });
 tuitionApplySchema.index({ tuitionCode: 1, appliedAt: -1 });
 tuitionApplySchema.index({ phone: 1 });
 tuitionApplySchema.index({ tuitionId: 1, appliedAt: -1 });
+tuitionApplySchema.index({ followUpDate: 1 });
 
 const TuitionApply = mongoose.model('TuitionApply', tuitionApplySchema);
 module.exports = TuitionApply;

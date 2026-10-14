@@ -80,7 +80,7 @@ async function enrichAppliesWithDue(applyList) {
 
     const regTeachers = teacherQuery.length > 0
         ? await RegTeacher.find({ $or: teacherQuery })
-            .select('phone whatsapp alternativePhone premiumCode')
+            .select('phone whatsapp alternativePhone premiumCode status isBanned isSpam isBest isExpress')
             .lean()
         : [];
 
@@ -307,8 +307,43 @@ async function enrichAppliesWithDue(applyList) {
         const scDueCount = matchedScMap.size;
         const hasScDue = scDueAmount > 0;
 
+        let regTeacherStatus = apply.regTeacherStatus || '';
+        let isBanned = !!apply.isBanned;
+        let isSpam = !!apply.isSpam;
+        let isBest = !!apply.isBest;
+        let isExpress = !!apply.isExpress;
+
+        codeSet.forEach(c => {
+            if (teachersByCode.has(c)) {
+                const t = teachersByCode.get(c);
+                if (!regTeacherStatus && t.status) regTeacherStatus = t.status;
+                if (t.isBanned) isBanned = true;
+                if (t.isSpam) isSpam = true;
+                if (t.isBest) isBest = true;
+                if (t.isExpress) isExpress = true;
+            }
+        });
+
+        phoneSet.forEach(k => {
+            if (teachersByPhone10.has(k)) {
+                const list = teachersByPhone10.get(k);
+                list.forEach(t => {
+                    if (!regTeacherStatus && t.status) regTeacherStatus = t.status;
+                    if (t.isBanned) isBanned = true;
+                    if (t.isSpam) isSpam = true;
+                    if (t.isBest) isBest = true;
+                    if (t.isExpress) isExpress = true;
+                });
+            }
+        });
+
         return {
             ...apply,
+            regTeacherStatus,
+            isBanned,
+            isSpam,
+            isBest,
+            isExpress,
             hasDue,
             dueAmount,
             dueCount,
@@ -319,12 +354,40 @@ async function enrichAppliesWithDue(applyList) {
     });
 }
 
+router.get('/alert-today', async (req, res) => {
+    try {
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day').toDate();
+
+        const filter = {
+            status: new RegExp('^cancelled by teacher$', 'i'),
+            isFollowUpDone: { $ne: true },
+            followUpDate: { $lte: endOfBDToday }
+        };
+
+        const records = await TuitionApply.find(filter)
+            .sort({ followUpDate: 1 })
+            .lean();
+
+        const enrichedRecords = await enrichAppliesWithDue(records);
+
+        res.json(enrichedRecords);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 router.get('/getTableData', async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
-    const { tuitionCode = '', premiumCode = '', phone = '', status } = req.query;
+    const { tuitionCode = '', premiumCode = '', phone = '', status, isFollowUpDone, cancelCategory, dueToday } = req.query;
 
     const filter = {};
+
+    if (dueToday === 'true' || dueToday === true) {
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day').toDate();
+        filter.followUpDate = { $lte: endOfBDToday };
+        filter.isFollowUpDone = { $ne: true };
+    }
 
     if (tuitionCode) {
         filter.tuitionCode = new RegExp(escapeRegex(tuitionCode), 'i');
@@ -340,6 +403,14 @@ router.get('/getTableData', async (req, res) => {
 
     if (status) {
         filter.status = new RegExp(`^${escapeRegex(status)}$`, 'i');
+    }
+
+    if (isFollowUpDone !== undefined && isFollowUpDone !== '') {
+        filter.isFollowUpDone = isFollowUpDone === 'true' || isFollowUpDone === true;
+    }
+
+    if (cancelCategory) {
+        filter.cancelCategory = new RegExp(`^${escapeRegex(cancelCategory)}$`, 'i');
     }
 
     try {
@@ -539,6 +610,9 @@ router.post('/add', async (req, res) => {
         commentForTeacher,
         agentComment,
         regTeacherStatus,
+        followUpDate,
+        followUpComment,
+        cancelCategory,
     } = req.body;
 
     try {
@@ -629,6 +703,15 @@ router.post('/add', async (req, res) => {
             }
         }
 
+        let finalFollowUpDate = followUpDate || null;
+        let finalFollowUpComment = followUpComment || '';
+        if (autoStatus === 'cancelled by teacher' || (status && status.toLowerCase() === 'cancelled by teacher')) {
+            if (!finalFollowUpDate) {
+                finalFollowUpDate = moment().tz("Asia/Dhaka").add(1, 'day').startOf('day').toDate();
+            }
+            finalFollowUpComment = finalFollowUpComment || '';
+        }
+
         const newApply = new TuitionApply({
             premiumCode,
             tuitionCode,
@@ -649,7 +732,12 @@ router.post('/add', async (req, res) => {
             isExpress,
             agentComment,
             isAppApply: true,
-            regTeacherStatus: finalRegTeacherStatus || ''
+            regTeacherStatus: finalRegTeacherStatus || '',
+            followUpDate: finalFollowUpDate,
+            followUpComment: finalFollowUpComment,
+            isFollowUpDone: req.body.isFollowUpDone || false,
+            followUpTakenBy: req.body.followUpTakenBy || '',
+            cancelCategory: cancelCategory || ''
         });
 
         await newApply.save();
@@ -811,7 +899,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply isCvSent comment updatedBy agentComment commentForTeacher regTeacherStatus'
+            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply isCvSent comment updatedBy agentComment commentForTeacher regTeacherStatus followUpDate followUpComment isFollowUpDone followUpTakenBy cancelCategory'
         ).sort({ appliedAt: -1 }).lean();
 
         const data = await enrichAppliesWithDue(appliedList);
@@ -938,6 +1026,18 @@ router.put('/edit/:id', async (req, res) => {
         }
 
         let updatePayload = { ...req.body };
+        if (updatePayload.followUpDate === '') {
+            updatePayload.followUpDate = null;
+        }
+
+        if (req.body.status && req.body.status.toLowerCase() === 'cancelled by teacher') {
+            if (!updatePayload.followUpDate) {
+                updatePayload.followUpDate = moment().tz("Asia/Dhaka").add(1, 'day').startOf('day').toDate();
+            }
+            if (updatePayload.followUpComment === undefined) {
+                updatePayload.followUpComment = '';
+            }
+        }
 
         if (req.body.phone) {
             const normalizedInputPhone = normalizePhone(req.body.phone);
