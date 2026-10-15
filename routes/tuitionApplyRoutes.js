@@ -850,6 +850,10 @@ router.post('/add-web', applyLimiter, async (req, res) => {
         } else if (status && status.toLowerCase() === 'cv sent - liked') {
             autoStatus = 'CV Sent - Liked';
             autoCommentForTeacher = 'অভিভাবক আপনার সিভি পছন্দ করেছেন, দ্রুত যোগাযোগ করুন Whatsapp +8801577665717';
+        } else if (status && ['cancelled by guardian', 'cancel by guardian', 'cancel by gaurdian', 'cancelled by gaurdian'].includes(status.toLowerCase())) {
+            autoCommentForTeacher = 'দুঃখিত, অভিভাবক আপনার সিভি পছন্দ করেনি। আমাদের অন্য এভেইলেবল টিউশনগুলোতে এপ্লাই করুন।';
+        } else if (status && ['cancelled by teacher', 'cancel by teacher'].includes(status.toLowerCase())) {
+            autoCommentForTeacher = 'আপনি এই টিউশনটি নিতে পারবেন না বলে জানিয়েছেন। ভবিষ্যতে কোনো টিউশনে আবেদন করার আগে বেতন, সময়, লোকেশনসহ অন্যান্য বিষয় ভালোভাবে যাচাই করে নিশ্চিত হয়ে আবেদন করার অনুরোধ রইল। কোনো বিষয়ে পরিবর্তন বা আলোচনা প্রয়োজন হলে অনুগ্রহ করে কমেন্টস-এ উল্লেখ করবেন। অভিভাবক আপনার সিভি পছন্দ করার পর যেন আপনার পক্ষ থেকে টিউশনটি বাতিল করার প্রয়োজন না হয়, সেদিকে বিশেষভাবে খেয়াল রাখবেন। আপনার সহযোগিতা কামনা করছি। ধন্যবাদ।';
         }
 
         let finalRegTeacherStatus = regTeacherStatus;
@@ -1072,11 +1076,15 @@ router.put('/edit/:id', async (req, res) => {
             updatePayload.isExpress = isExpress;
         }
 
-        // Auto-update commentForTeacher when status is updated to 'CV Sent' or 'CV Sent - Liked'
+        // Auto-update commentForTeacher when status is updated
         if (req.body.status && req.body.status.toLowerCase() === 'cv sent') {
             updatePayload.commentForTeacher = 'আপনার সিভি অভিভাবক এর কাছে পাঠানো হয়েছে। অভিভাবক সিভি পছন্দ করলে আমরা দ্রুত সময়ের মধ্যে যোগাযোগ করবো। আমাদের অন্যান্য এভেইলেবল টিউশনগুলো দেখুন পছন্দ হলে এপ্লাই করুন।';
         } else if (req.body.status && req.body.status.toLowerCase() === 'cv sent - liked') {
             updatePayload.commentForTeacher = 'অভিভাবক আপনার সিভি পছন্দ করেছেন, দ্রুত যোগাযোগ করুন Whatsapp +8801577665717';
+        } else if (req.body.status && ['cancelled by guardian', 'cancel by guardian', 'cancel by gaurdian', 'cancelled by gaurdian'].includes(req.body.status.toLowerCase())) {
+            updatePayload.commentForTeacher = 'দুঃখিত, অভিভাবক আপনার সিভি পছন্দ করেনি। আমাদের অন্য এভেইলেবল টিউশনগুলোতে এপ্লাই করুন।';
+        } else if (req.body.status && ['cancelled by teacher', 'cancel by teacher'].includes(req.body.status.toLowerCase())) {
+            updatePayload.commentForTeacher = 'আপনি এই টিউশনটি নিতে পারবেন না বলে জানিয়েছেন। ভবিষ্যতে কোনো টিউশনে আবেদন করার আগে বেতন, সময়, লোকেশনসহ অন্যান্য বিষয় ভালোভাবে যাচাই করে নিশ্চিত হয়ে আবেদন করার অনুরোধ রইল। কোনো বিষয়ে পরিবর্তন বা আলোচনা প্রয়োজন হলে অনুগ্রহ করে কমেন্টস-এ উল্লেখ করবেন। অভিভাবক আপনার সিভি পছন্দ করার পর যেন আপনার পক্ষ থেকে টিউশনটি বাতিল করার প্রয়োজন না হয়, সেদিকে বিশেষভাবে খেয়াল রাখবেন। আপনার সহযোগিতা কামনা করছি। ধন্যবাদ।';
         }
 
         const updatedData = await TuitionApply.findByIdAndUpdate(

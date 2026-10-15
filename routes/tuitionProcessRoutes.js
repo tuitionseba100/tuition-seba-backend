@@ -5,8 +5,35 @@ const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const StatusHistory = require('../models/StatusHistory');
 const Payment = require('../models/Payment');
+const Settings = require('../models/Settings');
 const { logStatusChange } = require('../utils/statusLogger');
 const { logActivity } = require('../utils/activityLogger');
+
+const getLeastAssignedUser = async (userList) => {
+    if (!userList || userList.length === 0) return null;
+    if (userList.length === 1) return userList[0];
+
+    const counts = await Promise.all(userList.map(async (user) => {
+        const count = await Tuition.countDocuments({
+            assignedTo: user,
+            isSoftDelete: { $ne: true },
+            status: { $nin: ['cancel', 'confirm'] }
+        });
+        return { user, count };
+    }));
+
+    counts.sort((a, b) => a.count - b.count);
+
+    const minCount = counts[0].count;
+    const candidates = counts.filter(c => c.count === minCount);
+
+    if (candidates.length > 1) {
+        const randomIndex = Math.floor(Math.random() * candidates.length);
+        return candidates[randomIndex].user;
+    }
+
+    return counts[0].user;
+};
 
 const authMiddleware = (req, res, next) => {
     const token = req.header('Authorization');
@@ -203,56 +230,170 @@ router.post('/status-change/:tuitionId', authMiddleware, async (req, res) => {
             updateFields.tutorNumber = tutorNumber;
         }
 
-        // Special handling for Cancel
-        if (status?.toLowerCase() === 'cancel') {
-            if (cancelReason) {
-                updateFields.cancellationReason = cancelReason;
-            }
-            const sevenDaysLater = new Date();
-            sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
-            updateFields.nextUpdateDate = sevenDaysLater;
-            updateFields.nextUpdateComment = 'Check if guardian requires teacher again';
+        const newStatus = status ? status.toLowerCase() : null;
+        const oldStatusNormalized = tuition.status ? tuition.status.toLowerCase() : null;
+
+        if (status && status !== tuition.status) {
+            updateFields.statusChangedAt = new Date();
         }
 
-        // Special handling for Confirm
-        if (status?.toLowerCase() === 'confirm') {
-            updateFields.assignedTo = 'TSF';
-            const oneMonthLater = new Date();
-            oneMonthLater.setDate(oneMonthLater.getDate() + 30);
-            updateFields.$push = {
-                confirmationFollowUps: {
+        if (newStatus && newStatus !== oldStatusNormalized) {
+            // 1. Confirm -> TSF
+            if (newStatus === 'confirm') {
+                updateFields.assignedTo = 'TSF';
+                const oneMonthLater = new Date();
+                oneMonthLater.setDate(oneMonthLater.getDate() + 30);
+
+                const teacherNum = tutorNumber || tuition.tutorNumber || '-';
+                const initialFollowUp = {
                     lastFollowUpDate: new Date(),
-                    lastFollowUpComment: `Confirmed with tutor ${tutorNumber || tuition.tutorNumber || ''}`,
+                    lastFollowUpComment: `টিউশনটি কনফার্ম করা হয়েছে এবং এই টিচারটি দেওয়া হয়েছে (${teacherNum})`,
                     nextFollowUpDate: oneMonthLater,
-                    nextFollowUpComment: "Check tutor teaching performance & feedback",
-                    createdBy: changedBy,
+                    nextFollowUpComment: "শিক্ষক কেমন পড়াচ্ছেন ফিডব্যাক নিন - system generated",
+                    createdBy: changedBy || 'System',
                     createdAt: new Date()
+                };
+                updateFields.$push = { confirmationFollowUps: initialFollowUp };
+            }
+            // 2. Cancel -> Cancel Setting + Scheduling
+            else if (newStatus === 'cancel') {
+                const setting = await Settings.findOne({ key: 'cancel_status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) updateFields.assignedTo = nextUser;
                 }
-            };
+
+                if (cancelReason) {
+                    updateFields.cancellationReason = cancelReason;
+                }
+
+                // Follow-up scheduling
+                const sevenDaysLater = new Date();
+                sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+                updateFields.nextUpdateDate = sevenDaysLater;
+                updateFields.nextUpdateComment = "teacher lagbe kina dekhen - system generated";
+            }
+            // 3. Guardian No Response -> Guardian No Response Setting
+            else if (newStatus === 'guardian no response') {
+                const setting = await Settings.findOne({ key: 'guardian_no_response_status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) updateFields.assignedTo = nextUser;
+                }
+            }
+            // 4. Progressive statuses -> Status Change Setting
+            else if (['given number', 'guardian meet', 'demo class running', '1st demo class', '2nd demo class'].includes(newStatus)) {
+                const setting = await Settings.findOne({ key: 'status_change_auto_assign_user' });
+                if (setting && setting.value && setting.value.length > 0) {
+                    const userList = Array.isArray(setting.value) ? setting.value : [setting.value];
+                    const nextUser = await getLeastAssignedUser(userList);
+                    if (nextUser) updateFields.assignedTo = nextUser;
+                }
+            }
+            // 5. Back to Available -> Restore previous assigned user
+            else if (newStatus === 'available' && ['given number', 'guardian meet', 'demo class running', '1st demo class', '2nd demo class', 'guardian no response'].includes(oldStatusNormalized)) {
+                if (tuition.previousAssignedTo) {
+                    updateFields.assignedTo = tuition.previousAssignedTo;
+                }
+                if (tuition.tutorNumber) {
+                    updateFields.comment1 = `Failed Tutor: ${tuition.tutorNumber} - ${comment || 'Demo failed'}`;
+                }
+            }
         }
 
         // Special handling for Demo Class Failed
-        if (status?.toLowerCase() === 'demo class failed') {
+        if (newStatus === 'demo class failed') {
             if (tuition.tutorNumber) {
                 updateFields.comment1 = `Failed Tutor: ${tuition.tutorNumber} - ${comment || 'Demo class failed'}`;
             }
         }
 
-        // Special handling for Back to Available (Demo Failed)
-        if (status?.toLowerCase() === 'available' && (oldStatus?.toLowerCase().includes('demo') || oldStatus?.toLowerCase() === 'given number')) {
-            if (tuition.tutorNumber) {
-                updateFields.comment1 = `Failed Tutor: ${tuition.tutorNumber} - ${comment || 'Demo failed'}`;
-            }
-            if (tuition.previousAssignedTo) {
-                updateFields.assignedTo = tuition.previousAssignedTo;
-            }
-        }
-
-        if (status && status !== oldStatus) {
-            updateFields.statusChangedAt = new Date();
+        if (updateFields.assignedTo !== undefined && updateFields.assignedTo !== tuition.assignedTo) {
+            updateFields.previousAssignedTo = tuition.assignedTo || '';
         }
 
         const updatedTuition = await Tuition.findByIdAndUpdate(tuitionId, updateFields, { new: true });
+
+        // Handle auto-cancellation of tuition applications when tuition is cancelled, confirmed, or suspended
+        const triggerStatus = status ? status.toLowerCase() : null;
+        if (triggerStatus && ['confirm', 'cancel', 'suspended', 'suspend'].includes(triggerStatus)) {
+            try {
+                const targetStatuses = [
+                    'pending',
+                    'called (interested)',
+                    'called (no response)',
+                    'called (guardian no response)',
+                    'shortlisted',
+                    'requested for payment',
+                    'refer to bm',
+                    'meet to office',
+                    'CV Sent',
+                    'CV Sent - Liked'
+                ];
+
+                let commentForTeacher = 'দুঃখিত, টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
+                if (triggerStatus === 'confirm') {
+                    commentForTeacher = 'আলহামদুলিল্লাহ, আমাদের একজন টিচার কনফার্ম হয়েছে। আমাদের এভেইলেবল টিউশনগুলো এপ্লাই করুন।';
+                }
+
+                await TuitionApply.updateMany(
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: { $in: targetStatuses }
+                    },
+                    {
+                        status: 'cancelled',
+                        commentForTeacher: commentForTeacher,
+                        updatedBy: 'System'
+                    }
+                );
+            } catch (applyErr) {
+                console.error('Error updating tuition applications in tuitionProcessRoutes:', applyErr);
+            }
+        }
+
+        // Handle progressive status triggers: given number / guardian meet / demo class running
+        const progressiveStatusMessages = {
+            'given number': 'টিউশনটির নাম্বার আমাদের একজন টিচারকে দেয়া হয়েছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            'guardian meet': 'আমাদের একজন টিচার দেখা করতে যাবেন। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            'demo class running': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            '1st demo class': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+            '2nd demo class': 'আমাদের একজন টিচার ডেমো ক্লাস নিচ্ছে। কোনো কারণে ওনার ক্যান্সেল হলে আমরা যোগাযোগ করবো আপনার সাথে। অন্য টিউশনগুলো এপ্লাই করুন।',
+        };
+
+        if (triggerStatus && progressiveStatusMessages[triggerStatus]) {
+            const msg = progressiveStatusMessages[triggerStatus];
+            try {
+                // 1. Pending → Shortlisted + set message
+                await TuitionApply.updateMany(
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: 'pending'
+                    },
+                    {
+                        status: 'shortlisted',
+                        commentForTeacher: msg,
+                        updatedBy: 'System'
+                    }
+                );
+
+                // 2. Already Shortlisted → only update message, keep status
+                await TuitionApply.updateMany(
+                    {
+                        tuitionCode: updatedTuition.tuitionCode,
+                        status: 'shortlisted'
+                    },
+                    {
+                        commentForTeacher: msg,
+                        updatedBy: 'System'
+                    }
+                );
+            } catch (applyErr) {
+                console.error('Error updating tuition applications for progressive status in tuitionProcessRoutes:', applyErr);
+            }
+        }
 
         // IMPORTANT: Save comment and subStatus in StatusHistory!
         // This ensures the comment is logged chronologically without overwriting the Tuition document.

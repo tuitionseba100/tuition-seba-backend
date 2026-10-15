@@ -1363,7 +1363,9 @@ router.put('/edit/:id', async (req, res) => {
                     'shortlisted',
                     'requested for payment',
                     'refer to bm',
-                    'meet to office'
+                    'meet to office',
+                    'CV Sent',
+                    'CV Sent - Liked'
                 ];
 
                 let commentForTeacher = 'দুঃখিত, টিউশনটি ক্যান্সেল করা হয়েছে, আমাদের এভেইলবল অন্য টিউশনগুলোতে এপ্লাই করুন।';
