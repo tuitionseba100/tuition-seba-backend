@@ -406,7 +406,15 @@ router.get('/getTableData', async (req, res) => {
     }
 
     if (isFollowUpDone !== undefined && isFollowUpDone !== '') {
-        filter.isFollowUpDone = isFollowUpDone === 'true' || isFollowUpDone === true;
+        const isDone = isFollowUpDone === 'true' || isFollowUpDone === true;
+        if (isDone) {
+            filter.isFollowUpDone = true;
+        } else {
+            filter.isFollowUpDone = { $ne: true };
+            if (!filter.followUpDate) {
+                filter.followUpDate = { $ne: null };
+            }
+        }
     }
 
     if (cancelCategory) {
@@ -705,11 +713,13 @@ router.post('/add', async (req, res) => {
 
         let finalFollowUpDate = followUpDate || null;
         let finalFollowUpComment = followUpComment || '';
+        let finalCancelledAt = null;
         if (autoStatus === 'cancelled by teacher' || (status && status.toLowerCase() === 'cancelled by teacher')) {
             if (!finalFollowUpDate) {
                 finalFollowUpDate = moment().tz("Asia/Dhaka").add(1, 'day').startOf('day').toDate();
             }
             finalFollowUpComment = finalFollowUpComment || '';
+            finalCancelledAt = new Date();
         }
 
         const newApply = new TuitionApply({
@@ -725,6 +735,7 @@ router.post('/add', async (req, res) => {
             comment,
             commentForTeacher: autoCommentForTeacher,
             appliedAt: localTime,
+            cancelledAt: finalCancelledAt,
             status: autoStatus,
             isBanned,
             isSpam,
@@ -903,7 +914,7 @@ router.get('/appliedListByTuitionId', async (req, res) => {
     try {
         const appliedList = await TuitionApply.find(
             { tuitionId },
-            'premiumCode name phone academicYear institute department address appliedAt status isBanned isSpam isBest isExpress isAppApply isCvSent comment updatedBy agentComment commentForTeacher regTeacherStatus followUpDate followUpComment isFollowUpDone followUpTakenBy cancelCategory'
+            'premiumCode name phone academicYear institute department address appliedAt cancelledAt status isBanned isSpam isBest isExpress isAppApply isCvSent comment updatedBy agentComment commentForTeacher regTeacherStatus followUpDate followUpComment isFollowUpDone followUpTakenBy cancelCategory'
         ).sort({ appliedAt: -1 }).lean();
 
         const data = await enrichAppliesWithDue(appliedList);
@@ -1040,6 +1051,9 @@ router.put('/edit/:id', async (req, res) => {
             }
             if (updatePayload.followUpComment === undefined) {
                 updatePayload.followUpComment = '';
+            }
+            if (oldApply.status !== req.body.status || !oldApply.cancelledAt) {
+                updatePayload.cancelledAt = new Date();
             }
         }
 
