@@ -75,6 +75,34 @@ router.put('/end', authMiddleware, async (req, res) => {
     }
 });
 
+router.put('/stop/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role, userId } = req.user;
+
+        const attendance = await Attendance.findById(id);
+        if (!attendance) {
+            return res.status(404).json({ message: 'Attendance record not found' });
+        }
+
+        if (role !== 'superadmin' && attendance.userId?.toString() !== userId?.toString()) {
+            return res.status(403).json({ message: 'Access denied. Only superadmin can stop session for other users.' });
+        }
+
+        if (attendance.endTime) {
+            return res.status(400).json({ message: 'Session has already ended' });
+        }
+
+        attendance.endTime = new Date();
+        attendance.duration = calculateDuration(attendance.startTime, attendance.endTime);
+        await attendance.save();
+
+        res.json({ message: 'Session stopped successfully', duration: attendance.duration, attendance });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 const getDateRange = (filter, customYear) => {
     const tz = 'Asia/Dhaka';
     const now = moment.tz(tz);
