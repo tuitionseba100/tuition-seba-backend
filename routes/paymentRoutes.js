@@ -281,7 +281,7 @@ router.get('/alert-today', async (req, res) => {
         const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
 
         const filter = {
-            duePayDate: { $gte: new Date(startSearch), $lte: new Date(endSearch) }
+            duePayDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: new Date(endSearch) }
         };
 
         if (assignedTo) {
@@ -478,12 +478,10 @@ router.get('/getTableData', async (req, res) => {
     }
 
     if (dueToday === 'true') {
-        const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
-        const startSearch = startOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
         const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
 
-        filter.duePayDate = { $gte: new Date(startSearch), $lte: new Date(endSearch) };
+        filter.duePayDate = { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: new Date(endSearch) };
     }
 
     try {
