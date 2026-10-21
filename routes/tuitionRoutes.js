@@ -381,14 +381,11 @@ router.get('/getTableData', async (req, res) => {
     if (needsUpdateToday === 'true') {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
         const endOfDayBD = new Date(todayBD);
         endOfDayBD.setHours(23, 59, 59, 999);
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        filter.nextUpdateDate = { $gte: startUTC, $lte: endUTC };
+        filter.nextUpdateDate = { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: endUTC };
     }
 
     if (pendingPaymentCreation === 'true') {
@@ -453,18 +450,14 @@ router.get('/alert-today', async (req, res) => {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
 
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
-
         const endOfDayBD = new Date(todayBD);
         endOfDayBD.setHours(23, 59, 59, 999);
 
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
         const { assignedTo } = req.query;
         const filter = {
-            nextUpdateDate: { $gte: startUTC, $lte: endUTC },
+            nextUpdateDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: endUTC },
             isSoftDelete: false
         };
 
@@ -619,22 +612,18 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
 
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
-
         const endOfDayBD = new Date(todayBD);
         endOfDayBD.setHours(23, 59, 59, 999);
 
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
         const filter = {
-            nextUpdateDate: { $gte: startUTC, $lte: endUTC },
+            nextUpdateDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: endUTC },
             isSoftDelete: false
         };
 
         // If specific IDs are provided, limit to those
-        if (tuitionIds && Array.isArray(tuitionIds)) {
+        if (tuitionIds && Array.isArray(tuitionIds) && tuitionIds.length > 0) {
             filter._id = { $in: tuitionIds };
         }
 
@@ -644,11 +633,19 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
         for (const tuition of tuitionsToUpdate) {
             const oldTuition = tuition.toObject();
 
-            // Increment nextUpdateDate by 1 day
-            const currentNextDate = new Date(tuition.nextUpdateDate);
-            currentNextDate.setDate(currentNextDate.getDate() + 1);
+            // Set nextUpdateDate to tomorrow (or increment by 1 day if not in the past)
+            const tomorrowBD = new Date(todayBD);
+            tomorrowBD.setDate(tomorrowBD.getDate() + 1);
 
-            tuition.nextUpdateDate = currentNextDate;
+            const currentNextDate = new Date(tuition.nextUpdateDate);
+            let targetDate = new Date(currentNextDate);
+            targetDate.setDate(targetDate.getDate() + 1);
+            if (targetDate <= endOfDayBD) {
+                targetDate = new Date(tomorrowBD);
+                targetDate.setHours(currentNextDate.getHours(), currentNextDate.getMinutes(), currentNextDate.getSeconds(), 0);
+            }
+
+            tuition.nextUpdateDate = targetDate;
             tuition.updatedBy = 'auto migration';
 
             await tuition.save();
@@ -792,14 +789,11 @@ router.get('/summary', async (req, res) => {
     if (needsUpdateToday === 'true') {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
         const endOfDayBD = new Date(todayBD);
         endOfDayBD.setHours(23, 59, 59, 999);
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
         const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
 
-        filter.nextUpdateDate = { $gte: startUTC, $lte: endUTC };
+        filter.nextUpdateDate = { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: endUTC };
     }
 
     if (pendingPaymentCreation === 'true') {
