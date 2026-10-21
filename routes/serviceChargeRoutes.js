@@ -48,9 +48,8 @@ router.get('/all', async (req, res) => {
         }
         if (toBePaidToday === 'true') {
             const bdNow = moment.tz("Asia/Dhaka");
-            const todayStart = bdNow.clone().startOf('day').toDate();
             const todayEnd = bdNow.clone().endOf('day').toDate();
-            query.nextPaymentDate = { $gte: todayStart, $lte: todayEnd };
+            query.nextPaymentDate = { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: todayEnd };
         }
 
         const data = await ServiceCharge.find(query)
@@ -91,7 +90,7 @@ router.get('/summary', async (req, res) => {
         const totalAgg = await ServiceCharge.aggregate([{ $match: { status: { $nin: ['pending', 'cancelled'] } } }, { $group: { _id: null, total: { $sum: "$amount" } } }]);
 
         const toBePaidTodayCount = await ServiceCharge.countDocuments({
-            nextPaymentDate: { $gte: todayStart, $lte: todayEnd }
+            nextPaymentDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: todayEnd }
         });
 
         res.json({
@@ -109,11 +108,10 @@ router.get('/summary', async (req, res) => {
 router.get('/alert-today', async (req, res) => {
     try {
         const bdNow = moment.tz("Asia/Dhaka");
-        const todayStart = bdNow.clone().startOf('day').toDate();
         const todayEnd = bdNow.clone().endOf('day').toDate();
 
         const serviceCharges = await ServiceCharge.find({
-            nextPaymentDate: { $gte: todayStart, $lte: todayEnd }
+            nextPaymentDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: todayEnd }
         }).sort({ nextPaymentDate: 1 }).lean();
 
         res.json(serviceCharges);
@@ -137,9 +135,13 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
 
             const oldSc = sc.toObject();
 
-            // Calculate next day
+            // Calculate next day (move to tomorrow if past/today)
             const currentNextPayment = sc.nextPaymentDate ? moment(sc.nextPaymentDate) : moment();
-            const nextDay = currentNextPayment.clone().add(1, 'day');
+            let nextDay = currentNextPayment.clone().add(1, 'day');
+            const endOfToday = moment.tz("Asia/Dhaka").endOf('day');
+            if (nextDay.isSameOrBefore(endOfToday)) {
+                nextDay = moment.tz("Asia/Dhaka").add(1, 'day').startOf('day');
+            }
 
             sc.nextPaymentDate = nextDay.toDate();
             sc.updatedBy = 'auto migration';
