@@ -13,8 +13,8 @@ const ServiceCharge = require('../models/ServiceCharge');
 
 
 const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
+    const token = req.header('Authorization') || req.query.token;
+    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
 
     try {
         const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
@@ -26,11 +26,14 @@ const authMiddleware = (req, res, next) => {
 };
 
 const superadminOnly = (req, res, next) => {
-    if (req.user && req.user.role !== 'superadmin') {
+    if (!req.user || req.user.role !== 'superadmin') {
         return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
     }
     next();
 };
+
+// Protect all payment routes with authentication
+router.use(authMiddleware);
 
 const getLeastAssignedPaymentUser = async (userList) => {
     if (!userList || userList.length === 0) return null;
@@ -302,7 +305,7 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
-router.get('/exportData', async (req, res) => {
+router.get('/exportData', superadminOnly, async (req, res) => {
     try {
         const { paymentStatus } = req.query;
 

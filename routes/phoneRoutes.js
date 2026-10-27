@@ -1,7 +1,28 @@
 const express = require('express');
+const jwt = require('jsonwebtoken');
 const Phone = require('../models/Phone');
 const router = express.Router();
 const moment = require('moment-timezone');
+
+const authMiddleware = (req, res, next) => {
+    const token = req.header('Authorization') || req.query.token;
+    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
+
+    try {
+        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        req.user = verified;
+        next();
+    } catch (err) {
+        res.status(400).json({ message: 'Invalid Token' });
+    }
+};
+
+const superadminOnly = (req, res, next) => {
+    if (!req.user || req.user.role !== 'superadmin') {
+        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
+    }
+    next();
+};
 
 router.get('/all', async (req, res) => {
     try {
@@ -63,7 +84,7 @@ router.get('/summary', async (req, res) => {
     }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/export', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { phone, type } = req.query;
         const query = {};

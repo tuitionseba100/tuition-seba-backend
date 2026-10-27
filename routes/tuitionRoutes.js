@@ -13,8 +13,8 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 
 const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
+    const token = req.header('Authorization') || req.query.token;
+    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
 
     try {
         const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
@@ -23,6 +23,13 @@ const authMiddleware = (req, res, next) => {
     } catch (err) {
         res.status(400).json({ message: 'Invalid Token' });
     }
+};
+
+const superadminOnly = (req, res, next) => {
+    if (!req.user || req.user.role !== 'superadmin') {
+        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
+    }
+    next();
 };
 
 const getLeastAssignedUser = async (userList) => {
@@ -1453,7 +1460,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.get('/export', async (req, res) => {
+router.get('/export', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { status } = req.query;
 
@@ -1568,7 +1575,7 @@ router.get('/export', async (req, res) => {
     }
 });
 
-router.get('/exportData', async (req, res) => {
+router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { status } = req.query;
 
