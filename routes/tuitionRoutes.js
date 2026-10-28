@@ -55,7 +55,7 @@ const availableCache = {
     }
 };
 
-const EXCLUDE_AVAILABLE_FIELDS = '-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior -confirmationFollowUps -assignedTo -previousAssignedTo -note -isSpamGuardian -isBestGuardian -taskAssignedTo -isGuardianSmsSent -isGuardianNoResponseSmsSent';
+const EXCLUDE_AVAILABLE_FIELDS = '-status -guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -updatedAt -agentComment -tuitionCancelReason -guardianBehavior -confirmationFollowUps -assignedTo -previousAssignedTo -note -isSpamGuardian -isBestGuardian -taskAssignedTo -isGuardianSmsSent -isGuardianNoResponseSmsSent -guardian_source_medium -cancellationReason -subStatus -statusChangedAt -isReviewDone -isProposal -isUrgent -tuitionType -isSoftDelete -isPublish -__v';
 
 //available tuition
 router.get('/available', async (req, res) => {
@@ -113,7 +113,7 @@ router.get('/byCodePublic', async (req, res) => {
             return res.status(400).json({ message: 'Tuition code is required' });
         }
         const tuition = await Tuition.findOne({ tuitionCode: tuitionCode.trim(), isSoftDelete: { $ne: true } })
-            .select('-guardianNumber -tutorNumber -createdBy -updatedBy -lastAvailableCheck -lastUpdate -lastUpdateComment -nextUpdateDate -nextUpdateComment -comment1 -comment2 -isPaymentCreated -agentComment -tuitionCancelReason -guardianBehavior -confirmationFollowUps -assignedTo -previousAssignedTo -note -isSpamGuardian -isBestGuardian -taskAssignedTo -isGuardianSmsSent -isGuardianNoResponseSmsSent')
+            .select(EXCLUDE_AVAILABLE_FIELDS)
             .lean();
 
         if (!tuition) {
