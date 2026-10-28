@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const ComplaintSuggestion = require('../models/ComplaintSuggestion');
 const Phone = require('../models/Phone');
-const jwt = require('jsonwebtoken');
+const { authMiddleware, superadminOnly: superadminMiddleware } = require('../middleware/auth');
 const rateLimit = require('express-rate-limit');
 
 // Complaint/suggestion submissions per IP per hour
@@ -36,27 +36,7 @@ function normalizePhoneForSave(phone) {
     return digits;
 }
 
-// Authentication middleware
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-// Superadmin middleware
-const superadminMiddleware = (req, res, next) => {
-    if (req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Superadmin access required' });
-    }
-    next();
-};
+// Endpoints follow:
 
 // POST /submit (Public submission endpoint)
 router.post('/submit', submitLimiter, async (req, res) => {

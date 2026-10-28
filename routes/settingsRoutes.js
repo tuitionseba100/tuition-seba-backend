@@ -1,27 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const Settings = require('../models/Settings');
-const jwt = require('jsonwebtoken');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
+// Alias to match previous naming used in this file
+const superadminMiddleware = superadminOnly;
 
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminMiddleware = (req, res, next) => {
-    if (req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Superadmin access required' });
-    }
-    next();
-};
 
 // In-memory RAM cache for public settings (0 DB query overhead for visitors)
 let cachedPublicSettings = null;

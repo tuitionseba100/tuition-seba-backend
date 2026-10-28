@@ -1,5 +1,4 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const RegTeacher = require('../models/RegTeacher');
 const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
@@ -8,15 +7,16 @@ const path = require('path');
 const { deleteFromR2 } = require('../utils/r2Storage');
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
+const { authMiddleware } = require('../middleware/auth');
 
 // Must match the secret in chatRoutes.js
-const CHAT_TOKEN_SECRET = 'tsf-chat-hmac-secret-2025';
+const CHAT_TOKEN_SECRET = process.env.CHAT_TOKEN_SECRET || 'tsf-chat-hmac-secret-2025';
 const generateChatToken = (phone) =>
     crypto.createHmac('sha256', CHAT_TOKEN_SECRET).update(phone).digest('hex');
 
 // Protects against brute-force enumeration of premiumCode + phone combos.
 const checkApplyLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,  // 15 minutes
+    windowMs: 15 * 60 * 1000,
     max: 60,
     skip: (req) => !!req.headers.authorization,
     skipSuccessfulRequests: false,
@@ -24,19 +24,6 @@ const checkApplyLimiter = rateLimit({
     legacyHeaders: false,
     message: { message: 'Too many verification attempts. Please try again after 15 minutes.' }
 });
-
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 
 router.get('/byPremiumCode/:premiumCode', authMiddleware, async (req, res) => {

@@ -5,6 +5,7 @@ const Tuition = require('../models/Tuition');
 const moment = require('moment-timezone');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
 // Rate limit for public submissions — bypass for authenticated staff/admin users
 const submitLimiter = rateLimit({
@@ -43,16 +44,7 @@ function normalizePhoneForSave(phone) {
     return digits;
 }
 
-router.get('/all', async (req, res) => {
-    try {
-        const allApply = await GuardianApply.find();
-        res.json(allApply);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.get('/today-followups', async (req, res) => {
+router.get('/today-followups', authMiddleware, async (req, res) => {
     try {
         const startBD = moment.tz('Asia/Dhaka').startOf('day').toDate();
         const endBD = moment.tz('Asia/Dhaka').endOf('day').toDate();
@@ -71,7 +63,7 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-router.get('/getTableData', async (req, res) => {
+router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
 
@@ -116,7 +108,7 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     const {
         phone = '',
         address = '',
@@ -238,7 +230,7 @@ router.post('/add', submitLimiter, async (req, res) => {
 });
 
 
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         let updatePayload = { ...req.body };
 
@@ -278,7 +270,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.put('/update-status/:id', async (req, res) => {
+router.put('/update-status/:id', authMiddleware, async (req, res) => {
     const { status, comment, nextUpdateDate, updatedBy } = req.body;
 
     if (!status) {
@@ -314,7 +306,7 @@ router.put('/update-status/:id', async (req, res) => {
 
 
 
-router.get('/tuition-details/:code', async (req, res) => {
+router.get('/tuition-details/:code', authMiddleware, async (req, res) => {
     try {
         const tuition = await Tuition.findOne({ tuitionCode: req.params.code, isSoftDelete: { $ne: true } }).lean();
         if (!tuition) {
@@ -326,7 +318,7 @@ router.get('/tuition-details/:code', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, superadminOnly, async (req, res) => {
     try {
         await GuardianApply.findByIdAndDelete(req.params.id);
         res.status(204).send();

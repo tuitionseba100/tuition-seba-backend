@@ -2,33 +2,12 @@ const express = require('express');
 const Lead = require('../models/Lead');
 const router = express.Router();
 const moment = require('moment-timezone');
-const jwt = require('jsonwebtoken');
+const { authMiddleware } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
-
-router.get('/all', authMiddleware, async (req, res) => {
-    try {
-        const leads = await Lead.find();
-        res.json(leads);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;

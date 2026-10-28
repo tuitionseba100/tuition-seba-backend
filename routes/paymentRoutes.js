@@ -3,34 +3,13 @@ const Payment = require('../models/Payment');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
-const jwt = require('jsonwebtoken');
 const Settings = require('../models/Settings');
 const Attendance = require('../models/Attendance');
 const RefundPayment = require('../models/RefundPayment');
 const Expense = require('../models/Expense');
 const RegTeacher = require('../models/RegTeacher');
 const ServiceCharge = require('../models/ServiceCharge');
-
-
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-    }
-    next();
-};
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
 // Protect all payment routes with authentication
 router.use(authMiddleware);

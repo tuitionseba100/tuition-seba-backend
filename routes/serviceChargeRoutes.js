@@ -2,31 +2,11 @@ const express = require('express');
 const router = express.Router();
 const ServiceCharge = require('../models/ServiceCharge');
 const moment = require('moment-timezone');
-const jwt = require('jsonwebtoken');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) {
-        if (req.headers['x-user-name']) {
-            req.user = { username: req.headers['x-user-name'] };
-            return next();
-        }
-        return res.status(401).json({ message: 'Access Denied' });
-    }
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        if (req.headers['x-user-name']) {
-            req.user = { username: req.headers['x-user-name'] };
-            return next();
-        }
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
+// Protect all service charge routes with authentication
+router.use(authMiddleware);
 
 router.get('/all', async (req, res) => {
     try {
@@ -272,7 +252,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', superadminOnly, async (req, res) => {
     try {
         const activeUser = req.headers['x-user-name'] || 'Admin';
         const oldData = await ServiceCharge.findById(req.params.id).lean();

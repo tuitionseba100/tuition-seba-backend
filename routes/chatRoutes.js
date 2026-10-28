@@ -5,27 +5,15 @@ const RegTeacher = require('../models/RegTeacher');
 const ChatSession = require('../models/ChatSession');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { authMiddleware, JWT_SECRET } = require('../middleware/auth');
 
-const CHAT_TOKEN_SECRET = 'tsf-chat-hmac-secret-2025';
+const CHAT_TOKEN_SECRET = process.env.CHAT_TOKEN_SECRET || 'tsf-chat-hmac-secret-2025';
 
 // Generate a deterministic token tied to a specific phone number.
 // Anyone who calls check-apply-possible and receives this token proves
 // they own the phone — so they may fetch that phone's chat history.
 const generateChatToken = (phone) =>
     crypto.createHmac('sha256', CHAT_TOKEN_SECRET).update(phone).digest('hex');
-
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 // Fetch past messages for a chat session (with pagination)
 // Auth: Admin JWT (Authorization header) OR chatToken query param from check-apply-possible
@@ -38,7 +26,11 @@ router.get('/history/:phone', async (req, res) => {
         if (adminToken) {
             // Admin path — verify JWT
             try {
-                jwt.verify(adminToken, 'mahedi1000abcdefgh100');
+                let token = adminToken;
+                if (typeof token === 'string' && token.startsWith('Bearer ')) {
+                    token = token.slice(7).trim();
+                }
+                jwt.verify(token, JWT_SECRET);
             } catch {
                 return res.status(401).json({ message: 'Invalid admin token' });
             }

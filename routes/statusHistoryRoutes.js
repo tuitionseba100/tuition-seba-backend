@@ -3,26 +3,14 @@ const StatusHistory = require('../models/StatusHistory');
 const ActivityLog = require('../models/ActivityLog');
 const router = express.Router();
 const moment = require('moment-timezone');
-const jwt = require('jsonwebtoken');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const superadminOnly = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
+// Alias — keep existing route signatures working
+const superadminOnlyHandler = [authMiddleware, superadminOnly];
 
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        if (verified.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-        }
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 // Get summary/report of status changes for today (Asia/Dhaka timezone)
-router.get('/today-report', superadminOnly, async (req, res) => {
+router.get('/today-report', [authMiddleware, superadminOnly], async (req, res) => {
     try {
         const { changedBy, tuitionCode, startDate, endDate, isAllTime } = req.query;
 

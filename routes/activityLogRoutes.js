@@ -1,34 +1,13 @@
 const express = require('express');
 const ActivityLog = require('../models/ActivityLog');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const moment = require('moment-timezone');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-// Auth middleware (ensure superadmin)
-const superadminOnly = (req, res, next) => {
-    let token = req.header('Authorization');
-    console.log('Activity Log Request Header:', token ? 'Token exists' : 'Token missing');
-    
-    // Fallback to query param for file downloads (window.open)
-    if (!token && req.query.token) {
-        token = req.query.token;
-    }
+// Protect all activity log routes — superadmin only
+router.use(authMiddleware, superadminOnly);
 
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        if (verified.role !== 'superadmin') {
-            return res.status(403).json({ message: 'Forbidden: Superadmin only' });
-        }
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-router.get('/', superadminOnly, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
         const { user, module, action, startDate, endDate, tuitionCode, page = 1, limit = 50 } = req.query;
         const filter = {};

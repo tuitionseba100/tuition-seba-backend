@@ -4,41 +4,37 @@ const jwt = require('jsonwebtoken');
 const router = express.Router();
 const SmsLog = require('../models/SmsLog');
 const TuitionApply = require('../models/TuitionApply');
+const { JWT_SECRET } = require('../middleware/auth');
 
-// Flexible auth middleware to extract user name for logging
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    const xUserName = req.headers['x-user-name'];
-
-    if (token) {
-        try {
-            const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-            req.user = verified;
-            req.username = xUserName || 'Admin';
-        } catch (err) {
-            console.error('Invalid token in SMS routes:', err.message);
-        }
-    } else if (xUserName) {
-        req.username = xUserName;
+// Helper to reliably obtain SMS API credentials from environment
+const getSmsConfig = () => {
+    const apiKey = (process.env.SMS_API_KEY || '').trim();
+    const senderId = (process.env.SMS_SENDER_ID || '').trim();
+    if (!apiKey || !senderId) {
+        throw new Error('SMS credentials (SMS_API_KEY, SMS_SENDER_ID) are missing in environment variables.');
     }
-
-    if (!req.username) {
-        req.username = 'System';
-    }
-    next();
+    return { apiKey, senderId };
 };
 
-// Strict auth middleware for reading logs
-const strictAuthMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
+// Strict auth middleware to authenticate staff/admin before sending SMS
+const authMiddleware = (req, res, next) => {
+    let token = req.header('Authorization');
+    if (!token) {
+        return res.status(401).json({ success: false, statusMessage: 'Access Denied: No authentication token provided' });
+    }
+
+    if (typeof token === 'string' && token.startsWith('Bearer ')) {
+        token = token.slice(7).trim();
+    }
 
     try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
+        const verified = jwt.verify(token, JWT_SECRET);
         req.user = verified;
+        const xUserName = req.headers['x-user-name'];
+        req.username = xUserName || verified.username || verified.name || 'Admin';
         next();
     } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
+        return res.status(401).json({ success: false, statusMessage: 'Invalid or expired token' });
     }
 };
 
@@ -52,13 +48,7 @@ router.post('/send-single', authMiddleware, async (req, res) => {
 
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
-
-        apiKey = apiKey.trim();
-        senderId = senderId.trim();
-
-        console.log(`[SMS DEBUG] Sending SMS to ${phone} using apiKey: "${apiKey}", senderId: "${senderId}"`);
+        const { apiKey, senderId } = getSmsConfig();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
 
@@ -126,11 +116,7 @@ router.post('/send-bulk', authMiddleware, async (req, res) => {
 
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
-
-        apiKey = apiKey.trim();
-        senderId = senderId.trim();
+        const { apiKey, senderId } = getSmsConfig();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${msisdn}&smstext=${encodedMessage}`;
 
@@ -185,11 +171,7 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
         return res.status(400).json({ success: false, statusMessage: 'Valid messages array is required' });
     }
 
-    let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-    let senderId = process.env.SMS_SENDER_ID || '8809617621855';
-
-    apiKey = apiKey.trim();
-    senderId = senderId.trim();
+    const { apiKey, senderId } = getSmsConfig();
 
     const logs = [];
     let successCount = 0;
@@ -258,10 +240,9 @@ router.post('/send-dynamic', authMiddleware, async (req, res) => {
 });
 
 // Check SMS Balance
-router.get('/balance', async (req, res) => {
+router.get('/balance', authMiddleware, async (req, res) => {
     try {
-        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        apiKey = apiKey.trim();
+        const { apiKey } = getSmsConfig();
         const apiUrl = `https://api.automas.com.bd/getbalancev3?apikey=${apiKey}`;
 
         const apiResponse = await axios.get(apiUrl);
@@ -282,11 +263,7 @@ router.post('/send', authMiddleware, async (req, res) => {
 
         const isUnicode = /[^\u0000-\u007F]/.test(message);
         const encodedMessage = encodeURIComponent(message);
-        let apiKey = process.env.SMS_API_KEY || 'd63053e5066920d85c08ce2bae2e3b2c';
-        let senderId = process.env.SMS_SENDER_ID || '8809617621855';
-
-        apiKey = apiKey.trim();
-        senderId = senderId.trim();
+        const { apiKey, senderId } = getSmsConfig();
 
         let apiUrl = `https://api.automas.com.bd/smsapiv3?apikey=${apiKey}&sender=${senderId}&msisdn=${phone}&smstext=${encodedMessage}`;
         if (isUnicode) {

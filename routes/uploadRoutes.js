@@ -1,6 +1,8 @@
 const express = require('express');
 const multer = require('multer');
 const sharp = require('sharp');
+const rateLimit = require('express-rate-limit');
+const { authMiddleware } = require('../middleware/auth');
 
 // Disable Sharp internal caching & limit worker concurrency to prevent OOM on 512MB instances
 sharp.cache(false);
@@ -10,11 +12,22 @@ const { uploadToR2, deleteFromR2 } = require('../utils/r2Storage');
 
 const router = express.Router();
 
-// Configure Multer for in-memory storage
+// Rate limit uploads to prevent R2 storage abuse / DoS (60 uploads per 15 mins per IP)
+const uploadLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many uploads from this IP. Please try again later.' },
+});
+
+router.use(uploadLimiter);
+
+// Configure Multer for in-memory storage (accept up to 25MB incoming photo/document files)
 const upload = multer({
     storage: multer.memoryStorage(),
     limits: {
-        fileSize: 8 * 1024 * 1024, // Accept up to 8MB incoming, backend will compress under 100KB
+        fileSize: 25 * 1024 * 1024, // Accept up to 25MB incoming, backend will compress under 100KB
     },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) {
@@ -231,7 +244,7 @@ const handleDeleteMedia = async (req, res) => {
     }
 };
 
-router.delete('/teacher-photo', handleDeleteMedia);
-router.delete('/teacher-document', handleDeleteMedia);
+router.delete('/teacher-photo', authMiddleware, handleDeleteMedia);
+router.delete('/teacher-document', authMiddleware, handleDeleteMedia);
 
 module.exports = router;

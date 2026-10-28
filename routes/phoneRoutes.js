@@ -1,28 +1,11 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const Phone = require('../models/Phone');
 const router = express.Router();
 const moment = require('moment-timezone');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-    }
-    next();
-};
+// Protect all phone management endpoints with authentication
+router.use(authMiddleware);
 
 router.get('/all', async (req, res) => {
     try {
@@ -210,7 +193,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', superadminOnly, async (req, res) => {
     try {
         await Phone.findByIdAndDelete(req.params.id);
         res.status(204).send();

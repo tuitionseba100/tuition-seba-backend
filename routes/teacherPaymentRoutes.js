@@ -1,38 +1,9 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const TeacherPayment = require('../models/TeacherPayment');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 const router = express.Router();
 const moment = require('moment-timezone');
-
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-    }
-    next();
-};
-
-router.get('/all', async (req, res) => {
-    try {
-        const all = await TeacherPayment.find({ isSoftDelete: { $ne: true } }).lean();
-        res.json(all);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
 
 function escapeRegex(str) {
     if (typeof str !== 'string') {
@@ -41,7 +12,7 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-router.get('/getTableData', async (req, res) => {
+router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
 
@@ -94,7 +65,7 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     const {
         tuitionCode = '',
         personalPhone = '',
@@ -337,16 +308,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.get('/getPaymentRequestStatuses', async (req, res) => {
-    try {
-        const summary = await TeacherPayment.find({ isSoftDelete: { $ne: true } }, 'tuitionCode paymentType paymentNumber status phone').lean();
-        res.json(summary);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         const oldData = await TeacherPayment.findById(req.params.id).lean();
         if (!oldData) {
@@ -367,7 +329,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         const dataToDelete = await TeacherPayment.findById(req.params.id).lean();
         if (!dataToDelete) {

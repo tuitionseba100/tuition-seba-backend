@@ -1,5 +1,4 @@
 const express = require('express');
-const jwt = require('jsonwebtoken');
 const ExcelJS = require('exceljs');
 const TuitionApply = require('../models/TuitionApply');
 const Payment = require('../models/Payment');
@@ -11,26 +10,8 @@ const RegTeacher = require('../models/RegTeacher');
 const Phone = require('../models/Phone');
 const Tuition = require('../models/Tuition');
 const rateLimit = require('express-rate-limit');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-    }
-    next();
-};
 
 // 60 tuition applications per IP per hour — teachers can apply to many tuitions in one session.
 const applyLimiter = rateLimit({

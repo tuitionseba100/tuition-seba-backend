@@ -2,6 +2,7 @@ const express = require('express');
 const compression = require('compression');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
 const dns = require('node:dns');
 
 // Set global DNS servers to resolve MongoDB SRV records reliably across different networks
@@ -14,8 +15,61 @@ if (process.env.NODE_ENV !== 'production') {
 const app = express();
 app.set('trust proxy', 1);
 app.use(compression());
-app.use(cors());
-app.use(express.json());
+
+// Security: HTTP headers
+app.use(helmet());
+
+// Security: CORS — restrict to known origins only
+const ALLOWED_ORIGINS = [
+    'https://tuitionseba.com',
+    'https://www.tuitionseba.com',
+    'https://tuitionsebaforum.com',
+    'https://www.tuitionsebaforum.com',
+    'https://forum.tuitionseba.com',
+    // add other trusted origins here
+];
+if (process.env.NODE_ENV !== 'production') {
+    ALLOWED_ORIGINS.push('http://localhost:5173', 'http://localhost:3000');
+}
+// Helper to check if origin is allowed (supports Web, Android App, WebViews, and Native clients)
+const isAllowedOrigin = (origin) => {
+    // 1. Native mobile apps, Postman, server-to-server requests (no Origin header sent)
+    if (!origin) return true;
+
+    // 2. Android WebViews loading local assets/files send literal string 'null'
+    if (origin === 'null') return true;
+
+    // 3. Android hybrid wrappers (Capacitor, Cordova, Ionic, android-app scheme)
+    if (
+        origin.startsWith('capacitor://') ||
+        origin.startsWith('ionic://') ||
+        origin.startsWith('android-app://') ||
+        origin.startsWith('http://localhost') ||
+        origin.startsWith('https://localhost')
+    ) {
+        return true;
+    }
+
+    // 4. Trusted web domains
+    return ALLOWED_ORIGINS.includes(origin);
+};
+
+app.use(cors({
+    origin: (origin, callback) => {
+        if (isAllowedOrigin(origin)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-name'],
+    credentials: false,
+}));
+
+// Security: body parser limit (50MB provides ample headroom for heavy bulk operations)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 mongoose.connect(process.env.DB_URI)
     .then(() => console.log('MongoDB connected'))
@@ -76,7 +130,7 @@ app.use('/api/upload', uploadRoutes);
 
 
 app.get('/', (req, res) => {
-    res.send('Welcome to TuitionSeba API!');
+    res.send('Welcome to TuitionSebaForum API!');
 });
 
 // Lightweight health check for Render / load balancers
@@ -98,7 +152,13 @@ server.headersTimeout = 125 * 1000;
 const { Server } = require('socket.io');
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: (origin, callback) => {
+            if (isAllowedOrigin(origin)) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         methods: ['GET', 'POST']
     }
 });
@@ -246,11 +306,11 @@ io.on('connection', (socket) => {
                 ? {
                     conversationId, senderId, senderName,
                     type: 'task', text: '',
-                    taskTitle:       taskData.title || '',
+                    taskTitle: taskData.title || '',
                     taskDescription: taskData.description || '',
-                    taskAssignedTo:  taskData.assignedTo || '',
-                    taskDueDate:     taskData.dueDate || null,
-                    taskStatus:      'pending',
+                    taskAssignedTo: taskData.assignedTo || '',
+                    taskDueDate: taskData.dueDate || null,
+                    taskStatus: 'pending',
                 }
                 : { conversationId, senderId, senderName, text };
 

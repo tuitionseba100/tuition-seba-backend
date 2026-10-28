@@ -1,6 +1,5 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const Tuition = require('../models/Tuition');
 const TuitionApply = require('../models/TuitionApply');
 const StatusHistory = require('../models/StatusHistory');
@@ -8,6 +7,7 @@ const Payment = require('../models/Payment');
 const Settings = require('../models/Settings');
 const { logStatusChange } = require('../utils/statusLogger');
 const { logActivity } = require('../utils/activityLogger');
+const { authMiddleware } = require('../middleware/auth');
 
 const getLeastAssignedUser = async (userList) => {
     if (!userList || userList.length === 0) return null;
@@ -35,18 +35,6 @@ const getLeastAssignedUser = async (userList) => {
     return counts[0].user;
 };
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 /**
  * GET /api/tuition-process/:tuitionId

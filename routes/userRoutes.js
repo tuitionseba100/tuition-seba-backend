@@ -3,10 +3,10 @@ const User = require('../models/User');
 const LoginHistory = require('../models/LoginHistory');
 const bcrypt = require('bcryptjs');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const { authMiddleware, superadminOnly, signToken } = require('../middleware/auth');
 
-// Max 10 login attempts per IP per 15 minutes, then blocked for 1 hour
+// Max 10 login attempts per IP per 15 minutes
 const loginLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
@@ -15,19 +15,6 @@ const loginLimiter = rateLimit({
     legacyHeaders: false,
     message: { message: 'Too many login attempts. Please try again after 15 minutes.' }
 });
-
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 // Get all users
 router.get('/users', authMiddleware, async (req, res) => {
@@ -111,10 +98,9 @@ router.post('/login', loginLimiter, async (req, res) => {
             }
         }
 
-        const token = jwt.sign(
+        const token = signToken(
             { userId: user._id, role: user.role },
-            'mahedi1000abcdefgh100',
-            { expiresIn: '12h' }
+            '12h'
         );
 
         // Record login history
@@ -189,8 +175,8 @@ router.put('/change-password/:id', authMiddleware, async (req, res) => {
         return res.status(400).json({ message: 'New password is required' });
     }
 
-    if (newPassword.trim().length < 4) {
-        return res.status(400).json({ message: 'Password must be at least 4 characters long' });
+    if (newPassword.trim().length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
     }
 
     try {

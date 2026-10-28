@@ -5,6 +5,18 @@ const RegTeacher = require('../models/RegTeacher');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const router = express.Router();
 const moment = require('moment-timezone');
+const rateLimit = require('express-rate-limit');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
+
+// Rate limit for public refund applications — bypass for authenticated staff
+const submitLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 30,
+    skip: (req) => !!req.headers.authorization,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many refund submissions from this IP. Please try again later.' }
+});
 
 function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -36,7 +48,7 @@ async function findTeacherCodeByPhone(phoneStr) {
     }
 }
 
-router.get('/all', async (req, res) => {
+router.get('/all', authMiddleware, async (req, res) => {
     try {
         const {
             page = 1,
@@ -97,7 +109,7 @@ router.get('/all', async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     try {
         const stats = await RefundPayment.aggregate([
             {
@@ -155,7 +167,7 @@ router.get('/summary', async (req, res) => {
     }
 });
 
-router.get('/alert-today', async (req, res) => {
+router.get('/alert-today', authMiddleware, async (req, res) => {
     try {
         const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
@@ -191,7 +203,7 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', submitLimiter, async (req, res) => {
     const {
         tuitionCode,
         paymentType,
@@ -289,16 +301,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.get('/getRefundRequestStatuses', async (req, res) => {
-    try {
-        const summary = await RefundPayment.find({}, 'tuitionCode paymentType paymentNumber status phone');
-        res.json(summary);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         const updateData = { ...req.body };
         if (updateData.returnDate === "") {
@@ -366,7 +369,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const dataToDelete = await RefundPayment.findById(req.params.id).lean();
         await RefundPayment.findByIdAndDelete(req.params.id);

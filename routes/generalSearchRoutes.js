@@ -10,7 +10,10 @@ const TeacherPayment = require('../models/TeacherPayment');
 const Payment = require('../models/Payment');
 const RefundPayment = require('../models/RefundPayment');
 const TaskData = require('../models/TaskData');
+const { authMiddleware } = require('../middleware/auth');
 
+// Protect all general search endpoints — staff/admin only
+router.use(authMiddleware);
 
 // General Phone Search Route
 router.get('/phone/:phoneNumber', async (req, res) => {

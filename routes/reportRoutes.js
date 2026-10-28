@@ -3,21 +3,8 @@ const router = express.Router();
 const Tuition = require('../models/Tuition');
 const Settings = require('../models/Settings');
 const Expense = require('../models/Expense');
-const jwt = require('jsonwebtoken');
+const { authMiddleware } = require('../middleware/auth');
 
-// Middleware to protect routes
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization');
-    if (!token) return res.status(401).json({ message: 'Access Denied' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
 
 // GET /api/report/marketing
 router.get('/marketing', authMiddleware, async (req, res) => {

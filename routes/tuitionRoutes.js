@@ -10,27 +10,8 @@ const SmsLog = require('../models/SmsLog');
 const { logActivity, getDifferences } = require('../utils/activityLogger');
 const { logStatusChange } = require('../utils/statusLogger');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
+const { authMiddleware, superadminOnly } = require('../middleware/auth');
 
-const authMiddleware = (req, res, next) => {
-    const token = req.header('Authorization') || req.query.token;
-    if (!token) return res.status(401).json({ message: 'Access Denied: No token provided' });
-
-    try {
-        const verified = jwt.verify(token, 'mahedi1000abcdefgh100');
-        req.user = verified;
-        next();
-    } catch (err) {
-        res.status(400).json({ message: 'Invalid Token' });
-    }
-};
-
-const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
-        return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
-    }
-    next();
-};
 
 const getLeastAssignedUser = async (userList) => {
     if (!userList || userList.length === 0) return null;
@@ -270,18 +251,6 @@ router.get('/published-summary', async (req, res) => {
             newCount,
             areaWiseCount: areaWiseCountArray
         });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-router.get('/all', authMiddleware, async (req, res) => {
-    try {
-        const tuitions = await Tuition.find({ isSoftDelete: false })
-            .sort({ _id: -1 })
-            .limit(100)
-            .lean(); // Limit to prevents OOM crashes
-        res.json(tuitions);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
