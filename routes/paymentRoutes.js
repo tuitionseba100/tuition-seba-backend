@@ -463,13 +463,10 @@ router.get('/getTableData', async (req, res) => {
 
     const dateToFilter = nextPaymentDate || duePayDate;
     if (dateToFilter) {
-        const d1Start = new Date(`${dateToFilter}T00:00:00.000Z`);
-        const d1End = new Date(`${dateToFilter}T23:59:59.999Z`);
-        const d2Start = moment.tz(dateToFilter, "Asia/Dhaka").startOf('day').toDate();
-        const d2End = moment.tz(dateToFilter, "Asia/Dhaka").endOf('day').toDate();
-        const minStart = d1Start < d2Start ? d1Start : d2Start;
-        const maxEnd = d1End > d2End ? d1End : d2End;
-        filter.duePayDate = { $gte: minStart, $lte: maxEnd };
+        filter.duePayDate = {
+            $gte: new Date(`${dateToFilter}T00:00:00.000Z`),
+            $lte: new Date(`${dateToFilter}T23:59:59.999Z`)
+        };
     } else if (dueToday === 'true') {
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
         const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
@@ -505,6 +502,7 @@ router.get('/summary', async (req, res) => {
         paymentStatus = '',
         paymentType = '',
         assignedTo = '',
+        dueToday = '',
         duePayDate = '',
         nextPaymentDate = ''
     } = req.query;
@@ -546,13 +544,14 @@ router.get('/summary', async (req, res) => {
 
     const dateToFilter = nextPaymentDate || duePayDate;
     if (dateToFilter) {
-        const d1Start = new Date(`${dateToFilter}T00:00:00.000Z`);
-        const d1End = new Date(`${dateToFilter}T23:59:59.999Z`);
-        const d2Start = moment.tz(dateToFilter, "Asia/Dhaka").startOf('day').toDate();
-        const d2End = moment.tz(dateToFilter, "Asia/Dhaka").endOf('day').toDate();
-        const minStart = d1Start < d2Start ? d1Start : d2Start;
-        const maxEnd = d1End > d2End ? d1End : d2End;
-        filter.duePayDate = { $gte: minStart, $lte: maxEnd };
+        filter.duePayDate = {
+            $gte: new Date(`${dateToFilter}T00:00:00.000Z`),
+            $lte: new Date(`${dateToFilter}T23:59:59.999Z`)
+        };
+    } else if (dueToday === 'true') {
+        const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
+        const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+        filter.duePayDate = { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: new Date(endSearch) };
     }
 
     try {
