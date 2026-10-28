@@ -130,7 +130,7 @@ app.use('/api/upload', uploadRoutes);
 
 
 app.get('/', (req, res) => {
-    res.send('Welcome to TuitionSebaForum API!');
+    res.send('Welcome to Tuition Seba Forum API');
 });
 
 // Lightweight health check for Render / load balancers
