@@ -284,7 +284,7 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
-router.get('/exportData', superadminOnly, async (req, res) => {
+router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { paymentStatus } = req.query;
 

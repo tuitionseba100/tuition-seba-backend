@@ -193,7 +193,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', superadminOnly, async (req, res) => {
+router.delete('/delete/:id', authMiddleware, superadminOnly, async (req, res) => {
     try {
         await Phone.findByIdAndDelete(req.params.id);
         res.status(204).send();

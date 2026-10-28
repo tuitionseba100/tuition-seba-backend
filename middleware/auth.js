@@ -40,11 +40,19 @@ const authMiddleware = (req, res, next) => {
 };
 
 /**
- * Must be used AFTER authMiddleware.
- * Rejects requests from non-superadmin users.
+ * Can be used after or in place of authMiddleware.
+ * Validates token if not already validated, then rejects requests from non-superadmin users.
  */
 const superadminOnly = (req, res, next) => {
-    if (!req.user || req.user.role !== 'superadmin') {
+    if (!req.user) {
+        return authMiddleware(req, res, () => {
+            if (!req.user || req.user.role !== 'superadmin') {
+                return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
+            }
+            next();
+        });
+    }
+    if (req.user.role !== 'superadmin') {
         return res.status(403).json({ message: 'Forbidden: Superadmin access required' });
     }
     next();

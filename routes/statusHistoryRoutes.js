@@ -169,7 +169,7 @@ router.get('/today-report', [authMiddleware, superadminOnly], async (req, res) =
 });
 
 // Get status changes history for a specific resource
-router.get('/history/:moduleName/:resourceId', async (req, res) => {
+router.get('/history/:moduleName/:resourceId', authMiddleware, async (req, res) => {
     try {
         const { moduleName, resourceId } = req.params;
         const history = await StatusHistory.find({ 
@@ -185,7 +185,7 @@ router.get('/history/:moduleName/:resourceId', async (req, res) => {
 });
 
 // Get all status history records with filtering and pagination
-router.get('/list', superadminOnly, async (req, res) => {
+router.get('/list', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 50;
@@ -319,7 +319,7 @@ router.get('/list', superadminOnly, async (req, res) => {
 });
 
 // Export status history records to CSV (streaming directly from DB)
-router.get('/export-csv', superadminOnly, async (req, res) => {
+router.get('/export-csv', authMiddleware, superadminOnly, async (req, res) => {
     try {
         const { moduleName, changedBy, newStatus, startDate, endDate, tuitionCode } = req.query;
 
