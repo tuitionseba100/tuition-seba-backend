@@ -310,7 +310,7 @@ router.post('/send', authMiddleware, async (req, res) => {
 });
 
 // Get SMS logs (server-side pagination, search, filters)
-router.get('/logs', strictAuthMiddleware, async (req, res) => {
+router.get('/logs', authMiddleware, async (req, res) => {
     try {
         const { page = 1, limit = 50, search = '', status = '', category = '', premiumCode = '' } = req.query;
         const filter = {};
