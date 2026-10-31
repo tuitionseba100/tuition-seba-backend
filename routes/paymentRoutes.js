@@ -257,13 +257,16 @@ router.get('/alert-today', async (req, res) => {
         const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
 
-        // Note: The database currently stores "Local Time as UTC" (e.g., 10 AM BD is stored as 10:00:00.000Z)
-        // To match this, we need to query based on the "Wall Clock" time numbers.
-        const startSearch = startOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
+        // Note: The database stores BD wall-clock time as if it were UTC
+        // (e.g., 10 AM BD is stored as 2026-10-31T10:00:00.000Z instead of 04:00:00Z)
+        // So we query using the BD wall-clock string appended with Z.
         const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
 
         const filter = {
-            duePayDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: new Date(endSearch) }
+            // Today and all previous uncleared dues (from system start date)
+            duePayDate: { $gte: new Date('2024-12-01T00:00:00.000Z'), $lte: new Date(endSearch) },
+            // Exclude records where duePayment is 0, empty, or null (already cleared)
+            duePayment: { $nin: ['', '0', null, 0] }
         };
 
         if (assignedTo) {
@@ -555,14 +558,11 @@ router.get('/summary', async (req, res) => {
     }
 
     try {
-        const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
-        const todayBD = new Date(nowBD);
-        const startOfDayBD = new Date(todayBD);
-        startOfDayBD.setHours(0, 0, 0, 0);
-        const endOfDayBD = new Date(todayBD);
-        endOfDayBD.setHours(23, 59, 59, 999);
-        const startUTC = new Date(startOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
-        const endUTC = new Date(endOfDayBD.toLocaleString('en-US', { timeZone: 'UTC' }));
+        // Use moment-timezone to reliably get BD wall-clock start/end of day.
+        // DB stores BD wall-clock time as if it were UTC, so we append 'Z' to the
+        // formatted wall-clock string to match how dates are stored in MongoDB.
+        const startUTC = new Date(moment.tz("Asia/Dhaka").startOf('day').format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z");
+        const endUTC = new Date(moment.tz("Asia/Dhaka").endOf('day').format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z");
 
         const stats = await Payment.aggregate([
             { $match: filter },
