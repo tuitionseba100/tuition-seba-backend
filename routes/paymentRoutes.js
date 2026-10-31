@@ -257,7 +257,6 @@ router.get('/alert-today', async (req, res) => {
         const startOfBDToday = moment.tz("Asia/Dhaka").startOf('day');
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day');
 
-        // Note: The database stores BD wall-clock time as if it were UTC
         // (e.g., 10 AM BD is stored as 2026-10-31T10:00:00.000Z instead of 04:00:00Z)
         // So we query using the BD wall-clock string appended with Z.
         const endSearch = endOfBDToday.format("YYYY-MM-DDTHH:mm:ss.SSS") + "Z";
