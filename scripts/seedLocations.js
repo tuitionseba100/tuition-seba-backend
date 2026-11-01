@@ -16,6 +16,21 @@ function formatTitle(str) {
         .join(' ');
 }
 
+// Format Pouroshova names cleanly
+function formatPourosovaName(rawTitle) {
+    let clean = formatTitle(rawTitle);
+    clean = clean
+        .replace(/pourashava/gi, 'Pouroshova')
+        .replace(/pourosova/gi, 'Pouroshova')
+        .replace(/paurasabha/gi, 'Pouroshova')
+        .replace(/municipality/gi, 'Pouroshova')
+        .trim();
+    if (!clean.toLowerCase().includes('pouroshova')) {
+        clean = `${clean} Pouroshova`;
+    }
+    return clean;
+}
+
 // Metropolitan thana cleaner
 function cleanThanaName(rawTitle) {
     const map = {
@@ -78,7 +93,17 @@ function cleanThanaName(rawTitle) {
 const CHITTAGONG_THANA_AREAS = {
     'Panchlaish': [
         '2 Number Gate', 'Gec', 'Muradpur', 'Panchlaish', 'Solokbohor',
-        'Soloshohor', 'Shershah', 'Oxyzen', 'Polytechnic More'
+        'Soloshohor'
+    ],
+    'Bayazid Bostami': [
+        'Oxyzen', 'Baizid', 'Baluchara', 'Aturar Depo', 'Shershah', 'Polytechnic More'
+    ],
+    'Khulshi': [
+        'Khulsi', 'Tiger Pass', 'Foyezlake', 'Ambagan'
+    ],
+    'Pahartali': [
+        'Pahartali', 'Ak Khan', 'Akbarshah', 'Alongkar', 'Baroquerter',
+        'City Gate', 'Cornelhut', 'Firozsah', 'Sagorika'
     ],
     'Double Mooring': [
         'Agrabad', 'Agrbad CDA', 'Barek Building', 'Dewanhat', 'Chowmohoni',
@@ -93,13 +118,6 @@ const CHITTAGONG_THANA_AREAS = {
     'Halishahar': [
         'Halishohor', 'Boropol', 'Noyabazar'
     ],
-    'Pahartali': [
-        'Pahartali', 'Ak Khan', 'Akbarshah', 'Alongkar', 'Ambagan',
-        'City Gate', 'Cornelhut', 'Firozsah', 'Foyezlake', 'Sagorika'
-    ],
-    'Bayazid Bostami': [
-        'Baizid', 'Baluchara', 'Aturar Depo'
-    ],
     'Bakalia': [
         'Bakalia accese road', 'Kalamia Bazar', 'Kolpolok Abasik',
         'Rahattarpol', 'Noton Bridge'
@@ -112,9 +130,6 @@ const CHITTAGONG_THANA_AREAS = {
         'Patenga', 'Katgor', 'Bandartila', 'Cement Crossing',
         'Freeport', 'Miler Matha', 'Saltgola Crossing', 'Stillmil Bazar'
     ],
-    'Khulshi': [
-        'Khulsi', 'Tiger Pass', 'Baroquerter'
-    ],
     'Chattogram Port': [
         'Customs', 'Majirghat', 'Nimtola', 'Sadharghat', 'West Madarbari', 'Kodomtoli'
     ]
@@ -123,28 +138,48 @@ const CHITTAGONG_THANA_AREAS = {
 // Chittagong Upazila specific areas
 const CHITTAGONG_UPAZILA_SPECIFIC = {
     'Hathazari': {
-        'Fatehpur Union': ['CU Campus'],
-        'Chikandandi Union': ['Aman bazar'],
-        'Hathazari Pouroshova': ['Hathazari Bus Stand', 'College Gate', 'Hathazari Sadar']
+        'Fathepur': ['CU Campus'],
+        'Fatehpur': ['CU Campus'],
+        'Chikondandi': ['Aman bazar'],
+        'Chikandandi': ['Aman bazar'],
+        'Hathazari (Pourosova)': ['Hathazari Bus Stand', 'College Gate', 'Hathazari Sadar']
     },
     'Sitakunda': {
-        'Sitakunda Pouroshova': ['Sitakunda Sadar', 'Bazar Area'],
-        'Bhatiari Union': ['Vatiyari', 'Bhatiari Station Area']
+        'Sitakunda (Pourosova)': ['Sitakunda Sadar', 'Bazar Area'],
+        'Bhatiari': ['Vatiyari', 'Bhatiari Station Area']
     },
     'Patiya': {
-        'Patiya Pouroshova': ['Patiya Sadar', 'Station Road', 'Thana More']
+        'Patiya (Pourosova)': ['Patiya Sadar', 'Station Road', 'Thana More']
     },
     'Boalkhali': {
-        'Boalkhali Pouroshova': ['Boalkhali Sadar', 'Sakpura']
+        'Boalkhali (Pourosova)': ['Boalkhali Sadar', 'Sakpura']
     },
     'Fatikchhari': {
-        'Fatikchhari Pouroshova': ['Fatikchhari Sadar', 'Bibek More']
+        'Fatikchhari (Pourosova)': ['Fatikchhari Sadar', 'Bibek More'],
+        'Nazirhat (Pourosova)': ['Nazirhat Sadar', 'Bazar Area']
     },
-    'Raojan': {
-        'Raojan Pouroshova': ['Raojan Sadar', 'Pahartali More']
+    'Raozan': {
+        'Raozan (Pourosova)': ['Raozan Sadar', 'Pahartali More']
     },
     'Rangunia': {
-        'Rangunia Pouroshova': ['Rangunia Sadar', 'Dhamairhat']
+        'Rangunia (Pourosova)': ['Rangunia Sadar', 'Dhamairhat']
+    },
+    'Banshkhali': {
+        'Banshkhali (Pourosova)': ['Banshkhali Sadar', 'Thana More', 'Bus Stand', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5', 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9']
+    },
+    'Satkania': {
+        'Satkania (Pourosova)': ['Satkania Sadar', 'Keranihat', 'Bazar More', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5', 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9']
+    },
+    'Mirsharai': {
+        'Mirsharai (Pourosova)': ['Mirsharai Sadar', 'Bazar Area'],
+        'Baraiyarhat (Pourosova)': ['Baraiyarhat Sadar', 'Bazar Area']
+    },
+    'Sandwip': {
+        'Sandwip (Pourosova)': ['Sandwip Sadar', 'Bazar Area']
+    },
+    'Chandanaish': {
+        'Chandanaish (Pourosova)': ['Chandanaish Sadar', 'Bazar Area'],
+        'Dohazari (Pourosova)': ['Dohazari Sadar', 'Station Road']
     }
 };
 
@@ -267,8 +302,8 @@ async function seed() {
                                 ];
                             }
 
-                            // Create primary Ward/Center entry for this Thana
-                            const primaryWard = `${thanaName} Ward / Zone`;
+                            // Clean direct name (no extra "Ward / Zone" suffix)
+                            const primaryUnit = thanaName;
 
                             operations.push({
                                 updateOne: {
@@ -276,14 +311,14 @@ async function seed() {
                                         division: divisionName,
                                         district: districtName,
                                         upazila_thana: thanaName,
-                                        pourosova_union_ward: primaryWard
+                                        pourosova_union_ward: primaryUnit
                                     },
                                     update: {
                                         $set: {
                                             division: divisionName,
                                             district: districtName,
                                             upazila_thana: thanaName,
-                                            pourosova_union_ward: primaryWard,
+                                            pourosova_union_ward: primaryUnit,
                                             type: 'ward',
                                             areas: childAreas,
                                             isActive: true,
@@ -333,27 +368,42 @@ async function seed() {
 
                     for (const un of unionList) {
                         const rawTitle = un.title.trim();
-                        const unitName = formatTitle(rawTitle);
+                        const lower = rawTitle.toLowerCase();
 
-                        const isPourosova = rawTitle.toLowerCase().includes('pouroshova') ||
-                                            rawTitle.toLowerCase().includes('pourashava') ||
-                                            rawTitle.toLowerCase().includes('municipality');
+                        // Pouroshovas have explicit titles or ID in range 4540..4900 (as assigned in bangladesh-location-data)
+                        const isPourosova = lower.includes('pouro') ||
+                                            lower.includes('paur') ||
+                                            lower.includes('muni') ||
+                                            (un.value >= 4540 && un.value <= 4900 && !lower.includes('union') && !lower.endsWith('up'));
 
+                        let unitName = isPourosova ? formatPourosovaName(rawTitle) : formatTitle(rawTitle);
                         let unitType = isPourosova ? 'pourosova' : 'union';
 
                         // Check specific custom areas
                         let areas = [];
-                        if (CHITTAGONG_UPAZILA_SPECIFIC[upazilaName] && CHITTAGONG_UPAZILA_SPECIFIC[upazilaName][unitName]) {
-                            areas = [...CHITTAGONG_UPAZILA_SPECIFIC[upazilaName][unitName]];
-                        } else {
-                            const defaultLabel = isPourosova ? `${unitName} Sadar` : 'Bazar / Center';
+                        const upzConfig = CHITTAGONG_UPAZILA_SPECIFIC[upazilaName];
+                        if (upzConfig) {
+                            const normalizeStr = s => s.toLowerCase().replace(/pouroshova/g, 'pourosova').replace(/[^a-z0-9]/g, '');
+                            const targetKey = normalizeStr(unitName);
+                            const rawKey = normalizeStr(rawTitle);
+                            const foundKey = Object.keys(upzConfig).find(k => {
+                                const n = normalizeStr(k);
+                                return n === targetKey || n === rawKey || targetKey.startsWith(n) || n.startsWith(targetKey);
+                            });
+                            if (foundKey) {
+                                areas = [...upzConfig[foundKey]];
+                            }
+                        }
+
+                        if (areas.length === 0) {
+                            const baseName = unitName.replace(/ pouroshova/i, '').trim();
+                            const defaultLabel = isPourosova ? `${baseName} Sadar` : 'Bazar / Center';
                             areas = [
                                 defaultLabel,
                                 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5',
                                 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9'
                             ];
                         }
-
                         operations.push({
                             updateOne: {
                                 filter: {
