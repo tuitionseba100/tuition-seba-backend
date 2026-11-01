@@ -31,6 +31,15 @@ function formatPourosovaName(rawTitle) {
     return clean;
 }
 
+// Clean union names and fix typos in underlying dataset
+function cleanUnionName(rawTitle, upazilaName) {
+    const lower = rawTitle.trim().toLowerCase();
+    if (upazilaName === 'Banshkhali' && (lower === 'silk' || lower === 'silkoop' || lower === 'silkup')) {
+        return 'Silkup Union';
+    }
+    return formatTitle(rawTitle);
+}
+
 // Metropolitan thana cleaner
 function cleanThanaName(rawTitle) {
     const map = {
@@ -135,51 +144,92 @@ const CHITTAGONG_THANA_AREAS = {
     ]
 };
 
-// Chittagong Upazila specific areas
+// Chittagong Upazila specific areas (real localities, bazars, and mahallas)
 const CHITTAGONG_UPAZILA_SPECIFIC = {
     'Hathazari': {
         'Fathepur': ['CU Campus'],
         'Fatehpur': ['CU Campus'],
         'Chikondandi': ['Aman bazar'],
         'Chikandandi': ['Aman bazar'],
-        'Hathazari (Pourosova)': ['Hathazari Bus Stand', 'College Gate', 'Hathazari Sadar']
+        'Hathazari (Pourosova)': [
+            'Hathazari Sadar', 'Bus Stand', 'College Gate', 'Azimpara', 'Alampur',
+            'Alipur', 'Chandrapur', 'West Dewanagar', 'East Dewanagar', 'Phatika',
+            'Madhya Pahartali', 'Mohammadpur', 'Rangipara', 'Suzanagar'
+        ]
     },
     'Sitakunda': {
-        'Sitakunda (Pourosova)': ['Sitakunda Sadar', 'Bazar Area'],
+        'Sitakunda (Pourosova)': [
+            'Sitakunda Sadar', 'Sitakunda Bazar', 'Thana More', 'Sobhanbagh', 'Nunachara',
+            'Panthichila', 'Yakubnagar', 'Fakira Para', 'Mahadebpur', 'Bholagiri',
+            'Premtala', 'Bhuiyan Para', 'Moulvi Para', 'Baraigram', 'Amirabad',
+            'Edilpur', 'Shibpur'
+        ],
         'Bhatiari': ['Vatiyari', 'Bhatiari Station Area']
     },
     'Patiya': {
-        'Patiya (Pourosova)': ['Patiya Sadar', 'Station Road', 'Thana More']
+        'Patiya (Pourosova)': [
+            'Patiya Sadar', 'Station Road', 'Thana More', 'Allai', 'Okhara',
+            'Suchakradandi', 'Guadandi', 'Sheyanpara', 'Hazirpara', 'Paikpara',
+            'Bahuli', 'PTI Area', 'Dakshin Gobindarkhil', 'Uttar Gobindarkhil'
+        ]
     },
     'Boalkhali': {
-        'Boalkhali (Pourosova)': ['Boalkhali Sadar', 'Sakpura']
+        'Boalkhali (Pourosova)': [
+            'Boalkhali Sadar', 'Sakpura', 'Purba Gomdandi', 'Paschim Gomdandi',
+            'Chowdhury Hat', 'Kadhurkhil', 'Chowdhurypara', 'Darpapara', 'Muftipara', 'Yousuf Para'
+        ]
     },
     'Fatikchhari': {
-        'Fatikchhari (Pourosova)': ['Fatikchhari Sadar', 'Bibek More'],
-        'Nazirhat (Pourosova)': ['Nazirhat Sadar', 'Bazar Area']
+        'Fatikchhari (Pourosova)': ['Fatikchhari Sadar', 'Bibek More', 'College Road', 'Bazar Area'],
+        'Nazirhat (Pourosova)': ['Nazirhat Sadar', 'Bazar Area', 'Station Road']
     },
     'Raozan': {
-        'Raozan (Pourosova)': ['Raozan Sadar', 'Pahartali More']
+        'Raozan (Pourosova)': [
+            'Raozan Sadar', 'Pahartali More', 'West Gohira', 'South Gohira', 'Mobarakkhil',
+            'Gohira', 'Janalihat', 'Kazipara', 'Berulia', 'Sultanpur',
+            'Chitiapara', 'Shahnagar', 'Shaplanga', 'Hajipara', 'West Raozan'
+        ]
     },
     'Rangunia': {
-        'Rangunia (Pourosova)': ['Rangunia Sadar', 'Dhamairhat']
+        'Rangunia (Pourosova)': [
+            'Rangunia Sadar', 'Dhamairhat', 'Uttar Noyagaon', 'Dakshin Noyagaon',
+            'Ichhakhali', 'Dakshin Ghatchek', 'Uttar Ghatchek', 'Muradnagar', 'Syedbari', 'Ichhamati'
+        ]
     },
     'Banshkhali': {
-        'Banshkhali (Pourosova)': ['Banshkhali Sadar', 'Thana More', 'Bus Stand', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5', 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9']
+        'Banshkhali (Pourosova)': [
+            'Miah Bazar', 'Banshkhali Sadar', 'Thana More', 'Banshkhali Bus Stand',
+            'Jaldi Vadalia', 'Uttar Jaldi', 'Banshkhali Sadar Paschim', 'Neyajor Para',
+            'Banshkhali Sadar Purba', 'Ruhulla Para', 'Askaria', 'Dakshin Jaldi',
+            'Rangia Ghona', 'Harun Bazar', 'Daroga Bazar', 'Boruapara', 'Jaldi College Road'
+        ],
+        'Silkup Union': [
+            'Silkup Bazar', 'Eco Park Area', 'Silkup Sadar', 'Silkup Purba', 'Silkup Paschim', 'Silkup Uttar', 'Silkup Dakshin'
+        ],
+        'Silk': [
+            'Silkup Bazar', 'Eco Park Area', 'Silkup Sadar', 'Silkup Purba', 'Silkup Paschim', 'Silkup Uttar', 'Silkup Dakshin'
+        ]
     },
     'Satkania': {
-        'Satkania (Pourosova)': ['Satkania Sadar', 'Keranihat', 'Bazar More', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5', 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9']
+        'Satkania (Pourosova)': [
+            'Keranihat', 'Satkania Sadar', 'Thana More', 'Karaiyanagar', 'Satipara',
+            'Samadar Para', 'Lodhergaon', 'Rukania', 'West Dhemsa', 'South Dhemsa',
+            'Rampur', 'Upazila Health Complex Area'
+        ]
     },
     'Mirsharai': {
-        'Mirsharai (Pourosova)': ['Mirsharai Sadar', 'Bazar Area'],
-        'Baraiyarhat (Pourosova)': ['Baraiyarhat Sadar', 'Bazar Area']
+        'Mirsharai (Pourosova)': [
+            'Mirsharai Sadar', 'Mirsharai Bazar', 'Talbaria', 'Noapara', 'Govania',
+            'Ambaria', 'Tarakatia', 'Maghadia', 'Nazir Para', 'Poddar Taluk'
+        ],
+        'Baraiyarhat (Pourosova)': ['Baraiyarhat Sadar', 'Baraiyarhat Bazar', 'Station Area']
     },
     'Sandwip': {
-        'Sandwip (Pourosova)': ['Sandwip Sadar', 'Bazar Area']
+        'Sandwip (Pourosova)': ['Sandwip Sadar', 'Bazar Area', 'Harispur', 'Rahmatpur']
     },
     'Chandanaish': {
-        'Chandanaish (Pourosova)': ['Chandanaish Sadar', 'Bazar Area'],
-        'Dohazari (Pourosova)': ['Dohazari Sadar', 'Station Road']
+        'Chandanaish (Pourosova)': ['Chandanaish Sadar', 'Bazar Area', 'Gachbaria'],
+        'Dohazari (Pourosova)': ['Dohazari Sadar', 'Station Road', 'Rail Gate Area', 'Dohazari Bazar']
     }
 };
 
@@ -297,8 +347,12 @@ async function seed() {
                             } else {
                                 childAreas = [
                                     `${thanaName} Center`,
-                                    'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5',
-                                    'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9'
+                                    `${thanaName} Sadar`,
+                                    `${thanaName} Purba`,
+                                    `${thanaName} Paschim`,
+                                    `${thanaName} Uttar`,
+                                    `${thanaName} Dakshin`,
+                                    `${thanaName} Bazar`
                                 ];
                             }
 
@@ -338,7 +392,14 @@ async function seed() {
                     if (unionList.length === 0) {
                         // Upazila with no unions listed
                         const defaultUnitName = `${upazilaName} Sadar`;
-                        let areas = ['Center / Bazar', 'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5', 'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9'];
+                        let areas = [
+                            `${upazilaName} Sadar`,
+                            `${upazilaName} Bazar / Center`,
+                            `${upazilaName} Purba`,
+                            `${upazilaName} Paschim`,
+                            `${upazilaName} Uttar`,
+                            `${upazilaName} Dakshin`
+                        ];
 
                         operations.push({
                             updateOne: {
@@ -376,7 +437,7 @@ async function seed() {
                                             lower.includes('muni') ||
                                             (un.value >= 4540 && un.value <= 4900 && !lower.includes('union') && !lower.endsWith('up'));
 
-                        let unitName = isPourosova ? formatPourosovaName(rawTitle) : formatTitle(rawTitle);
+                        let unitName = isPourosova ? formatPourosovaName(rawTitle) : cleanUnionName(rawTitle, upazilaName);
                         let unitType = isPourosova ? 'pourosova' : 'union';
 
                         // Check specific custom areas
@@ -397,11 +458,13 @@ async function seed() {
 
                         if (areas.length === 0) {
                             const baseName = unitName.replace(/ pouroshova/i, '').trim();
-                            const defaultLabel = isPourosova ? `${baseName} Sadar` : 'Bazar / Center';
+                            const defaultLabel = isPourosova ? `${baseName} Sadar` : `${baseName} Bazar`;
                             areas = [
                                 defaultLabel,
-                                'Ward 1', 'Ward 2', 'Ward 3', 'Ward 4', 'Ward 5',
-                                'Ward 6', 'Ward 7', 'Ward 8', 'Ward 9'
+                                `${baseName} Purba`,
+                                `${baseName} Paschim`,
+                                `${baseName} Uttar`,
+                                `${baseName} Dakshin`
                             ];
                         }
                         operations.push({
