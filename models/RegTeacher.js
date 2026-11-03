@@ -70,6 +70,18 @@ const teacherSchema = new mongoose.Schema({
 });
 
 // Indexes for fast verification (combines phone fields & premiumCode)
+
+// Pre-save hook: If division is provided save division, if not provided save city as division
+teacherSchema.pre('save', function (next) {
+    if ((!this.division || !String(this.division).trim()) && this.city && String(this.city).trim()) {
+        const c = String(this.city).trim();
+        this.division = (c.toLowerCase() === 'chittagong' || c.toLowerCase() === 'chattogram')
+            ? 'Chittagong'
+            : (c.toLowerCase() === 'dhaka' ? 'Dhaka' : c.charAt(0).toUpperCase() + c.slice(1));
+    }
+    next();
+});
+
 teacherSchema.index({ premiumCode: 1 });
 teacherSchema.index({ phone: 1, premiumCode: 1 });
 teacherSchema.index({ alternativePhone: 1, premiumCode: 1 });

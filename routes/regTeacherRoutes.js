@@ -523,8 +523,21 @@ router.post('/add', async (req, res) => {
             assignedPremiumCode = await getNextPremiumCode();
         }
 
+        // If division is provided then save division, if not provided then save city as division
+        let resolvedDivision = req.body.division && String(req.body.division).trim()
+            ? String(req.body.division).trim()
+            : undefined;
+
+        if (!resolvedDivision && req.body.city && String(req.body.city).trim()) {
+            const c = String(req.body.city).trim();
+            resolvedDivision = (c.toLowerCase() === 'chittagong' || c.toLowerCase() === 'chattogram')
+                ? 'Chittagong'
+                : (c.toLowerCase() === 'dhaka' ? 'Dhaka' : c.charAt(0).toUpperCase() + c.slice(1));
+        }
+
         const newTeacher = new RegTeacher({
             ...req.body,
+            division: resolvedDivision || req.body.division,
             premiumCode: assignedPremiumCode,
             createdBy,
             createdAt: localTime,
@@ -590,6 +603,14 @@ router.put('/edit/:id', authMiddleware, async (req, res) => {
         // If Other Document 3 is replaced or removed, delete old document from R2 storage
         if (req.body.otherDoc3 !== undefined && oldTeacher.otherDoc3 && oldTeacher.otherDoc3 !== req.body.otherDoc3) {
             await deleteFromR2(oldTeacher.otherDoc3);
+        }
+
+        // If division is provided then save division, if not provided then save city as division
+        if ((!req.body.division || !String(req.body.division).trim()) && req.body.city && String(req.body.city).trim()) {
+            const c = String(req.body.city).trim();
+            req.body.division = (c.toLowerCase() === 'chittagong' || c.toLowerCase() === 'chattogram')
+                ? 'Chittagong'
+                : (c.toLowerCase() === 'dhaka' ? 'Dhaka' : c.charAt(0).toUpperCase() + c.slice(1));
         }
 
         const updatedTeacher = await RegTeacher.findByIdAndUpdate(
