@@ -160,10 +160,8 @@ router.get('/public-teachers', async (req, res) => {
     }
 });
 
-router.get('/getTableData', authMiddleware, async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 50;
-
+// Helper to construct uniform teacher filters for /getTableData and /summary
+function buildTeacherFilter(query) {
     const {
         premiumCode = '',
         phone = '',
@@ -175,80 +173,129 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         department,
         referStatus,
         referPersonPhone = '',
-        isInfoVerified
-    } = req.query;
+        isInfoVerified,
+        city,
+        division,
+        district,
+        thana
+    } = query;
 
     const filter = {};
+    const andConditions = [];
 
     if (isInfoVerified !== undefined && isInfoVerified !== '') {
         const isVerified = isInfoVerified === 'true' || isInfoVerified === true;
-        if (isVerified) {
-            filter.isInfoVerified = true;
-        } else {
-            filter.isInfoVerified = { $ne: true };
+        filter.isInfoVerified = isVerified ? true : { $ne: true };
+    }
+
+    if (premiumCode && premiumCode.trim()) {
+        filter.premiumCode = new RegExp(escapeRegex(premiumCode.trim()), 'i');
+    }
+
+    if (phone && phone.trim()) {
+        const pRegex = new RegExp(escapeRegex(phone.trim()), 'i');
+        andConditions.push({
+            $or: [
+                { phone: pRegex },
+                { alternativePhone: pRegex },
+                { whatsapp: pRegex }
+            ]
+        });
+    }
+
+    if (department && department.trim()) {
+        const deptRegex = new RegExp(escapeRegex(department.trim()), 'i');
+        andConditions.push({
+            $or: [
+                { department: deptRegex },
+                { mastersDept: deptRegex },
+                { honorsDept: deptRegex }
+            ]
+        });
+    }
+
+    // City / Division filter
+    const targetDivision = (division || city || '').trim();
+    if (targetDivision) {
+        let divPattern = escapeRegex(targetDivision);
+        if (/^(chittagong|chattogram)$/i.test(targetDivision)) {
+            divPattern = '(?:chittagong|chattogram)';
         }
+        const divRegex = new RegExp('^' + divPattern + '$', 'i');
+        andConditions.push({
+            $or: [
+                { division: divRegex },
+                { city: divRegex }
+            ]
+        });
     }
 
-    if (premiumCode) {
-        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
+    // District filter
+    if (district && district.trim()) {
+        const distRegex = new RegExp('^' + escapeRegex(district.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { district: distRegex },
+                { city: distRegex }
+            ]
+        });
     }
 
-    if (phone) {
-        filter.$or = [
-            { phone: new RegExp(escapeRegex(phone), 'i') },
-            { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
-            { whatsapp: new RegExp(escapeRegex(phone), 'i') }
-        ];
+    // Thana filter
+    if (thana && thana.trim()) {
+        const thanaRegex = new RegExp('^' + escapeRegex(thana.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { thana: thanaRegex },
+                { currentArea: new RegExp(escapeRegex(thana.trim()), 'i') }
+            ]
+        });
     }
 
-    if (department) {
-        const deptRegex = new RegExp(escapeRegex(department), 'i');
-        const deptClauses = [
-            { department: deptRegex },
-            { mastersDept: deptRegex },
-            { honorsDept: deptRegex }
-        ];
-
-        if (filter.$or && Array.isArray(filter.$or)) {
-            filter.$or = filter.$or.concat(deptClauses);
-        } else if (filter.$or) {
-            filter.$or = [filter.$or].concat(deptClauses);
-        } else {
-            filter.$or = deptClauses;
-        }
+    if (status && status.trim()) {
+        filter.status = status.trim();
     }
 
-    if (status) {
-        filter.status = status;
+    if (gender && gender.trim()) {
+        filter.gender = gender.trim();
     }
 
-    if (gender) {
-        filter.gender = gender;
+    if (name && name.trim()) {
+        filter.name = new RegExp(escapeRegex(name.trim()), 'i');
     }
 
-    if (name) {
-        filter.name = new RegExp(escapeRegex(name), 'i');
-    }
-
-    if (currentArea) {
-        filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
+    if (currentArea && currentArea.trim()) {
+        filter.currentArea = new RegExp(escapeRegex(currentArea.trim()), 'i');
     }
 
     if (uniCode) {
         if (uniCode === 'Not Assigned') {
             filter.uniCode = { $in: [null, ''] };
-        } else {
-            filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
+        } else if (uniCode.trim()) {
+            filter.uniCode = new RegExp(escapeRegex(uniCode.trim()), 'i');
         }
     }
 
-    if (referStatus) {
-        filter.referStatus = referStatus;
+    if (referStatus && referStatus.trim()) {
+        filter.referStatus = referStatus.trim();
     }
 
-    if (referPersonPhone) {
-        filter.referPersonPhone = new RegExp(escapeRegex(referPersonPhone), 'i');
+    if (referPersonPhone && referPersonPhone.trim()) {
+        filter.referPersonPhone = new RegExp(escapeRegex(referPersonPhone.trim()), 'i');
     }
+
+    if (andConditions.length > 0) {
+        filter.$and = andConditions;
+    }
+
+    return filter;
+}
+
+router.get('/getTableData', authMiddleware, async (req, res) => {
+    const page = parseInt(req.query.page) || 1;
+    const limit = 50;
+
+    const filter = buildTeacherFilter(req.query);
 
     try {
         const total = await RegTeacher.countDocuments(filter);
@@ -270,91 +317,7 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
 });
 
 router.get('/summary', authMiddleware, async (req, res) => {
-    const {
-        premiumCode = '',
-        phone = '',
-        status,
-        gender,
-        name,
-        currentArea,
-        uniCode,
-        department,
-        referStatus,
-        referPersonPhone = '',
-        isInfoVerified
-    } = req.query;
-
-    const filter = {};
-
-    if (isInfoVerified !== undefined && isInfoVerified !== '') {
-        const isVerified = isInfoVerified === 'true' || isInfoVerified === true;
-        if (isVerified) {
-            filter.isInfoVerified = true;
-        } else {
-            filter.isInfoVerified = { $ne: true };
-        }
-    }
-
-    if (premiumCode) {
-        filter.premiumCode = new RegExp(escapeRegex(premiumCode), 'i');
-    }
-
-    if (phone) {
-        filter.$or = [
-            { phone: new RegExp(escapeRegex(phone), 'i') },
-            { alternativePhone: new RegExp(escapeRegex(phone), 'i') },
-            { whatsapp: new RegExp(escapeRegex(phone), 'i') }
-        ];
-    }
-
-    if (department) {
-        const deptRegex = new RegExp(escapeRegex(department), 'i');
-        const deptClauses = [
-            { department: deptRegex },
-            { mastersDept: deptRegex },
-            { honorsDept: deptRegex }
-        ];
-
-        if (filter.$or && Array.isArray(filter.$or)) {
-            filter.$or = filter.$or.concat(deptClauses);
-        } else if (filter.$or) {
-            filter.$or = [filter.$or].concat(deptClauses);
-        } else {
-            filter.$or = deptClauses;
-        }
-    }
-
-    if (status) {
-        filter.status = status;
-    }
-
-    if (gender) {
-        filter.gender = gender;
-    }
-
-    if (name) {
-        filter.name = new RegExp(escapeRegex(name), 'i');
-    }
-
-    if (currentArea) {
-        filter.currentArea = new RegExp(escapeRegex(currentArea), 'i');
-    }
-
-    if (uniCode) {
-        if (uniCode === 'Not Assigned') {
-            filter.uniCode = { $in: [null, ''] };
-        } else {
-            filter.uniCode = new RegExp(escapeRegex(uniCode), 'i');
-        }
-    }
-
-    if (referStatus) {
-        filter.referStatus = referStatus;
-    }
-
-    if (referPersonPhone) {
-        filter.referPersonPhone = new RegExp(escapeRegex(referPersonPhone), 'i');
-    }
+    const filter = buildTeacherFilter(req.query);
 
     try {
         const countsAggregation = await RegTeacher.aggregate([
@@ -393,7 +356,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         let records = [];
         if (req.query.allData === 'true') {
             records = await RegTeacher.find(filter)
-                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status isInfoVerified isBiodataShow isResultShow')
+                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status isInfoVerified isBiodataShow isResultShow division district thana city')
                 .lean();
         }
 
