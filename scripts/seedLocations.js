@@ -119,10 +119,28 @@ const CHITTAGONG_THANA_AREAS = {
         'Commerce college road', 'Cuna Factory road', 'Eidgah kacha rasta'
     ],
     'Kotwali': [
-        'Andorkillah', 'Anayet Bazar', 'Chawkbazar', 'CRB', 'Dampara',
+        'Andorkillah', 'Anayet Bazar', 'CRB', 'Dampara',
         'Dewanbazar', 'Didar Market', 'Firingibazar', 'Jamalkhan', 'Jubilee Road',
-        'Kajir dewri', 'Kapasgola', 'Kotoali', 'Lalkhan Bazar', 'Love lane',
+        'Kajir dewri', 'Kotoali', 'Lalkhan Bazar', 'Love lane',
         'Mehedibag', 'Nalapara', 'Nandan kanon', 'New Market', 'Wasa'
+    ],
+    'Chawkbazar': [
+        'Chawkbazar', 'Chawkbazar Mor', 'Gulzar Mor', 'Chittagong College Area',
+        'Mohsin College Area', 'Probartak Mor', 'Kapasgola', 'Chankholer Par',
+        'DC Road', 'Katalganj', 'Parade Corner', 'Subash Datta Lane',
+        'Dewan Bazar', 'Badurtala', 'Goni Bakery', 'College Road'
+    ],
+    'Akbarshah': [
+        'Akbarshah', 'Baroquarter', 'Kaibalyadham', 'Colonelhat',
+        'Firojshah', 'Lake City', 'Bishwa Colony', 'Foy\'s Lake', 'City Gate'
+    ],
+    'EPZ': [
+        'EPZ Area', 'CEPZ', 'Bandartila', 'South Halishahar',
+        'Barrister College Road', 'Sailors Colony', 'Freeport', 'Noyabazar', 'Cement Crossing'
+    ],
+    'Sadarghat': [
+        'Sadarghat', 'Majirghat', 'Ferighat', 'West Madarbari',
+        'East Madarbari', 'Nimtoli', 'Strand Road'
     ],
     'Halishahar': [
         'Halishohor', 'Boropol', 'Noyabazar'
@@ -383,6 +401,36 @@ async function seed() {
                                 }
                             });
                         }
+
+                        // Also guarantee all CMP metropolitan thanas from CHITTAGONG_THANA_AREAS exist
+                        if (districtName === 'Chattogram') {
+                            for (const [cmpThana, cmpAreas] of Object.entries(CHITTAGONG_THANA_AREAS)) {
+                                operations.push({
+                                    updateOne: {
+                                        filter: {
+                                            division: divisionName,
+                                            district: districtName,
+                                            upazila_thana: cmpThana,
+                                            pourosova_union_ward: cmpThana
+                                        },
+                                        update: {
+                                            $set: {
+                                                division: divisionName,
+                                                district: districtName,
+                                                upazila_thana: cmpThana,
+                                                pourosova_union_ward: cmpThana,
+                                                type: 'ward',
+                                                areas: cmpAreas,
+                                                isActive: true,
+                                                updatedAt: new Date()
+                                            }
+                                        },
+                                        upsert: true
+                                    }
+                                });
+                            }
+                        }
+
                         continue;
                     }
 
