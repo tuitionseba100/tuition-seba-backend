@@ -177,7 +177,8 @@ function buildTeacherFilter(query) {
         city,
         division,
         district,
-        thana
+        thana,
+        pourosova_union_ward
     } = query;
 
     const filter = {};
@@ -248,6 +249,17 @@ function buildTeacherFilter(query) {
             $or: [
                 { thana: thanaRegex },
                 { currentArea: new RegExp(escapeRegex(thana.trim()), 'i') }
+            ]
+        });
+    }
+
+    // Pourosova / Union / Ward filter
+    if (pourosova_union_ward && pourosova_union_ward.trim()) {
+        const unitRegex = new RegExp('^' + escapeRegex(pourosova_union_ward.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { pourosova_union_ward: unitRegex },
+                { currentArea: new RegExp(escapeRegex(pourosova_union_ward.trim()), 'i') }
             ]
         });
     }
@@ -356,7 +368,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
         let records = [];
         if (req.query.allData === 'true') {
             records = await RegTeacher.find(filter)
-                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status isInfoVerified isBiodataShow isResultShow division district thana city')
+                .select('name gender currentArea academicYear mastersDept mastersUniversity honorsDept honorsUniversity premiumCode uniCode sscResult hscResult experience favoriteSubject hscGroup sscGroup school college status isInfoVerified isBiodataShow isResultShow division district thana pourosova_union_ward city')
                 .lean();
         }
 
