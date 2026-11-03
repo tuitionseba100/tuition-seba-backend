@@ -25,6 +25,7 @@ const teacherSchema = new mongoose.Schema({
     division: { type: String },
     district: { type: String },
     thana: { type: String },
+    pourosova_union_ward: { type: String },
     currentArea: { type: String },
     expectedTuitionAreas: { type: String },
     fullAddress: { type: String },
