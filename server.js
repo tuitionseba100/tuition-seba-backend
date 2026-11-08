@@ -100,6 +100,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const internalChatRoutes = require('./routes/internalChatRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const locationRoutes = require('./routes/locationRoutes');
+const bkashRoutes = require('./routes/bkashRoutes');
 
 const tuitionProcessRoutes = require('./routes/tuitionProcessRoutes');
 
@@ -129,6 +130,7 @@ app.use('/api/chat', chatRoutes);
 app.use('/api/internal-chat', internalChatRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/locations', locationRoutes);
+app.use('/api/bkash', bkashRoutes);
 
 
 app.get('/', (req, res) => {
