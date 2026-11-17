@@ -604,7 +604,7 @@ function normalizePhoneForSave(phone) {
     return digits;
 }
 
-router.post('/add', authMiddleware, async (req, res) => {
+router.post('/add', async (req, res) => {
     const {
         premiumCode,
         tuitionCode,
@@ -952,7 +952,7 @@ router.get('/getTuitionStatusesByPhone', async (req, res) => {
         twoMonthsAgo.setDate(twoMonthsAgo.getDate() - 60);
 
         const matchedTuitions = await TuitionApply.find(
-            { 
+            {
                 phone: normalizedPhone,
                 appliedAt: { $gte: twoMonthsAgo }
             },
