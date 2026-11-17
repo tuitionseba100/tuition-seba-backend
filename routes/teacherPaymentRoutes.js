@@ -4,6 +4,17 @@ const { logActivity, getDifferences } = require('../utils/activityLogger');
 const { authMiddleware, superadminOnly } = require('../middleware/auth');
 const router = express.Router();
 const moment = require('moment-timezone');
+const rateLimit = require('express-rate-limit');
+
+// Rate limit for public manual payment submissions — bypass for authenticated staff
+const submitLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000,
+    max: 30,
+    skip: (req) => !!req.headers.authorization,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: 'Too many payment submissions from this IP. Please try again later.' }
+});
 
 function escapeRegex(str) {
     if (typeof str !== 'string') {
@@ -257,7 +268,7 @@ router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
     }
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', submitLimiter, async (req, res) => {
     const {
         tuitionCode,
         paymentType,

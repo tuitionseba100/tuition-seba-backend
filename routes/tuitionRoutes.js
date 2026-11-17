@@ -260,7 +260,7 @@ function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-router.get('/getTableData', async (req, res) => {
+router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
 
@@ -421,7 +421,7 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
-router.get('/alert-today', async (req, res) => {
+router.get('/alert-today', authMiddleware, async (req, res) => {
     try {
         const nowBD = new Date().toLocaleString('en-US', { timeZone: 'Asia/Dhaka' });
         const todayBD = new Date(nowBD);
@@ -470,7 +470,7 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
-router.get('/guardian-followup-today', async (req, res) => {
+router.get('/guardian-followup-today', authMiddleware, async (req, res) => {
     try {
         const { assignedTo } = req.query;
 
@@ -643,7 +643,7 @@ router.post('/auto-migrate', authMiddleware, async (req, res) => {
     }
 });
 
-router.get('/pending-payment-creation', async (req, res) => {
+router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
     try {
         const tuitions = await Tuition.find({
             status: 'confirm',
@@ -671,7 +671,7 @@ router.get('/pending-payment-creation', async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     const {
         tuitionCode = '',
         guardianNumber = '',
@@ -966,7 +966,7 @@ async function getNextTuitionCode(baseCode = null, { peekOnly = false } = {}) {
     return candidateCode;
 }
 
-router.get('/next-code', async (req, res) => {
+router.get('/next-code', authMiddleware, async (req, res) => {
     try {
         const { baseCode, copyFrom } = req.query;
         const targetBase = baseCode || copyFrom || null;
@@ -977,7 +977,7 @@ router.get('/next-code', async (req, res) => {
     }
 });
 
-router.post('/add', async (req, res) => {
+router.post('/add', authMiddleware, async (req, res) => {
     const {
         tuitionCode,
         isPublish,
@@ -1187,7 +1187,7 @@ router.post('/add', async (req, res) => {
     }
 });
 
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         delete req.body.confirmationFollowUps;
         delete req.body.tuitionCode; // Permanent immutable identifier: cannot be changed via edit
@@ -1650,7 +1650,7 @@ router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
 });
 
 
-router.get('/:id', async (req, res) => {
+router.get('/:id', authMiddleware, async (req, res) => {
     try {
         const tuition = await Tuition.findOne({ _id: req.params.id, isSoftDelete: false });
         if (!tuition) {
@@ -1662,7 +1662,7 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         const tuitionToDelete = await Tuition.findById(req.params.id).lean();
         if (!tuitionToDelete) {

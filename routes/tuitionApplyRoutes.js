@@ -356,7 +356,7 @@ async function enrichAppliesWithDue(applyList) {
     });
 }
 
-router.get('/alert-today', async (req, res) => {
+router.get('/alert-today', authMiddleware, async (req, res) => {
     try {
         const endOfBDToday = moment.tz("Asia/Dhaka").endOf('day').toDate();
 
@@ -378,7 +378,7 @@ router.get('/alert-today', async (req, res) => {
     }
 });
 
-router.get('/getTableData', async (req, res) => {
+router.get('/getTableData', authMiddleware, async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = 50;
     const { tuitionCode = '', premiumCode = '', phone = '', status, isFollowUpDone, cancelCategory, dueToday } = req.query;
@@ -467,7 +467,7 @@ router.get('/getTableData', async (req, res) => {
     }
 });
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', authMiddleware, async (req, res) => {
     const { tuitionCode = '', premiumCode = '', phone = '', status } = req.query;
 
     const filter = {};
@@ -604,7 +604,7 @@ function normalizePhoneForSave(phone) {
     return digits;
 }
 
-router.post('/add', async (req, res) => {
+router.post('/add', authMiddleware, async (req, res) => {
     const {
         premiumCode,
         tuitionCode,
@@ -1013,7 +1013,7 @@ router.get('/byPremiumCode', async (req, res) => {
     }
 });
 
-router.put('/toggle-cv-sent/:id', async (req, res) => {
+router.put('/toggle-cv-sent/:id', authMiddleware, async (req, res) => {
     try {
         const apply = await TuitionApply.findById(req.params.id);
         if (!apply) {
@@ -1035,7 +1035,7 @@ router.put('/toggle-cv-sent/:id', async (req, res) => {
 });
 
 
-router.put('/edit/:id', async (req, res) => {
+router.put('/edit/:id', authMiddleware, async (req, res) => {
     try {
         const oldApply = await TuitionApply.findById(req.params.id);
         if (!oldApply) {
@@ -1119,7 +1119,7 @@ router.put('/edit/:id', async (req, res) => {
     }
 });
 
-router.delete('/delete/:id', async (req, res) => {
+router.delete('/delete/:id', authMiddleware, async (req, res) => {
     try {
         await TuitionApply.findByIdAndDelete(req.params.id);
         res.status(204).send();

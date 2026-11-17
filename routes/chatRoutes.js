@@ -65,7 +65,7 @@ router.get('/history/:phone', async (req, res) => {
 });
 
 // Fetch all active chat sessions (for the Agent console, with search)
-router.get('/sessions', async (req, res) => {
+router.get('/sessions', authMiddleware, async (req, res) => {
     try {
         const { search } = req.query;
         let query = {};
@@ -88,7 +88,7 @@ router.get('/sessions', async (req, res) => {
 });
 
 // Assign a session to an admin
-router.post('/assign', async (req, res) => {
+router.post('/assign', authMiddleware, async (req, res) => {
     try {
         const { phone, assignedTo } = req.body;
         if (!phone) {
@@ -102,7 +102,7 @@ router.post('/assign', async (req, res) => {
 });
 
 // Mark session as read
-router.post('/read/:phone', async (req, res) => {
+router.post('/read/:phone', authMiddleware, async (req, res) => {
     try {
         await ChatMessage.updateMany({ phone: req.params.phone, sender: 'member', isRead: false }, { isRead: true });
         await ChatSession.findOneAndUpdate({ phone: req.params.phone }, { unreadCount: 0 });
