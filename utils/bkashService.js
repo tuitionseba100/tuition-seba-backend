@@ -13,6 +13,35 @@ const getBaseUrl = () => {
     return process.env.BKASH_BASE_URL || 'https://tokenized.sandbox.bka.sh/v2';
 };
 
+const isV1 = () => {
+    const url = getBaseUrl().toLowerCase();
+    return url.includes('v1.2.0-beta') || url.includes('/v1');
+};
+
+const getEndpoints = () => {
+    const base = getBaseUrl().replace(/\/+$/, '');
+    if (isV1()) {
+        return {
+            grantToken: `${base}/tokenized/checkout/token/grant`,
+            refreshToken: `${base}/tokenized/checkout/token/refresh`,
+            createPayment: `${base}/tokenized/checkout/create`,
+            executePayment: `${base}/tokenized/checkout/execute`,
+            queryPayment: `${base}/tokenized/checkout/payment/query`,
+            queryPaymentGet: (id) => `${base}/tokenized/checkout/payment/query/${id}`,
+            searchTransaction: `${base}/tokenized/checkout/general/searchTran`
+        };
+    }
+    return {
+        grantToken: `${base}/tokenized-checkout/auth/grant-token`,
+        refreshToken: `${base}/tokenized-checkout/auth/refresh-token`,
+        createPayment: `${base}/tokenized-checkout/payment/create`,
+        executePayment: `${base}/tokenized-checkout/payment/execute`,
+        queryPayment: `${base}/tokenized-checkout/query/payment`,
+        queryPaymentGet: (id) => `${base}/tokenized-checkout/query/payment/${id}`,
+        searchTransaction: `${base}/tokenized-checkout/general/search-transaction`
+    };
+};
+
 const getAuthHeaders = () => {
     return {
         'Content-Type': 'application/json',
@@ -45,8 +74,9 @@ const grantToken = async () => {
         console.log('[bKash] Requesting new Grant Token...');
         tokenCache.grantCallsInWindow += 1;
 
+        const endpoints = getEndpoints();
         const response = await axios.post(
-            `${getBaseUrl()}/tokenized-checkout/auth/grant-token`,
+            endpoints.grantToken,
             {
                 app_key: process.env.BKASH_APP_KEY,
                 app_secret: process.env.BKASH_APP_SECRET
@@ -86,8 +116,9 @@ const refreshToken = async () => {
 
     try {
         console.log('[bKash] Refreshing Token with refresh_token...');
+        const endpoints = getEndpoints();
         const response = await axios.post(
-            `${getBaseUrl()}/tokenized-checkout/auth/refresh-token`,
+            endpoints.refreshToken,
             {
                 app_key: process.env.BKASH_APP_KEY,
                 app_secret: process.env.BKASH_APP_SECRET,
@@ -152,12 +183,12 @@ const getPaymentHeaders = async () => {
 
 /**
  * Create Payment (Without Agreement)
- * POST /tokenized-checkout/payment/create
  */
 const createPayment = async ({ amount, merchantInvoiceNumber, payerReference, callbackURL }) => {
     const headers = await getPaymentHeaders();
     const payload = {
-        payerReference: payerReference || '01000000000',
+        mode: '0011',
+        payerReference: payerReference || 'TSF',
         callbackURL: callbackURL || process.env.BKASH_CALLBACK_URL,
         amount: Number(amount).toFixed(2),
         currency: 'BDT',
@@ -167,8 +198,9 @@ const createPayment = async ({ amount, merchantInvoiceNumber, payerReference, ca
 
     console.log(`[bKash] Creating payment: Invoice ${merchantInvoiceNumber}, Amount ${payload.amount}`);
 
+    const endpoints = getEndpoints();
     const response = await axios.post(
-        `${getBaseUrl()}/tokenized-checkout/payment/create`,
+        endpoints.createPayment,
         payload,
         {
             headers,
@@ -181,14 +213,14 @@ const createPayment = async ({ amount, merchantInvoiceNumber, payerReference, ca
 
 /**
  * Execute Payment
- * POST /tokenized-checkout/payment/execute
  */
 const executePayment = async (paymentId) => {
     const headers = await getPaymentHeaders();
     console.log(`[bKash] Executing payment: ${paymentId}`);
 
+    const endpoints = getEndpoints();
     const response = await axios.post(
-        `${getBaseUrl()}/tokenized-checkout/payment/execute`,
+        endpoints.executePayment,
         { 
             paymentId: paymentId,
             paymentID: paymentId
@@ -204,48 +236,80 @@ const executePayment = async (paymentId) => {
 
 /**
  * Query Payment
- * POST /tokenized-checkout/query/payment
  */
 const queryPayment = async (paymentId) => {
     const headers = await getPaymentHeaders();
     console.log(`[bKash] Querying payment status: ${paymentId}`);
 
-    const response = await axios.post(
-        `${getBaseUrl()}/tokenized-checkout/query/payment`,
-        { 
-            paymentId: paymentId,
-            paymentID: paymentId
-        },
-        {
-            headers,
-            timeout: 30000
+    const endpoints = getEndpoints();
+    try {
+        // First try POST with body
+        const response = await axios.post(
+            endpoints.queryPayment,
+            { 
+                paymentId: paymentId,
+                paymentID: paymentId
+            },
+            {
+                headers,
+                timeout: 30000
+            }
+        );
+        return response.data;
+    } catch (postErr) {
+        // If POST fails with 404/405 or method not allowed, try GET /payment/query/:paymentId
+        if (endpoints.queryPaymentGet && postErr.response && (postErr.response.status === 404 || postErr.response.status === 405)) {
+            console.log(`[bKash] Querying payment via GET fallback: ${paymentId}`);
+            const getResponse = await axios.get(
+                endpoints.queryPaymentGet(paymentId),
+                {
+                    headers,
+                    timeout: 30000
+                }
+            );
+            return getResponse.data;
         }
-    );
-
-    return response.data;
+        throw postErr;
+    }
 };
 
 /**
  * Search Transaction by trxID / trxId
- * POST /tokenized-checkout/general/search-transaction
  */
 const searchTransaction = async (trxId) => {
     const headers = await getPaymentHeaders();
     console.log(`[bKash] Searching transaction: ${trxId}`);
 
-    const response = await axios.post(
-        `${getBaseUrl()}/tokenized-checkout/general/search-transaction`,
-        { 
-            trxId: trxId,
-            trxID: trxId 
-        },
-        {
-            headers,
-            timeout: 30000
+    const endpoints = getEndpoints();
+    try {
+        const response = await axios.post(
+            endpoints.searchTransaction,
+            { 
+                trxId: trxId,
+                trxID: trxId 
+            },
+            {
+                headers,
+                timeout: 30000
+            }
+        );
+        return response.data;
+    } catch (searchErr) {
+        // Fallback for v1 endpoints if searchTran vs searchTransaction differs
+        if (searchErr.response && searchErr.response.status === 404) {
+            const altEndpoint = endpoints.searchTransaction.includes('searchTran') 
+                ? endpoints.searchTransaction.replace('searchTran', 'searchTransaction')
+                : endpoints.searchTransaction.replace('search-transaction', 'searchTran');
+            console.log(`[bKash] Searching transaction via alt endpoint: ${altEndpoint}`);
+            const altResponse = await axios.post(
+                altEndpoint,
+                { trxId: trxId, trxID: trxId },
+                { headers, timeout: 30000 }
+            );
+            return altResponse.data;
         }
-    );
-
-    return response.data;
+        throw searchErr;
+    }
 };
 
 module.exports = {
