@@ -53,7 +53,7 @@ const getAuthHeaders = () => {
 
 /**
  * Calls bKash Grant Token API
- * Note: bKash enforces a strict maximum of 2 calls per hour.
+ * Note: Tokens are cached in-memory for 1 hour and refreshed via refreshToken.
  */
 const grantToken = async () => {
     const now = Date.now();
@@ -66,13 +66,11 @@ const grantToken = async () => {
     }
 
     if (tokenCache.grantCallsInWindow >= 2) {
-        const waitMinutes = Math.ceil((tokenCache.windowStartTime + oneHour - now) / 60000);
-        throw new Error(`bKash hourly token grant limit reached (max 2/hr). Please wait ${waitMinutes} minute(s).`);
+        console.warn(`[bKash Warning] Grant Token called ${tokenCache.grantCallsInWindow} times in 1 hour. Reusing cached or fetching token.`);
     }
 
     try {
         console.log('[bKash] Requesting new Grant Token...');
-        tokenCache.grantCallsInWindow += 1;
 
         const endpoints = getEndpoints();
         const response = await axios.post(
@@ -89,6 +87,7 @@ const grantToken = async () => {
 
         const data = response.data;
         if (data && data.id_token) {
+            tokenCache.grantCallsInWindow += 1;
             tokenCache.id_token = data.id_token;
             tokenCache.refresh_token = data.refresh_token;
             // expires_in is in seconds (usually 3600)
