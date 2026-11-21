@@ -507,7 +507,7 @@ router.get('/guardian-followup-today', authMiddleware, async (req, res) => {
         }
 
         const tuitions = await Tuition.find(filter)
-            .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated')
+            .select('tuitionCode status salary note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated isSpamGuardian isBestGuardian')
             .lean();
 
         // Filter tuitions where the latest follow-up has nextFollowUpDate today
@@ -650,7 +650,7 @@ router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
             isPaymentCreated: false,
             isSoftDelete: false
         })
-        .select('tuitionCode status note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated')
+        .select('tuitionCode status salary note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated isSpamGuardian isBestGuardian')
         .lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
