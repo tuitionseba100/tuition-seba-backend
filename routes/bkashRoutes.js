@@ -238,7 +238,12 @@ router.post('/execute-payment', async (req, res) => {
                 paymentId: txn.paymentId,
                 amount: txn.amount,
                 tuitionCode: txn.tuitionCode,
+                premiumCode: txn.premiumCode,
+                teacherCode: txn.premiumCode,
+                tutorNumber: txn.tutorNumber,
                 tutorName: txn.tutorName,
+                payerAccount: txn.payerAccount,
+                merchantInvoiceNumber: txn.merchantInvoiceNumber,
                 executedAt: txn.executedAt
             });
         }
@@ -414,8 +419,12 @@ router.post('/execute-payment', async (req, res) => {
             paymentId: txn.paymentId,
             amount: executedAmount,
             tuitionCode: txn.tuitionCode,
+            premiumCode: txn.premiumCode,
+            teacherCode: txn.premiumCode,
+            tutorNumber: txn.tutorNumber,
             tutorName: txn.tutorName,
             payerAccount: txn.payerAccount || execResponse.payerAccount,
+            merchantInvoiceNumber: txn.merchantInvoiceNumber,
             executedAt: txn.executedAt
         });
 
@@ -461,7 +470,7 @@ router.get('/payment-status/:paymentId', async (req, res) => {
     try {
         const { paymentId } = req.params;
         const txn = await BkashTransaction.findOne({ paymentId })
-            .select('paymentId trxId tuitionCode tutorName amount currency status executedAt createdAt')
+            .select('paymentId trxId tuitionCode premiumCode tutorNumber tutorName amount currency status merchantInvoiceNumber payerAccount executedAt createdAt')
             .lean();
 
         if (!txn) {
