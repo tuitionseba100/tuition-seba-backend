@@ -271,6 +271,10 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         isPublish,
         isUrgent,
         status,
+        division,
+        district,
+        thana,
+        pourosova_union_ward,
         area,
         assignedTo,
         type,
@@ -332,8 +336,54 @@ router.get('/getTableData', authMiddleware, async (req, res) => {
         filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
     }
 
-    if (area) {
-        filter.area = new RegExp(escapeRegex(area), 'i');
+    const andConditions = [];
+
+    if (division && division.trim()) {
+        const divRegex = new RegExp('^' + escapeRegex(division.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { division: divRegex },
+                { city: divRegex }
+            ]
+        });
+    }
+
+    if (district && district.trim()) {
+        const distRegex = new RegExp('^' + escapeRegex(district.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { district: distRegex },
+                { city: distRegex }
+            ]
+        });
+    }
+
+    if (thana && thana.trim()) {
+        const thanaRegex = new RegExp('^' + escapeRegex(thana.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { thana: thanaRegex },
+                { area: new RegExp(escapeRegex(thana.trim()), 'i') }
+            ]
+        });
+    }
+
+    if (pourosova_union_ward && pourosova_union_ward.trim()) {
+        const unitRegex = new RegExp('^' + escapeRegex(pourosova_union_ward.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { pourosova_union_ward: unitRegex },
+                { area: new RegExp(escapeRegex(pourosova_union_ward.trim()), 'i') }
+            ]
+        });
+    }
+
+    if (area && area.trim()) {
+        filter.area = new RegExp(escapeRegex(area.trim()), 'i');
+    }
+
+    if (andConditions.length > 0) {
+        filter.$and = andConditions;
     }
 
     if (assignedTo) {
@@ -679,6 +729,10 @@ router.get('/summary', authMiddleware, async (req, res) => {
         isPublish,
         isUrgent,
         status,
+        division,
+        district,
+        thana,
+        pourosova_union_ward,
         area,
         assignedTo,
         type,
@@ -740,8 +794,54 @@ router.get('/summary', authMiddleware, async (req, res) => {
         filter.status = new RegExp(`^${escapeRegex(status.trim())}$`, 'i');
     }
 
-    if (area) {
-        filter.area = new RegExp(escapeRegex(area), 'i');
+    const andConditions = [];
+
+    if (division && division.trim()) {
+        const divRegex = new RegExp('^' + escapeRegex(division.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { division: divRegex },
+                { city: divRegex }
+            ]
+        });
+    }
+
+    if (district && district.trim()) {
+        const distRegex = new RegExp('^' + escapeRegex(district.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { district: distRegex },
+                { city: distRegex }
+            ]
+        });
+    }
+
+    if (thana && thana.trim()) {
+        const thanaRegex = new RegExp('^' + escapeRegex(thana.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { thana: thanaRegex },
+                { area: new RegExp(escapeRegex(thana.trim()), 'i') }
+            ]
+        });
+    }
+
+    if (pourosova_union_ward && pourosova_union_ward.trim()) {
+        const unitRegex = new RegExp('^' + escapeRegex(pourosova_union_ward.trim()) + '$', 'i');
+        andConditions.push({
+            $or: [
+                { pourosova_union_ward: unitRegex },
+                { area: new RegExp(escapeRegex(pourosova_union_ward.trim()), 'i') }
+            ]
+        });
+    }
+
+    if (area && area.trim()) {
+        filter.area = new RegExp(escapeRegex(area.trim()), 'i');
+    }
+
+    if (andConditions.length > 0) {
+        filter.$and = andConditions;
     }
 
     if (assignedTo) {
@@ -993,6 +1093,10 @@ router.post('/add', authMiddleware, async (req, res) => {
         salary,
         location,
         city,
+        division,
+        district,
+        thana,
+        pourosova_union_ward,
         area,
         guardianNumber,
         status,
@@ -1122,6 +1226,10 @@ router.post('/add', authMiddleware, async (req, res) => {
             time,
             salary,
             city,
+            division,
+            district,
+            thana,
+            pourosova_union_ward,
             location,
             area,
             guardianNumber,
@@ -1456,7 +1564,7 @@ router.get('/export', authMiddleware, superadminOnly, async (req, res) => {
         );
 
         // Write CSV header
-        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Guardian Demand (Public),Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
+        const header = 'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Division,District,Thana,Union Ward,Area,Guardian Number,Status,Joining,Note,Guardian Demand (Public),Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
         res.write(header);
 
         // Process documents in batches to avoid memory issues
@@ -1497,6 +1605,10 @@ router.get('/export', authMiddleware, superadminOnly, async (req, res) => {
                     escapeCsvField(doc.salary || ''),
                     escapeCsvField(doc.location || ''),
                     escapeCsvField(doc.city || ''),
+                    escapeCsvField(doc.division || ''),
+                    escapeCsvField(doc.district || ''),
+                    escapeCsvField(doc.thana || ''),
+                    escapeCsvField(doc.pourosova_union_ward || ''),
                     escapeCsvField(doc.area || ''),
                     escapeCsvField(doc.guardianNumber || ''),
                     escapeCsvField(doc.status || ''),
@@ -1563,7 +1675,7 @@ router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
 
         // CSV header
         const header =
-            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Area,Guardian Number,Status,Joining,Note,Guardian Demand (Public),Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
+            'Tuition Code,Is Publish,Wanted Teacher,Student,Created By,Class,Medium,Institute,Subject,Day,Time,Salary,Location,City,Division,District,Thana,Union Ward,Area,Guardian Number,Status,Joining,Note,Guardian Demand (Public),Tutor Number,Is Urgent,Task Assigned To,Is Whatsapp Apply,Updated By,Last Available Check,Last Update,Last Update Comment,Next Update Date,Next Update Comment,Comment 1,Comment 2,Tuition Cancel Reason,Guardian Behavior,Is Payment Created,Assigned To,Previous Assigned To,Agent Comment\n';
 
         res.write(header);
 
@@ -1603,6 +1715,10 @@ router.get('/exportData', authMiddleware, superadminOnly, async (req, res) => {
                     escapeCsvField(doc.salary),
                     escapeCsvField(doc.location),
                     escapeCsvField(doc.city),
+                    escapeCsvField(doc.division),
+                    escapeCsvField(doc.district),
+                    escapeCsvField(doc.thana),
+                    escapeCsvField(doc.pourosova_union_ward),
                     escapeCsvField(doc.area),
                     escapeCsvField(doc.guardianNumber),
                     escapeCsvField(doc.status),

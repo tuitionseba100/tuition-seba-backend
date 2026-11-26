@@ -15,8 +15,12 @@ const tuitionSchema = new mongoose.Schema({
     salary: String,
     location: String,
     area: String,
-    guardianNumber: String,
     city: String,
+    division: { type: String },
+    district: { type: String },
+    thana: { type: String },
+    pourosova_union_ward: { type: String },
+    guardianNumber: String,
     guardian_source_medium: { type: String, default: '' },
     status: String,
     subStatus: { type: String, default: '' },
@@ -66,6 +70,19 @@ const tuitionSchema = new mongoose.Schema({
     }],
 }, {
     timestamps: true
+});
+
+// Pre-save hook: Keep division and city in sync if one is missing
+tuitionSchema.pre('save', function (next) {
+    if ((!this.division || !String(this.division).trim()) && this.city && String(this.city).trim()) {
+        const c = String(this.city).trim();
+        this.division = (c.toLowerCase() === 'chittagong' || c.toLowerCase() === 'chattogram')
+            ? 'Chittagong'
+            : (c.toLowerCase() === 'dhaka' ? 'Dhaka' : c.charAt(0).toUpperCase() + c.slice(1));
+    } else if ((!this.city || !String(this.city).trim()) && this.division && String(this.division).trim()) {
+        this.city = this.division;
+    }
+    next();
 });
 
 // Compound indexes for high-frequency queries
