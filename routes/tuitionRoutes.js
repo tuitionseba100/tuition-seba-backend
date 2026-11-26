@@ -700,8 +700,8 @@ router.get('/pending-payment-creation', authMiddleware, async (req, res) => {
             isPaymentCreated: false,
             isSoftDelete: false
         })
-        .select('tuitionCode status salary note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated isSpamGuardian isBestGuardian')
-        .lean();
+            .select('tuitionCode status salary note comment1 comment2 guardianBehavior lastUpdateComment nextUpdateDate nextUpdateComment confirmationFollowUps assignedTo tutorNumber guardianNumber createdAt isPublish isUrgent isReviewDone tuitionType applyType isProposal isPaymentCreated isSpamGuardian isBestGuardian')
+            .lean();
 
         const tuitionCodes = tuitions.map(t => t.tuitionCode);
         const pendingApplies = await TuitionApply.distinct('tuitionCode', {
@@ -1139,9 +1139,9 @@ router.post('/add', authMiddleware, async (req, res) => {
 
         const targetBase = req.body.copyFromCode || req.body.baseCode || null;
 
-        const isPlaceholder = !tuitionCode || 
-            String(tuitionCode).includes('Auto-Assigned') || 
-            String(tuitionCode).includes('Copy of') || 
+        const isPlaceholder = !tuitionCode ||
+            String(tuitionCode).includes('Auto-Assigned') ||
+            String(tuitionCode).includes('Copy of') ||
             String(tuitionCode).trim() === '';
 
         let finalTuitionCode = isPlaceholder ? null : String(tuitionCode).trim();
@@ -1842,10 +1842,10 @@ router.get('/:id/match-teachers', authMiddleware, async (req, res) => {
         // Match areas (case-insensitive)
         const searchArea = req.query.area !== undefined ? req.query.area : tuition.area;
         if (searchArea && searchArea !== 'all') {
-            const areas = Array.isArray(searchArea) 
-                ? searchArea 
+            const areas = Array.isArray(searchArea)
+                ? searchArea
                 : String(searchArea).split(',').map(a => a.trim()).filter(Boolean);
-            
+
             if (areas.length > 0) {
                 const areaOrQueries = [];
                 areas.forEach(area => {
@@ -1940,7 +1940,7 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
             return res.status(404).json({ message: 'Tuition not found' });
         }
 
-        const logs = await SmsLog.find({ 
+        const logs = await SmsLog.find({
             tuitionCode: tuition.tuitionCode,
             category: 'Proposal'
         })
@@ -1964,12 +1964,12 @@ router.get('/:id/sms-history', authMiddleware, async (req, res) => {
         // Map logs with their applied status
         const logsWithApplyStatus = logs.map(log => {
             const cleanPremiumCode = log.premiumCode ? log.premiumCode.trim() : '';
-            
+
             let appliedStatus = null;
             if (cleanPremiumCode && appliesMap.has(cleanPremiumCode)) {
                 appliedStatus = appliesMap.get(cleanPremiumCode);
             }
-            
+
             return {
                 ...log,
                 hasApplied: appliedStatus !== null,
