@@ -163,6 +163,7 @@ const io = new Server(server, {
     maxHttpBufferSize: 1e5, // 100 KB cap per socket frame to prevent memory spikes
     pingTimeout: 20000,
     pingInterval: 25000,
+    perMessageDeflate: false, // Avoid per-socket zlib memory overhead
     cors: {
         origin: (origin, callback) => {
             if (isAllowedOrigin(origin)) {
@@ -218,7 +219,7 @@ io.on('connection', (socket) => {
             if (!data || !data.phone || !data.text) return;
             const { phone, premiumCode, sender, senderName, text } = data;
 
-            // Save message
+            // Save message & upsert session in parallel to halve delivery latency
             const newMessage = new ChatMessage({
                 phone,
                 premiumCode,
@@ -227,9 +228,7 @@ io.on('connection', (socket) => {
                 text,
                 isRead: sender === 'agent'
             });
-            await newMessage.save();
 
-            // Upsert session
             const updateFields = {
                 phone,
                 lastMessage: text,
@@ -241,14 +240,18 @@ io.on('connection', (socket) => {
                 if (senderName) updateFields.name = senderName;
                 if (premiumCode) updateFields.premiumCode = premiumCode;
             }
-            const updatedSession = await ChatSession.findOneAndUpdate(
-                { phone },
-                updateFields,
-                { upsert: true, new: true, setDefaultsOnInsert: true }
-            ).lean();
+
+            const [savedMessage, updatedSession] = await Promise.all([
+                newMessage.save(),
+                ChatSession.findOneAndUpdate(
+                    { phone },
+                    updateFields,
+                    { upsert: true, new: true, setDefaultsOnInsert: true }
+                ).lean()
+            ]);
 
             // Broadcast to the room
-            io.to(phone).emit('receive_message', newMessage.toObject());
+            io.to(phone).emit('receive_message', savedMessage.toObject());
 
             // Notify only connected admin/agent sockets (not public ChatWidget visitors)
             io.to('admin_agents').emit('session_updated', updatedSession);

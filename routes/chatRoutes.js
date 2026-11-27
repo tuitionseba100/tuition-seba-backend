@@ -91,7 +91,11 @@ router.get('/sessions', authMiddleware, async (req, res) => {
                 ]
             };
         }
-        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 }).limit(limit).lean();
+        const sessions = await ChatSession.find(query)
+            .select('phone name premiumCode assignedTo lastSender lastMessage lastMessageAt unreadCount')
+            .sort({ lastMessageAt: -1 })
+            .limit(limit)
+            .lean();
         res.json(sessions);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -115,12 +119,14 @@ router.post('/assign', authMiddleware, async (req, res) => {
 // Mark session as read
 router.post('/read/:phone', authMiddleware, async (req, res) => {
     try {
-        await ChatMessage.updateMany({ phone: req.params.phone, sender: 'member', isRead: false }, { isRead: true });
-        const updatedSession = await ChatSession.findOneAndUpdate(
-            { phone: req.params.phone },
-            { unreadCount: 0 },
-            { new: true }
-        ).lean();
+        const [, updatedSession] = await Promise.all([
+            ChatMessage.updateMany({ phone: req.params.phone, sender: 'member', isRead: false }, { isRead: true }),
+            ChatSession.findOneAndUpdate(
+                { phone: req.params.phone },
+                { unreadCount: 0 },
+                { new: true }
+            ).lean()
+        ]);
         
         const io = req.app.get('socketio');
         if (io) {
