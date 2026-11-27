@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
-
-const chatDB = mongoose.createConnection(process.env.CHAT_DB_URI);
-
-chatDB.on('connected', () => console.log('InternalConversation DB connected'));
-chatDB.on('error', (err) => console.error('InternalConversation DB error:', err));
+const chatDB = require('../config/chatDb');
 
 const internalConversationSchema = new mongoose.Schema({
     // 'dm' = direct message between two employees, 'group' = group created by superadmin

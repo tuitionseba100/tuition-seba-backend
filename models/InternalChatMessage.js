@@ -1,9 +1,5 @@
 const mongoose = require('mongoose');
-
-const chatDB = mongoose.createConnection(process.env.CHAT_DB_URI);
-
-chatDB.on('connected', () => console.log('InternalChatMessage DB connected'));
-chatDB.on('error', (err) => console.error('InternalChatMessage DB error:', err));
+const chatDB = require('../config/chatDb');
 
 const internalChatMessageSchema = new mongoose.Schema({
     conversationId:  { type: String, required: true },  // InternalConversation._id as string

@@ -71,7 +71,12 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
-mongoose.connect(process.env.DB_URI)
+mongoose.connect(process.env.DB_URI, {
+    maxPoolSize: 20,
+    minPoolSize: 2,
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+})
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.log('MongoDB connection error:', err));
 
@@ -155,6 +160,9 @@ server.headersTimeout = 125 * 1000;
 // Setup Socket.io Server integrated directly
 const { Server } = require('socket.io');
 const io = new Server(server, {
+    maxHttpBufferSize: 1e5, // 100 KB cap per socket frame to prevent memory spikes
+    pingTimeout: 20000,
+    pingInterval: 25000,
     cors: {
         origin: (origin, callback) => {
             if (isAllowedOrigin(origin)) {
@@ -179,19 +187,24 @@ const InternalChatMessage = require('./models/InternalChatMessage');
 const InternalConversation = require('./models/InternalConversation');
 
 io.on('connection', (socket) => {
-    console.log(`New user connected: ${socket.id}`);
+    // Admin dashboard / navbar sockets join this room so session updates are NOT broadcast to public visitors
+    socket.on('join_admin_room', () => {
+        socket.join('admin_agents');
+    });
 
     // Join room for a specific member
     socket.on('join_room', async ({ phone, name, role }) => {
         try {
+            if (!phone) return;
             socket.join(phone);
-            console.log(`${role || 'Member'} (${name}) joined room: ${phone}`);
 
             if (role === 'agent') {
+                socket.join('admin_agents');
                 if (!socket.agentRooms) socket.agentRooms = new Set();
-                socket.agentRooms.add(phone);
-                if (!activeAgents[phone]) activeAgents[phone] = 0;
-                activeAgents[phone]++;
+                if (!socket.agentRooms.has(phone)) {
+                    socket.agentRooms.add(phone);
+                    activeAgents[phone] = (activeAgents[phone] || 0) + 1;
+                }
                 io.to(phone).emit('agent_status', { agentOnline: true });
             }
         } catch (err) {
@@ -202,6 +215,7 @@ io.on('connection', (socket) => {
     // Handle sending messages
     socket.on('send_message', async (data) => {
         try {
+            if (!data || !data.phone || !data.text) return;
             const { phone, premiumCode, sender, senderName, text } = data;
 
             // Save message
@@ -216,25 +230,28 @@ io.on('connection', (socket) => {
             await newMessage.save();
 
             // Upsert session
-            await ChatSession.findOneAndUpdate(
+            const updateFields = {
+                phone,
+                lastMessage: text,
+                lastSender: sender,
+                lastMessageAt: new Date(),
+                $inc: { unreadCount: (sender === 'member') ? 1 : 0 }
+            };
+            if (sender === 'member') {
+                if (senderName) updateFields.name = senderName;
+                if (premiumCode) updateFields.premiumCode = premiumCode;
+            }
+            const updatedSession = await ChatSession.findOneAndUpdate(
                 { phone },
-                {
-                    phone,
-                    name: sender === 'member' ? senderName : undefined,
-                    premiumCode: sender === 'member' ? premiumCode : undefined,
-                    lastMessage: text,
-                    lastSender: sender,
-                    lastMessageAt: new Date(),
-                    $inc: { unreadCount: (sender === 'member') ? 1 : 0 }
-                },
+                updateFields,
                 { upsert: true, new: true, setDefaultsOnInsert: true }
-            );
+            ).lean();
 
             // Broadcast to the room
-            io.to(phone).emit('receive_message', newMessage);
+            io.to(phone).emit('receive_message', newMessage.toObject());
 
-            // Notify agents in the system of a new/updated session
-            io.emit('session_updated');
+            // Notify only connected admin/agent sockets (not public ChatWidget visitors)
+            io.to('admin_agents').emit('session_updated', updatedSession);
 
 
         } catch (err) {

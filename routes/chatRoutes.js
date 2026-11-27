@@ -64,10 +64,21 @@ router.get('/history/:phone', async (req, res) => {
     }
 });
 
-// Fetch all active chat sessions (for the Agent console, with search)
+// Lightweight unread check for navbar badge (avoids downloading all sessions)
+router.get('/unread-status', authMiddleware, async (req, res) => {
+    try {
+        const hasUnread = !!(await ChatSession.exists({ unreadCount: { $gt: 0 } }));
+        res.json({ hasUnread });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Fetch active chat sessions (for the Agent console, with search and limit)
 router.get('/sessions', authMiddleware, async (req, res) => {
     try {
         const { search } = req.query;
+        const limit = Math.min(parseInt(req.query.limit) || 100, 300);
         let query = {};
         if (search && search.trim() !== '') {
             // Escape special characters to prevent invalid regex errors
@@ -80,7 +91,7 @@ router.get('/sessions', authMiddleware, async (req, res) => {
                 ]
             };
         }
-        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 }).lean();
+        const sessions = await ChatSession.find(query).sort({ lastMessageAt: -1 }).limit(limit).lean();
         res.json(sessions);
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -105,11 +116,15 @@ router.post('/assign', authMiddleware, async (req, res) => {
 router.post('/read/:phone', authMiddleware, async (req, res) => {
     try {
         await ChatMessage.updateMany({ phone: req.params.phone, sender: 'member', isRead: false }, { isRead: true });
-        await ChatSession.findOneAndUpdate({ phone: req.params.phone }, { unreadCount: 0 });
+        const updatedSession = await ChatSession.findOneAndUpdate(
+            { phone: req.params.phone },
+            { unreadCount: 0 },
+            { new: true }
+        ).lean();
         
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('session_updated');
+            io.to('admin_agents').emit('session_updated', updatedSession);
         }
         
         res.json({ success: true });
@@ -135,7 +150,7 @@ router.delete('/session/:phone', authMiddleware, async (req, res) => {
 
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('session_updated');
+            io.to('admin_agents').emit('session_updated');
         }
 
         res.json({ success: true, message: 'Chat session deleted successfully' });
@@ -161,10 +176,10 @@ router.patch('/message/:messageId/unsend', authMiddleware, async (req, res) => {
         message.deletedBy = username || 'Admin';
         await message.save();
 
-        // Notify all connected clients about the unsent message
+        // Notify only the room & admin agents about the unsent message
         const io = req.app.get('socketio');
         if (io) {
-            io.emit('message_unsent', { messageId: message._id, phone: message.phone, deletedBy: message.deletedBy });
+            io.to(message.phone).to('admin_agents').emit('message_unsent', { messageId: message._id, phone: message.phone, deletedBy: message.deletedBy });
         }
 
         res.json({ success: true, message: 'Message unsent successfully' });
